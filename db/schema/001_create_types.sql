@@ -2,7 +2,7 @@
 CREATE TYPE user_role AS ENUM ('user', 'admin', 'moderator');
 
 -- Define ENUM type for character relationships
-CREATE TYPE relationship_type AS ENUM ('family', 'friend', 'enemy', 'other');
+CREATE TYPE relationship_type AS ENUM ('family', 'friend', 'enemy', 'ally', 'other');
 
 -- Define ENUM type for container types (used in objects, posts, media, and comments)
 CREATE TYPE container_type AS ENUM ('character', 'account', 'post');
