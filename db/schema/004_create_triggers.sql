@@ -61,7 +61,7 @@ BEFORE UPDATE ON accounts
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_accounts_updated_at IS 'Trigger to update the updated_at field for the accounts table.';
+COMMENT ON TRIGGER update_accounts_updated_at ON accounts IS 'Trigger to update the updated_at field for the accounts table.';
 
 -- Trigger for updating characters updated_at field
 CREATE TRIGGER update_characters_updated_at
@@ -69,7 +69,7 @@ BEFORE UPDATE ON characters
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_characters_updated_at IS 'Trigger to update the updated_at field for the characters table.';
+COMMENT ON TRIGGER update_characters_updated_at ON characters IS 'Trigger to update the updated_at field for the characters table.';
 
 -- Trigger for updating objects updated_at field
 CREATE TRIGGER update_objects_updated_at
@@ -77,14 +77,14 @@ BEFORE UPDATE ON objects
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_objects_updated_at IS 'Trigger to update the updated_at field for the objects table.';
+COMMENT ON TRIGGER update_objects_updated_at ON objects IS 'Trigger to update the updated_at field for the objects table.';
 
 -- Trigger for enforcing container foreign key integrity in objects table
 CREATE TRIGGER enforce_container_fk
 BEFORE INSERT OR UPDATE ON objects
 FOR EACH ROW EXECUTE FUNCTION enforce_container_integrity();
 
-COMMENT ON TRIGGER enforce_container_fk IS 'Trigger to enforce container type integrity for objects table.';
+COMMENT ON TRIGGER enforce_container_fk ON objects IS 'Trigger to enforce container type integrity for objects table.';
 
 -- Trigger for updating posts updated_at field
 CREATE TRIGGER update_posts_updated_at
@@ -92,7 +92,7 @@ BEFORE UPDATE ON posts
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_posts_updated_at IS 'Trigger to update the updated_at field for the posts table.';
+COMMENT ON TRIGGER update_posts_updated_at ON posts IS 'Trigger to update the updated_at field for the posts table.';
 
 -- Trigger for updating comments updated_at field
 CREATE TRIGGER update_comments_updated_at
@@ -100,14 +100,14 @@ BEFORE UPDATE ON comments
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_comments_updated_at IS 'Trigger to update the updated_at field for the comments table.';
+COMMENT ON TRIGGER update_comments_updated_at ON comments IS 'Trigger to update the updated_at field for the comments table.';
 
 -- Trigger for enforcing container foreign key integrity in comments table
 CREATE TRIGGER enforce_comments_fk
 BEFORE INSERT OR UPDATE ON comments
 FOR EACH ROW EXECUTE FUNCTION enforce_container_integrity();
 
-COMMENT ON TRIGGER enforce_comments_fk IS 'Trigger to enforce container type integrity for comments table.';
+COMMENT ON TRIGGER enforce_comments_fk ON comments IS 'Trigger to enforce container type integrity for comments table.';
 
 -- Trigger for updating media updated_at field
 CREATE TRIGGER update_media_updated_at
@@ -115,17 +115,19 @@ BEFORE UPDATE ON media
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
-COMMENT ON TRIGGER update_media_updated_at IS 'Trigger to update the updated_at field for the media table.';
+COMMENT ON TRIGGER update_media_updated_at ON media IS 'Trigger to update the updated_at field for the media table.';
 
 -- Trigger for enforcing container foreign key integrity in media table
 CREATE TRIGGER enforce_media_fk
 BEFORE INSERT OR UPDATE ON media
 FOR EACH ROW EXECUTE FUNCTION enforce_container_integrity();
 
-COMMENT ON TRIGGER enforce_media_fk IS 'Trigger to enforce container type integrity for media table.';
+COMMENT ON TRIGGER enforce_media_fk ON media IS 'Trigger to enforce container type integrity for media table.';
 
 -- Trigger to enforce the foreign key constraint on comments
 CREATE TRIGGER enforce_commenter_fk
 BEFORE INSERT OR UPDATE ON comments
 FOR EACH ROW
 EXECUTE FUNCTION enforce_commenter_fk();
+
+COMMENT ON TRIGGER enforce_commenter_fk ON comments IS 'Trigger to enforce container type integrity for media table.';
