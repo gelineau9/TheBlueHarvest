@@ -8,7 +8,7 @@ CREATE TABLE accounts  (
   hashed_password VARCHAR(255) NOT NULL,
   first_name VARCHAR(50),
   last_name VARCHAR(50),
-  role user_role NOT NULL DEFAULT 'user',
+  user_role user_role NOT NULL DEFAULT 'user',
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,  
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,  
   deleted BOOLEAN DEFAULT FALSE         -- for soft deletion
@@ -21,7 +21,7 @@ COMMENT ON COLUMN accounts.email IS 'Email address used for login and notificati
 COMMENT ON COLUMN accounts.hashed_password IS 'Hashed password for security.';
 COMMENT ON COLUMN accounts.first_name IS 'First name of the user.';
 COMMENT ON COLUMN accounts.last_name IS 'Last name of the user.';
-COMMENT ON COLUMN accounts.role IS 'Role of the user (e.g., user, admin, moderator).';
+COMMENT ON COLUMN accounts.user_role IS 'Role of the user (e.g., user, admin, moderator).';
 COMMENT ON COLUMN accounts.created_at IS 'Timestamp of when the account was created.';
 COMMENT ON COLUMN accounts.updated_at IS 'Timestamp of when the account was last updated.';
 COMMENT ON COLUMN accounts.deleted IS 'Soft deletion flag; TRUE means the account is inactive but not removed from the DB.';
@@ -59,7 +59,7 @@ CREATE TABLE character_relationships (
   character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
   related_character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
   --relationship_type VARCHAR(50) NOT NULL, -- e.g. 'family', 'friend'
-  type relationship_type NOT NULL, -- using ENUM for fixed values, we can decide what relationships are allowed later. May want to add child to make the family tree easier to code (linked lists woo!)
+  relationship_type relationship_type NOT NULL, -- using ENUM for fixed values, we can decide what relationships are allowed later. May want to add child to make the family tree easier to code (linked lists woo!)
   CHECK (character_id <> related_character_id), -- to prevent self-referencing relationships
   PRIMARY KEY (character_id, related_character_id, relationship_type)
 );
@@ -75,7 +75,7 @@ COMMENT ON COLUMN character_relationships.relationship_type IS 'Type of relation
 CREATE TABLE objects (
   id SERIAL PRIMARY KEY,
   container_id INTEGER,      -- polymorphic: could refer to a character, account, etc. This is who owns the object
-  container_type ENUM('character', 'account'),  -- e.g. 'character', 'account'
+  container_type container_type,  -- e.g. 'character', 'account'
   object_type VARCHAR(50) NOT NULL,  -- e.g., 'NPC', 'Item'
   name VARCHAR(100) NOT NULL,
   details JSONB,  -- flexible storage for object attributes
@@ -101,7 +101,7 @@ COMMENT ON COLUMN objects.deleted IS 'Soft deletion flag; TRUE means the object 
 CREATE TABLE posts (
   id SERIAL PRIMARY KEY,
   container_id INTEGER,      -- polymorphic: could refer to a character, account, etc.
-  container_type ENUM('character', 'account'),  -- e.g. 'character', 'account'
+  container_type container_type,  -- e.g. 'character', 'account'
   content JSONB,             -- post content (structured as needed)
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -123,8 +123,8 @@ COMMENT ON COLUMN posts.deleted IS 'Soft deletion flag; TRUE means the post is i
 CREATE TABLE comments (
   id SERIAL PRIMARY KEY,
   post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
-  commenter_id INTEGER DEFAULT 1 ON DELETE SET DEFAULT, 
-  commenter_type commenter_type NOT NULL, -- e.g., 'account', 'character'
+  commenter_id INTEGER DEFAULT 1, 
+  commenter_type commenter_type DEFAULT 'account' NOT NULL, -- e.g., 'account', 'character'
   comment VARCHAR(1000) NOT NULL, -- limited to 1000 characters, we can adjust as needed, if we want no limit, TEXT is an option
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -147,7 +147,7 @@ COMMENT ON COLUMN comments.deleted IS 'Soft deletion flag; TRUE means the commen
 CREATE TABLE media (
   id SERIAL PRIMARY KEY,
   container_id INTEGER,
-  container_type ENUM('character', 'account', 'post'),
+  container_type container_type,
   filename VARCHAR(255) NOT NULL,
   url TEXT NOT NULL,
   file_size INTEGER,
