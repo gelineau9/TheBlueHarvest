@@ -58,7 +58,6 @@ COMMENT ON COLUMN characters.deleted IS 'Soft deletion flag; TRUE means the char
 CREATE TABLE character_relationships (
   character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
   related_character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
-  relationship_type VARCHAR(50) NOT NULL, -- e.g. 'family', 'friend'
   relationship_type relationship_type NOT NULL, -- using ENUM for fixed values, we can decide what relationships are allowed later. May want to add child to make the family tree easier to code (linked lists woo!)
   CHECK (character_id <> related_character_id), -- to prevent self-referencing relationships
   PRIMARY KEY (character_id, related_character_id, relationship_type)

@@ -12,9 +12,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger function to ensure container type integrity for objects, posts, media, and comments
-CREATE FUNCTION enforce_container_integrity()
+CREATE OR REPLACE FUNCTION enforce_container_integrity()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- Check container_type
   CASE NEW.container_type
     WHEN 'character' THEN 
       IF NOT EXISTS (SELECT 1 FROM characters WHERE id = NEW.container_id) THEN
@@ -27,6 +28,25 @@ BEGIN
     WHEN 'post' THEN 
       IF NOT EXISTS (SELECT 1 FROM posts WHERE id = NEW.container_id) THEN
         RAISE EXCEPTION 'Invalid container_id for post';
+      END IF;
+  END CASE;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function to ensure container type integrity for objects, posts, media, and comments
+CREATE OR REPLACE FUNCTION enforce_commenter_integrity()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Check commenter_type
+  CASE NEW.commenter_type
+    WHEN 'character' THEN 
+      IF NOT EXISTS (SELECT 1 FROM characters WHERE id = NEW.commenter_id) THEN
+        RAISE EXCEPTION 'Invalid commenter_id for character';
+      END IF;
+    WHEN 'account' THEN 
+      IF NOT EXISTS (SELECT 1 FROM accounts WHERE id = NEW.commenter_id) THEN
+        RAISE EXCEPTION 'Invalid commenter_id for account';
       END IF;
   END CASE;
   RETURN NEW;
@@ -105,7 +125,7 @@ COMMENT ON TRIGGER update_comments_updated_at ON comments IS 'Trigger to update 
 -- Trigger for enforcing container foreign key integrity in comments table
 CREATE TRIGGER enforce_comments_fk
 BEFORE INSERT OR UPDATE ON comments
-FOR EACH ROW EXECUTE FUNCTION enforce_container_integrity();
+FOR EACH ROW EXECUTE FUNCTION enforce_commenter_integrity();
 
 COMMENT ON TRIGGER enforce_comments_fk ON comments IS 'Trigger to enforce container type integrity for comments table.';
 
