@@ -75,7 +75,7 @@ CREATE TABLE objects (
   id SERIAL PRIMARY KEY,
   container_id INTEGER,      -- polymorphic: could refer to a character, account, etc. This is who owns the object
   container_type container_type,  -- e.g. 'character', 'account'
-  object_type VARCHAR(50) NOT NULL,  -- e.g., 'NPC', 'Item'
+  object_type object_type NOT NULL,  -- e.g., 'NPC', 'Item'
   name VARCHAR(100) NOT NULL,
   details JSONB,  -- flexible storage for object attributes
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
