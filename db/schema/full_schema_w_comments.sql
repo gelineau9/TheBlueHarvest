@@ -68,6 +68,7 @@ CREATE TABLE profiles (
     profile_type_id INT REFERENCES profile_types(type_id) NOT NULL, -- new type table for profiles
     name VARCHAR(100) NOT NULL,
     details JSONB, -- Flexible profile info (e.g., { "strength": 10, "bio": "A brave soul" }), indexed with GIN
+    -- Can also include information like {"Profile-Picture" : "s3:\\hash-profile-pic.jpg"}
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),  
     deleted BOOLEAN DEFAULT FALSE         -- for soft deletion
@@ -111,7 +112,10 @@ CREATE UNIQUE INDEX unique_primary_author ON authors (post_id) WHERE is_primary 
 -- Parent media Table
 CREATE TABLE media (
     media_id SERIAL PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
     url VARCHAR(255) NOT NULL,
+    file_size INT,
+    file_type VARCHAR(50),  
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted BOOLEAN DEFAULT FALSE

@@ -57,7 +57,10 @@ CREATE TABLE authors (
 -- Parent media Table
 CREATE TABLE media (
     media_id SERIAL PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
     url VARCHAR(255) NOT NULL,
+    file_size INT,
+    file_type VARCHAR(50),  
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted BOOLEAN DEFAULT FALSE
