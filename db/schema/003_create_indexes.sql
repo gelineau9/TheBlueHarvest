@@ -1,13 +1,38 @@
--- ======================================
--- INDEXES (Examples)
--- ======================================
-CREATE UNIQUE INDEX idx_accounts_username ON accounts(username);
-CREATE INDEX idx_accounts_email ON accounts(email);
-CREATE INDEX idx_characters_account_id ON characters(account_id);
-CREATE INDEX idx_characters_last_accessed ON characters(last_accessed_at DESC); -- allows us to sort recently accessed characters easily
-CREATE INDEX idx_posts_character ON posts(container_id) WHERE container_type = 'character'; -- partial index for character posts if we expect most posts are done by characters not accounts
-CREATE INDEX idx_comments_post_id ON comments(post_id); -- index since we will query often for showing comments
-CREATE INDEX idx_objects_container ON objects(container_type, container_id); -- polymorphic index
-CREATE INDEX idx_media_container ON media(container_type, container_id); -- polymorphic index
-CREATE INDEX idx_posts_container ON posts(container_type, container_id); -- polymorphic indexes
-CREATE INDEX idx_comments_container ON comments(commenter_type, commenter_id); -- polymorphic index
+-- 003_create_indexes.sql
+
+----------------------------------
+-- Indexes
+----------------------------------
+
+-- GIN indexes for JSONB columns
+CREATE INDEX idx_profiles_details ON profiles USING GIN (details);
+CREATE INDEX idx_posts_content ON posts USING GIN (content);
+
+-- Foreign key indexes
+CREATE INDEX idx_profiles_account_id ON profiles (account_id);
+CREATE INDEX idx_posts_account_id ON posts (account_id);
+CREATE INDEX idx_comments_post_id ON comments (post_id);
+
+-- Media indexes
+CREATE INDEX idx_media_post_id ON media (post_id);
+CREATE INDEX idx_media_profile_id ON media (profile_id);
+CREATE INDEX idx_media_account_id ON media (account_id);
+
+-- Relationships indexes
+CREATE INDEX idx_bidirectional_profile_id_1 ON bidirectional_relationships (profile_id_1);
+CREATE INDEX idx_bidirectional_profile_id_2 ON bidirectional_relationships (profile_id_2);
+CREATE INDEX idx_unidirectional_profile_id_1 ON unidirectional_relationships (profile_id_1);
+CREATE INDEX idx_unidirectional_profile_id_2 ON unidirectional_relationships (profile_id_2);
+
+-- Sorting by created_at
+CREATE INDEX idx_profiles_created_at ON profiles (created_at);
+CREATE INDEX idx_posts_created_at ON posts (created_at);
+CREATE INDEX idx_comments_created_at ON comments (created_at);
+
+-- Sorting by updated_at
+CREATE INDEX idx_profiles_updated_at ON profiles (updated_at);
+CREATE INDEX idx_posts_updated_at ON posts (updated_at);
+CREATE INDEX idx_comments_updated_at ON comments (updated_at);
+
+-- Index post_type_id
+CREATE INDEX idx_posts_post_type_id ON posts (post_type_id);

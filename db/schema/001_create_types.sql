@@ -1,14 +1,53 @@
--- Define ENUM type for user roles
-CREATE TYPE user_role AS ENUM ('user', 'admin', 'moderator');
+-- 001_create_types.sql
 
--- Define ENUM type for character relationships
-CREATE TYPE relationship_type AS ENUM ('family', 'friend', 'enemy', 'ally', 'other');
+----------------------------------
+-- Type tables
+----------------------------------
 
--- Define ENUM type for container types (used in objects, posts, media, and comments)
-CREATE TYPE container_type AS ENUM ('character', 'account', 'post');
+-- profile Types
+CREATE TABLE profile_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example of profile types:
+INSERT INTO profile_types (type_name) 
+VALUES ('character'), ('item'), ('kinship'), ('organization');
 
--- Define ENUM type for object types (this is a placeholder; you may want to expand this)
-CREATE TYPE object_type AS ENUM ('NPC', 'Item');
+-- account's user_role Types
+CREATE TABLE user_roles (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example user_roles
+INSERT INTO user_roles (role_name) 
+VALUES ('user'), ('admin'), ('moderator');
 
--- Define ENUM type for commenter types (character or account)
-CREATE TYPE commenter_type AS ENUM ('character', 'account');
+-- relationship Types
+CREATE TABLE relationship_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL,
+    is_bidirectional BOOLEAN DEFAULT FALSE
+)
+-- Example relationship_types
+INSERT INTO relationship_types (type_name, is_bidirectional) 
+VALUES ('parent', FALSE), ('child', FALSE), ('friend', TRUE), 
+        ('enemy', TRUE), ('ally', TRUE), ('other', FALSE);
+
+-- post Types
+CREATE TABLE post_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL,
+    type_description TEXT -- 
+);
+-- Example of post types:
+INSERT INTO post_types (type_name, type_description) 
+VALUES ('story', 'A narrative post'), ('art', 'Visual artwork'), 
+        ('recipe', 'Cooking instructions'), ('event', 'Post describing an event'),
+        ('other', 'Miscellaneous content');
+
+
+----------------------------------
+-- Custom ENUMs
+----------------------------------
+
+CREATE TYPE relationship_direction AS ENUM ('forward', 'backward', 'both');
