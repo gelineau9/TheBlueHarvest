@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+.env.local
+
+
+# ignore yarn.lock
+package-lock.json
