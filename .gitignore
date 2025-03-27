@@ -3,6 +3,5 @@ node_modules
 .env
 .env.local
 
-
 # ignore yarn.lock
 package-lock.json
