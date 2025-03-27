@@ -28,29 +28,18 @@ The project relies on the following dependencies:
 
 ## Installation
 
-1. Clone the repository:
+1. After cloning the repository (see root [README.md](../../README.md)), install dependencies with `npm install` at the root.
 
-   ```bash
-   git clone https://github.com/your-username/TheBlueHarvest.git
-   cd TheBlueHarvest/backend
-   ```
+2. Set up environment variables:
 
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables:
-
-   - Create a `.env` file in the backend directory.
+   - Create a `.env` file in `apps/backend/`.
    - A `.env.example` file has been provided as a template.
    - Add the required variables:
 
    ```text
    DB_HOST=localhost
    DB_USER=username
-   DB_PASSWORD=yourpasswpasswordord
+   DB_PASSWORD=yourpassword
    DB_NAME=theblueharvest
    DB_PORT=5432
    JWT_SECRET=yourjwtsecret
@@ -58,23 +47,7 @@ The project relies on the following dependencies:
    NODE_ENV=development
    ```
 
-4. Build the project:
-
-   ```bash
-   npm run build
-   ```
-
-5. Start the server
-
-   ```bash
-   npm start
-   ```
-
-- For development with live reloading:
-
-  ```bash
-  npm run dev
-  ```
+3. Follow root level installation in [README.md](../../README.md)
 
 ## Scripts
 
