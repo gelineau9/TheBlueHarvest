@@ -5,5 +5,3 @@ node_modules
 
 # ignore yarn.lock
 package-lock.json
-
-.local_docs/
