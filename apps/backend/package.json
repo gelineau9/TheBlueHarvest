@@ -1,0 +1,50 @@
+{
+  "name": "blue-harvest-backend",
+  "version": "0.1.0",
+  "description": "Backend for TheBlueHarvest",
+  "homepage": "https://github.com/gelineau9/TheBlueHarvest#readme",
+  "bugs": {
+    "url": "https://github.com/gelineau9/TheBlueHarvest/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gelineau9/TheBlueHarvest.git"
+  },
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node -r dotenv/config dist/index.js",
+    "dev": "nodemon --exec 'ts-node -r dotenv/config src/index.ts'",
+    "lint": "eslint 'src/**/*.{ts,js}' --fix",
+    "prestart": "npm run build",
+    "docs": "echo 'Add Swagger generation here'"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "config": "^3.3.12",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "slonik": "^46.4.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.14",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-import": "^2.31.0",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=23.7.0"
+  }
+}
