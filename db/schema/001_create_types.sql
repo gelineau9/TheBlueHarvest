@@ -22,16 +22,35 @@ CREATE TABLE user_roles (
 INSERT INTO user_roles (role_name) 
 VALUES ('user'), ('admin'), ('moderator');
 
--- relationship Types
-CREATE TABLE relationship_types (
+-- Bidirectional relationship Types
+CREATE TABLE bidirectional_relationship_types (
     type_id SERIAL PRIMARY KEY,
-    type_name VARCHAR(50) UNIQUE NOT NULL,
-    is_bidirectional BOOLEAN DEFAULT FALSE
-)
--- Example relationship_types
-INSERT INTO relationship_types (type_name, is_bidirectional) 
-VALUES ('parent', FALSE), ('child', FALSE), ('friend', TRUE), 
-        ('enemy', TRUE), ('ally', TRUE), ('other', FALSE);
+    type_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example bidirectional relationship types
+INSERT INTO bidirectional_relationship_types (type_name) 
+VALUES ('friend'), ('enemy'), ('ally');
+
+-- Unidirectional relationship Types
+CREATE TABLE unidirectional_relationship_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example unidirectional relationship types
+INSERT INTO unidirectional_relationship_types (type_name) 
+VALUES ('parent'), ('child'), ('other');
+
+
+-- -- relationship Types
+-- CREATE TABLE relationship_types (
+--     type_id SERIAL PRIMARY KEY,
+--     type_name VARCHAR(50) UNIQUE NOT NULL,
+--     is_bidirectional BOOLEAN DEFAULT FALSE
+-- );
+-- -- Example relationship_types
+-- INSERT INTO relationship_types (type_name, is_bidirectional) 
+-- VALUES ('parent', FALSE), ('child', FALSE), ('friend', TRUE), 
+--         ('enemy', TRUE), ('ally', TRUE), ('other', FALSE);
 
 -- post Types
 CREATE TABLE post_types (
