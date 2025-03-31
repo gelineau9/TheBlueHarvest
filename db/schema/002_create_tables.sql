@@ -12,9 +12,9 @@ CREATE TABLE accounts (
     hashed_password VARCHAR(255) NOT NULL,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
-    user_role_id INT REFERENCES user_roles(role_id) NOT NULL DEFAULT 
-                                                            (SELECT role_id FROM user_roles 
-                                                            WHERE role_name = 'user'), 
+    user_role_id INT REFERENCES user_roles(role_id) NOT NULL DEFAULT 1, -- changed subquery to hardcoded value
+    -- (SELECT role_id FROM user_roles 
+    -- WHERE role_name = 'user'), 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),  
     deleted BOOLEAN DEFAULT FALSE
@@ -36,9 +36,9 @@ CREATE TABLE profiles (
 CREATE TABLE posts (
     post_id SERIAL PRIMARY KEY,
     account_id INT REFERENCES accounts(account_id) NOT NULL,
-    post_type_id INT REFERENCES post_types(type_id) NOT NULL DEFAULT 
-                                                            (SELECT type_id FROM post_types 
-                                                            WHERE type_name = 'story'), 
+    post_type_id INT REFERENCES post_types(type_id) NOT NULL DEFAULT 1, -- changed subquery to hardcoded value
+    -- (SELECT type_id FROM post_types 
+    -- WHERE type_name = 'story'), 
     content JSONB NOT NULL, 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),  
@@ -90,19 +90,37 @@ CREATE TABLE comments (
     deleted BOOLEAN DEFAULT FALSE
 );
 
--- Parent relationships Table
+-- Parent relationships Table (no type_id here, as it’s moved to children)
 CREATE TABLE relationships (
     relationship_id SERIAL PRIMARY KEY,
     profile_id_1 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
     profile_id_2 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
-    type_id INT REFERENCES relationship_types(type_id) ON DELETE CASCADE,
     direction relationship_direction NOT NULL
 );
 
 -- Child table: bidirectional
 CREATE TABLE bidirectional_relationships (
+    type_id INT REFERENCES bidirectional_relationship_types(type_id) ON DELETE CASCADE
 ) INHERITS (relationships);
 
--- Child Table: Unidirectional Relationships
+-- Child Table: unidirectional
 CREATE TABLE unidirectional_relationships (
+    type_id INT REFERENCES unidirectional_relationship_types(type_id) ON DELETE CASCADE
 ) INHERITS (relationships);
+
+-- -- Parent relationships Table
+-- CREATE TABLE relationships (
+--     relationship_id SERIAL PRIMARY KEY,
+--     profile_id_1 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
+--     profile_id_2 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
+--     type_id INT REFERENCES relationship_types(type_id) ON DELETE CASCADE,
+--     direction relationship_direction NOT NULL
+-- );
+
+-- -- Child table: bidirectional
+-- CREATE TABLE bidirectional_relationships (
+-- ) INHERITS (relationships);
+
+-- -- Child Table: Unidirectional Relationships
+-- CREATE TABLE unidirectional_relationships (
+-- ) INHERITS (relationships);
