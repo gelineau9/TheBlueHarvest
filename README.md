@@ -1,70 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Blue Harvest
+
+Welcome to The Blue Harvest project! This is a monorepo containing both the frontend and backend applications.
+
+## Structure
+
+- **Frontend**: A Next.js application located in `apps/frontend`.
+- **Backend**: A TypeScript-based Node.js+Express service located in `apps/backend`.
+
+This project uses [Turborepo](https://turbo.build) to manage multiple apps and packages efficiently.
+
+## Prerequisites
+
+- **Node.js**: Version 23.7.0 or higher.
+- **npm**: Version 11.2.0 (specified as the package manager).
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   git clone https://github.com/gelineau9/TheBlueHarvest.git
+   cd TheBlueHarvest
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies (installs both frontend and backend via workspaces):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   npm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Set up environment variables in `apps/frontend/.env` and `apps/backend/.env` (see respective READMEs for details).
 
-## Learn More
+4. Run the development environment:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run build`: Builds all apps and packages.
+- `npm run dev`: Runs all apps in development mode with live reloading.
+- `npm run lint`: Lints all apps and packages.
+- `npm run start`: Starts the built apps (requires build first).
 
-## Deploy on Vercel
+## Configuration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-
-# Blue Harvest
-
-A hobby project built with a custom PERN stack (PostgreSQL, Express.js, React, Node.js). This README outlines the tech setup and hosting plan as of March 3, 2025.
-
-## Tech Stack
-- **Backend**: Node.js + Express
-- **Frontend**: React + Next.js
-- **Database**: PostgreSQL
-- **Hosting**: AWS (EC2, RDS, S3), Nginx
-
----
-
-## Project Overview
-
-- **Goal**: Mirror core features (accounts, profiles, posts, media, comments) with a lean, custom solution.
-- **Stack**: PERN (PostgreSQL, Express.js, React, Node.js) with Nginx as the web server.
-- **Hosting**: AWS Free Tier (EC2 for compute, RDS for PostgreSQL, S3 for media), scaling to paid tiers as performance demands.
-- **Status**: Early days. Database schema drafted, backend and frontend underway.
-- **MVP Focus**: Leverage free tier as much as possible, scale up with traffic/donations.
-
-
----
-
-## Next Steps
-
-1. **Schema Validation**: Refine foreign keys and constraints with test data.
-2. **Backend APIs**: Define endpoints (e.g., `/api/posts`, `/api/media`).
-3. **Frontend**: Finalize wireframes and start React components.
-4. **Hosting**: Confirm budget ($40/month operational cap) and set up AWS.
-5. **MVP Launch**: Target mid-April 2025 with basic CRUD functionality.
-
----
+- Environment variables should be set in each app's directory (e.g., .env files). See `apps/backend/README.md` and `apps/frontend/README.md` for specifics.
+- The .gitignore excludes common build artifacts, node modules, and environment files.
