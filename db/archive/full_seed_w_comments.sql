@@ -4,17 +4,14 @@
 
 INSERT INTO accounts (username, email, hashed_password, first_name, last_name, user_role_id)
 VALUES 
-  ('Deleted-Account', 'bha@example.com', 'hashed_pw0',
-   'Deleted','Account', (SELECT role_id FROM user_roles WHERE role_name = 'admin')),
+  ('Deleted-Account', 'bha@example.com', 'hashed_pw0', 'Deleted', 'Account', 2),
 
-  ('bigbootylover69420', 'bigbootylover69420@example.com', 'hashed_pw_1',
-   'Aranarion', 'ThErAnGeR', (SELECT role_id FROM user_roles WHERE role_name = 'moderator')),
+  ('bigbootylover69420', 'bigbootylover69420@example.com', 'hashed_pw_1', 'Aranarion', 'ThErAnGeR', 3),
 
-  ('darkrider77', 'darkrider77@example.com', 'hashed_pw_2',
-   'Dain', 'Shadowmane', (SELECT role_id FROM user_roles WHERE role_name = 'user')),
+  ('darkrider77', 'darkrider77@example.com', 'hashed_pw_2', 'Dain', 'Shadowmane', 1),
   
-  ('admin_lorien', 'admin@example.com', 'hashed_pw_3', 
-  'Galadriel', 'Admin', (SELECT role_id FROM user_roles WHERE role_name = 'admin'));
+  ('admin_lorien', 'admin@example.com', 'hashed_pw_3', 'Galadriel', 'Admin', 2);
+
 
 ----------------------------------
 -- Profiles Seed
@@ -59,15 +56,15 @@ VALUES
   -- Account id 3 () creates story post 
   -- (this is not what displays, this is the "account owner" of the post)
   (3, (SELECT type_id FROM post_types WHERE type_name = 'story'), 
-  '{"title": "Forging a New Axe", "body": "Thrandor labors in the forge, sparks flying as his hammer strikes true."}'),
+  '{"title": "Forging a New Axe", "body": "Thrandor labors in the forge, sparks flying as his hammer strikes true."}');
 
 INSERT INTO posts (account_id, post_type_id, content, deleted)
 VALUES 
   -- As with the "profiles_seed" example, we would not generate AS deleted = TRUE, this is for demo
-  -- Account id 1 (Deleted-User) "created" recipe post 
+  -- Account id 1 (Deleted-User) creates recipe post 
   -- (this is not what displays, this is the "account owner" of the post)
   (1, (SELECT type_id FROM post_types WHERE type_name = 'recipe'), 
-  '{"title": "Boiled Chicken", "ingredients": ["chicken", "water"], "steps" : ["Bring water to boil.",  "Put chicken in water.",  "Wait until chicken is boiled."]}'),
+  '{"title": "Boiled Chicken", "ingredients": ["chicken", "water"], "steps" : ["Bring water to boil.",  "Put chicken in water.",  "Wait until chicken is boiled."]}', TRUE);
 
 
 ----------------------------------
@@ -151,10 +148,10 @@ VALUES
 -- Inserting bidirectional friendship between Faenor and Thrandor
 INSERT INTO bidirectional_relationships (profile_id_1, profile_id_2, type_id, direction) 
 VALUES 
-    (1, 2, (SELECT type_id FROM relationship_types WHERE type_name = 'friend'), 'both');
+    (1, 2, (SELECT type_id FROM bidirectional_relationship_types WHERE type_name = 'friend'), 'both');
 
 -- Inserting unidirectional parenthood where profile 1 (Faenor) is profile 2's (Thrandor) parent
 -- Don't think about the logistics
 INSERT INTO unidirectional_relationships (profile_id_1, profile_id_2, type_id, direction) 
 VALUES 
-    (1, 2, (SELECT type_id FROM relationship_types WHERE type_name = 'parent'), 'forward');
+    (1, 2, (SELECT type_id FROM unidirectional_relationship_types WHERE type_name = 'parent'), 'forward');
