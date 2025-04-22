@@ -1,7 +1,6 @@
 import Image from "next/image"
 import { Calendar, Menu, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { LeftSidebar } from "@/components/left-side-bar"
 import { RightSidebar } from "@/components/right-sidebar"
@@ -77,9 +76,11 @@ export default function Home() {
 
             {/* Featured Cards - Positioned to overlap the hero background */}
             <div className="relative mx-auto -mt-20 grid max-w-5xl gap-4 px-4 sm:grid-cols-2 lg:grid-cols-3 z-10">
-              {featuredCards.map((card) => (
-                <FeaturedCard key={card.id} title={card.title} subtitle={card.subtitle} imageSrc={card.imageSrc} />
-              ))}
+              <div className="contents">
+                {featuredCards.map((card) => (
+                  <FeaturedCard key={card.id} title={card.title} subtitle={card.subtitle} imageSrc={card.imageSrc} />
+                ))}
+              </div>
             </div>
           </div>
 

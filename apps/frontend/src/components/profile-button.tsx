@@ -11,14 +11,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, Settings, User } from "lucide-react"
+import { AuthDialog } from "./auth/auth-dialog"
+import { useAuth } from "./auth/auth-provider"
 
-interface ProfileButtonProps {
-  isLoggedIn?: boolean
-  username?: string
-  avatarUrl?: string
-}
+export function ProfileButton() {
+  const { isLoggedIn, username, avatarUrl } = useAuth()
 
-export function ProfileButton({ isLoggedIn = false, username = "", avatarUrl = "" }: ProfileButtonProps) {
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Logout failed')
+      }
+
+      // Refresh the page to update auth state
+      window.location.reload()
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,7 +46,7 @@ export function ProfileButton({ isLoggedIn = false, username = "", avatarUrl = "
               <>
                 <AvatarImage src={avatarUrl} alt={username} />
                 <AvatarFallback className="bg-amber-100 text-amber-900">
-                  {username.slice(0, 2).toUpperCase()}
+                  {username?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </>
             ) : (
@@ -63,7 +78,10 @@ export function ProfileButton({ isLoggedIn = false, username = "", avatarUrl = "
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-amber-800/20" />
-            <DropdownMenuItem className="text-amber-900 hover:bg-amber-100">
+            <DropdownMenuItem
+              className="text-amber-900 hover:bg-amber-100"
+              onClick={handleLogout}
+            >
               <LogOut className="mr-2 h-4 w-4 text-amber-700" />
               <span>Log out</span>
             </DropdownMenuItem>
@@ -74,15 +92,19 @@ export function ProfileButton({ isLoggedIn = false, username = "", avatarUrl = "
               <p className="text-sm font-medium leading-none text-amber-900">Account</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-amber-800/20" />
-            <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-              <Link href="/login">
-                <User className="mr-2 h-4 w-4 text-amber-700" />
-                <span>Log in</span>
-              </Link>
+            <DropdownMenuItem asChild className="text-amber-900 ">
+              <AuthDialog
+                trigger={
+                  <div className="flex items-center w-full cursor-pointer hover:bg-amber-100 px-2 py-[6px] gap-2">
+                    <User className="h-4 w-4 text-amber-700 " />
+                    <span className="font-medium leading-none text-amber-900">Log in</span>
+                  </div>
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
               <Link href="/register">
-                <User className="mr-2 h-4 w-4 text-amber-700" />
+                <User className="h-4 w-4 text-amber-700" />
                 <span>Register</span>
               </Link>
             </DropdownMenuItem>
