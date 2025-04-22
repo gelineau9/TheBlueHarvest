@@ -20,16 +20,35 @@ CREATE TABLE user_roles (
 INSERT INTO user_roles (role_name) 
 VALUES ('user'), ('admin'), ('moderator');
 
--- relationship Types
-CREATE TABLE relationship_types (
+-- Bidirectional relationship Types
+CREATE TABLE bidirectional_relationship_types (
     type_id SERIAL PRIMARY KEY,
-    type_name VARCHAR(50) UNIQUE NOT NULL,
-    is_bidirectional BOOLEAN DEFAULT FALSE
-)
--- Example relationship_types
-INSERT INTO relationship_types (type_name, is_bidirectional) 
-VALUES ('parent', FALSE), ('child', FALSE), ('friend', TRUE), 
-        ('enemy', TRUE), ('ally', TRUE), ('other', FALSE);
+    type_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example bidirectional relationship types
+INSERT INTO bidirectional_relationship_types (type_name) 
+VALUES ('friend'), ('enemy'), ('ally');
+
+-- Unidirectional relationship Types
+CREATE TABLE unidirectional_relationship_types (
+    type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(50) UNIQUE NOT NULL
+);
+-- Example unidirectional relationship types
+INSERT INTO unidirectional_relationship_types (type_name) 
+VALUES ('parent'), ('child'), ('other');
+
+
+-- -- relationship Types
+-- CREATE TABLE relationship_types (
+--     type_id SERIAL PRIMARY KEY,
+--     type_name VARCHAR(50) UNIQUE NOT NULL,
+--     is_bidirectional BOOLEAN DEFAULT FALSE
+-- );
+-- -- Example relationship_types
+-- INSERT INTO relationship_types (type_name, is_bidirectional) 
+-- VALUES ('parent', FALSE), ('child', FALSE), ('friend', TRUE), 
+--         ('enemy', TRUE), ('ally', TRUE), ('other', FALSE);
 
 -- post Types
 CREATE TABLE post_types (
@@ -42,6 +61,13 @@ INSERT INTO post_types (type_name, type_description)
 VALUES ('story', 'A narrative post'), ('art', 'Visual artwork'), 
         ('recipe', 'Cooking instructions'), ('event', 'Post describing an event'),
         ('other', 'Miscellaneous content');
+
+
+----------------------------------
+-- Custom ENUMs
+----------------------------------
+
+CREATE TYPE relationship_direction AS ENUM ('forward', 'backward', 'both');
 
 ----------------------------------
 -- Data tables
@@ -151,15 +177,6 @@ CREATE TABLE comments (
     deleted BOOLEAN DEFAULT FALSE         -- for soft deletion
 );
 
-----------------------------------
--- Relationship tables (not originally intended for MVP)
-----------------------------------
-
--- Relationship direction type
--- 'forward' means profile_id_1 to profile_id_2
--- 'backward' means profile_id_2 to profile_id_1
--- 'both' means bidirectional
-CREATE TYPE relationship_direction AS ENUM ('forward', 'backward', 'both');
 
 -- Explanation of relationships table:
 -- redesign of relationships to leverage inheritance to enforce directionality while keeping things elegant and simple for querying (you're welcome devs)
@@ -173,34 +190,22 @@ CREATE TYPE relationship_direction AS ENUM ('forward', 'backward', 'both');
 -- trying to insert into the wrong child table (e.g. 'parent' into bidirectional_relationships) will fail because of the CHECK constraints.
 
 
--- parent relationships Table
+-- Parent relationships Table (no type_id here, as it’s moved to children)
 CREATE TABLE relationships (
     relationship_id SERIAL PRIMARY KEY,
     profile_id_1 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
     profile_id_2 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
-    type_id INT REFERENCES relationship_types(type_id) ON DELETE CASCADE,
-    direction relationship_direction NOT NULL,
-    CHECK (profile_id_1 < profile_id_2)
+    direction relationship_direction NOT NULL
 );
 
 -- Child table: bidirectional
 CREATE TABLE bidirectional_relationships (
-    CHECK (direction = 'both'),
-    --Ensure type_id references only bidirectional types
-    CONSTRAINT bidirectional_type CHECK (
-        EXISTS (SELECT 1 FROM relationship_types rt WHERE rt.type_id = bidirectional_relationships.type_id AND rt.is_bidirectional = TRUE),
-    ),
-    UNIQUE (profile_id_1, profile_id_2, type_id)
+    type_id INT REFERENCES bidirectional_relationship_types(type_id) ON DELETE CASCADE
 ) INHERITS (relationships);
 
--- Child Table: Unidirectional Relationships
+-- Child Table: unidirectional
 CREATE TABLE unidirectional_relationships (
-    CHECK (direction IN ('forward', 'backward')),
-    -- Ensure type_id references only unidirectional types
-    CONSTRAINT unidirectional_type CHECK (
-        EXISTS (SELECT 1 FROM relationship_types rt WHERE rt.type_id = unidirectional_relationships.type_id AND rt.is_bidirectional = FALSE)
-    ),
-    UNIQUE (profile_id_1, profile_id_2, type_id, direction)
+    type_id INT REFERENCES unidirectional_relationship_types(type_id) ON DELETE CASCADE
 ) INHERITS (relationships);
 
 
@@ -209,7 +214,7 @@ CREATE TABLE unidirectional_relationships (
 -- Indexes
 ----------------------------------
 
--- GIN indexes for our JSONB columns
+-- GIN indexes for JSONB columns
 CREATE INDEX idx_profiles_details ON profiles USING GIN (details);
 CREATE INDEX idx_posts_content ON posts USING GIN (content);
 
@@ -219,35 +224,35 @@ CREATE INDEX idx_posts_account_id ON posts (account_id); -- fetch all posts by a
 CREATE INDEX idx_comments_post_id ON comments (post_id); -- fetch all comments for a specific post (WHERE post_id = X) often
 
 -- Media indexes
-CREATE INDEX idx_media_post_id ON media (post_id);
-CREATE INDEX idx_media_profile_id ON media (profile_id);
-CREATE INDEX idx_media_account_id ON media (account_id);
+CREATE INDEX idx_media_post_id ON post_media (post_id);
+CREATE INDEX idx_media_profile_id ON profile_media (profile_id);
+CREATE INDEX idx_media_account_id ON account_media (account_id);
+CREATE INDEX idx_media_filename ON media (filename);
 
--- Relationships indexes since child tables don't automatically get indexed based on parent
+-- Relationships indexes
 CREATE INDEX idx_bidirectional_profile_id_1 ON bidirectional_relationships (profile_id_1);
 CREATE INDEX idx_bidirectional_profile_id_2 ON bidirectional_relationships (profile_id_2);
 CREATE INDEX idx_unidirectional_profile_id_1 ON unidirectional_relationships (profile_id_1);
 CREATE INDEX idx_unidirectional_profile_id_2 ON unidirectional_relationships (profile_id_2);
 
--- Sorting by created_at to find most recent
+-- Sorting by created_at
 CREATE INDEX idx_profiles_created_at ON profiles (created_at);
 CREATE INDEX idx_posts_created_at ON posts (created_at);
 CREATE INDEX idx_comments_created_at ON comments (created_at);
 
-
--- Sorting by updated_at to find most recent updates
+-- Sorting by updated_at
 CREATE INDEX idx_profiles_updated_at ON profiles (updated_at);
 CREATE INDEX idx_posts_updated_at ON posts (updated_at);
 CREATE INDEX idx_comments_updated_at ON comments (updated_at);
 
--- Index post_type_id to speed up filtering by type as posts table grows
+-- Index post_type_id
 CREATE INDEX idx_posts_post_type_id ON posts (post_type_id);
 
 ----------------------------------
 -- Triggers
 ----------------------------------
 
--- Trigger function to update the updated_at field for all tables
+-- Trigger function to update the updated_at field
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -256,38 +261,65 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for updating accounts updated_at field
+-- Trigger for accounts
 CREATE TRIGGER update_accounts_updated_at
 BEFORE UPDATE ON accounts
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
--- Trigger for updating profiles updated_at field
+-- Trigger for profiles
 CREATE TRIGGER update_profiles_updated_at
 BEFORE UPDATE ON profiles
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
--- Trigger for updating posts updated_at field
+-- Trigger for posts
 CREATE TRIGGER update_posts_updated_at
 BEFORE UPDATE ON posts
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
--- Trigger for updating media updated_at field
+-- Trigger for media
 CREATE TRIGGER update_media_updated_at
 BEFORE UPDATE ON media
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
--- Trigger for updating comments updated_at field
+-- Trigger for comments
 CREATE TRIGGER update_comments_updated_at
 BEFORE UPDATE ON comments
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
 
--- Trigger for updating authors updated_at field
+-- Trigger for authors
 CREATE TRIGGER update_authors_updated_at
 BEFORE UPDATE ON authors
 FOR EACH ROW
 EXECUTE PROCEDURE update_modified_column();
+
+----------------------------------
+-- Constraints
+----------------------------------
+
+-- profiles Table
+ALTER TABLE profiles
+ADD CONSTRAINT unique_account_name UNIQUE (account_id, name);
+
+-- authors Table
+ALTER TABLE authors
+ADD CONSTRAINT unique_post_profile UNIQUE (post_id, profile_id);
+CREATE UNIQUE INDEX unique_primary_author ON authors (post_id) WHERE is_primary = TRUE;
+
+-- relationships Table
+ALTER TABLE relationships
+ADD CONSTRAINT profile_id_order CHECK (profile_id_1 < profile_id_2);
+
+-- bidirectional_relationships Table
+ALTER TABLE bidirectional_relationships
+ADD CONSTRAINT direction_both CHECK (direction = 'both'),
+ADD CONSTRAINT unique_bidirectional UNIQUE (profile_id_1, profile_id_2, type_id);
+
+-- unidirectional_relationships Table
+ALTER TABLE unidirectional_relationships
+ADD CONSTRAINT direction_single CHECK (direction IN ('forward', 'backward')),
+ADD CONSTRAINT unique_unidirectional UNIQUE (profile_id_1, profile_id_2, type_id, direction);

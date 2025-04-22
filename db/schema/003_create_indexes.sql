@@ -14,9 +14,10 @@ CREATE INDEX idx_posts_account_id ON posts (account_id);
 CREATE INDEX idx_comments_post_id ON comments (post_id);
 
 -- Media indexes
-CREATE INDEX idx_media_post_id ON media (post_id);
-CREATE INDEX idx_media_profile_id ON media (profile_id);
-CREATE INDEX idx_media_account_id ON media (account_id);
+CREATE INDEX idx_media_post_id ON post_media (post_id);
+CREATE INDEX idx_media_profile_id ON profile_media (profile_id);
+CREATE INDEX idx_media_account_id ON account_media (account_id);
+CREATE INDEX idx_media_filename ON media (filename);
 
 -- Relationships indexes
 CREATE INDEX idx_bidirectional_profile_id_1 ON bidirectional_relationships (profile_id_1);
