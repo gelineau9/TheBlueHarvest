@@ -24,9 +24,9 @@ export function ProfileButton({ isLoggedIn = false, username = "", avatarUrl = "
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full bg-amber-50/30 backdrop-blur-sm hover:bg-amber-50/50"
+          className="relative h-10 w-10 rounded-full bg-amber-50/30 backdrop-blur-sm hover:bg-amber-50/50 cursor-pointer"
         >
-          <Avatar className="h-10 w-10 border-2 border-amber-800/20">
+          <Avatar className="h-10 w-10 border border-amber-800/20">
             {isLoggedIn ? (
               <>
                 <AvatarImage src={avatarUrl} alt={username} />
