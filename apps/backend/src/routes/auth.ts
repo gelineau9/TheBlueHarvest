@@ -7,9 +7,50 @@ import {User} from '../types';
 
 const router = Router();
 
+router.post('/signup', async (req: Request, res: Response) => {
+  const { email, username, password, first_name, last_name } = req.body;
 
+  if (!email || !username || !password) {
+    return res.status(400).json({ message: 'Email, username, and password are required.' });
+  }
+
+  try {
+    // Check if user already exists
+    const existing = await pool.query(sql`
+      SELECT 1 FROM accounts WHERE email = ${email} OR username = ${username}
+    `);
+
+    if (existing.rowCount > 0) {
+      return res.status(409).json({ message: 'User with that email or username already exists.' });
+    }
+
+    // Hash password
+    const hashedPassword = await argon2.hash(password);
+
+    // Insert new user
+    const result = await pool.query(sql`
+      INSERT INTO accounts (email, username, hashed_password, first_name, last_name)
+      VALUES (${email}, ${username}, ${hashedPassword}, ${first_name}, ${last_name})
+      RETURNING account_id
+    `);
+
+    const userId = result.rows[0].account_id;
+
+    // Issue JWT
+    const token = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET!,
+      { expiresIn: '1h' }
+    );
+
+    return res.status(201).json({ token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 //login post request
-router.post('./login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
     const {user, password} = req.body;
 
     try{
@@ -22,11 +63,10 @@ router.post('./login', async (req: Request, res: Response) => {
         if(!isValid) return res.status(400).json({message: 'message'});
 
         const token = jwt.sign(
-            //not sure what to do here
-            { userId: user.account_id},
-            //env variable for secret key,
-            { expiresIn: '1h'}
-        );
+            { userId: user.account_id },
+            process.env.JWT_SECRET!,
+            { expiresIn: '1h' }
+    );
 
         return res.json({token});
     } catch(err) {
