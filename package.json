@@ -15,6 +15,9 @@
     "turbo": "latest"
   },
   "dependencies": {
+    "@types/node": "^24.0.10",
+    "dotenv": "^17.0.1",
+    "express-validator": "^7.2.1",
     "pg": "^8.16.3",
     "slonik": "^47.3.2"
   }
