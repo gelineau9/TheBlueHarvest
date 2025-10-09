@@ -1,7 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { loginSchema, registerSchema } from './validations'
+import { loginSchema, registerSchema, profileUpdateSchema } from './validations'
 import { API_CONFIG } from '@/config/api'
 
 export async function login(formData: FormData) {
@@ -135,6 +135,61 @@ export async function register(formData: FormData) {
     return { success: true }
   } catch (error) {
     console.error('Registration action error:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+export async function updateProfile(formData: FormData) {
+  try {
+    const username = formData.get('username')
+    const firstName = formData.get('firstName')
+    const lastName = formData.get('lastName')
+
+    // Validate input
+    const result = profileUpdateSchema.safeParse({
+      username: username || undefined,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined
+    })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error.errors[0].message
+      }
+    }
+
+    // Get auth token
+    const cookieStore = await cookies()
+    const authToken = cookieStore.get('auth_token')
+
+    if (!authToken) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    // Call backend API
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken.value}`,
+      },
+      body: JSON.stringify({
+        username: result.data.username,
+        firstName: result.data.firstName,
+        lastName: result.data.lastName
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      return { success: false, error: data.message || 'Profile update failed' }
+    }
+
+    const data = await response.json()
+    return { success: true, user: data }
+  } catch (error) {
+    console.error('Profile update error:', error)
     return { success: false, error: 'An unexpected error occurred' }
   }
 }

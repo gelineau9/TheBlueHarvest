@@ -181,4 +181,93 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
+// Update user profile
+router.put('/profile', [
+  body('username')
+    .optional()
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage('Username must be at least 3 characters long.'),
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('First name is required.'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Last name is required.'),
+],
+async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      res.status(401).json({ message: 'No token provided' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+    const pool = await getPool();
+
+    const { username, firstName, lastName } = req.body;
+
+    // Check if username is already taken by another user
+    if (username) {
+      const existingUser = await pool.maybeOne(sql.unsafe`
+        SELECT account_id FROM accounts
+        WHERE username = ${username} AND account_id != ${decoded.userId}
+      `);
+
+      if (existingUser) {
+        res.status(409).json({ message: 'Username already taken' });
+        return;
+      }
+    }
+
+    // Update user profile
+    const updateFragments = [];
+
+    if (username) {
+      updateFragments.push(sql.fragment`username = ${username}`);
+    }
+    if (firstName) {
+      updateFragments.push(sql.fragment`first_name = ${firstName}`);
+    }
+    if (lastName) {
+      updateFragments.push(sql.fragment`last_name = ${lastName}`);
+    }
+
+    if (updateFragments.length === 0) {
+      res.status(400).json({ message: 'No fields to update' });
+      return;
+    }
+
+    const result = await pool.one(sql.unsafe`
+      UPDATE accounts
+      SET ${sql.join(updateFragments, sql.fragment`, `)}
+      WHERE account_id = ${decoded.userId}
+      RETURNING account_id, username, first_name, last_name, email
+    `);
+
+    res.json({
+      id: result.account_id,
+      username: result.username,
+      firstName: result.first_name,
+      lastName: result.last_name,
+      email: result.email
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
