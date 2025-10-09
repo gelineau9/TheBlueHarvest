@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getSession } from '@/app/lib/actions'
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const authToken = cookieStore.get('auth_token')
+    const session = await getSession()
 
-    if (!authToken) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ isLoggedIn: false }, { status: 401 })
     }
 
-    // TODO: Replace with actual API call to backend
-    // For now, we'll use the sample user from the seed data
     return NextResponse.json({
       isLoggedIn: true,
-      username: 'Legolas',
+      username: session.username,
+      firstName: session.firstName,
+      lastName: session.lastName,
+      email: session.email,
       avatarUrl: '',
     })
   } catch (err) {

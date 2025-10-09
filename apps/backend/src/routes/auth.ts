@@ -158,7 +158,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const pool = await getPool();
 
     const user = await pool.one(sql.unsafe`
-      SELECT account_id, username, first_name, last_name
+      SELECT account_id, username, first_name, last_name, email
       FROM accounts
       WHERE account_id = ${decoded.userId}
     `);
@@ -172,7 +172,8 @@ router.get('/me', async (req: Request, res: Response) => {
       id: user.account_id,
       username: user.username,
       firstName: user.first_name,
-      lastName: user.last_name
+      lastName: user.last_name,
+      email: user.email
     });
   } catch (err) {
     console.error(err);

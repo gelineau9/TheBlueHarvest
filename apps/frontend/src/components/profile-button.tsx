@@ -15,7 +15,7 @@ import { AuthDialog } from "./auth/auth-dialog"
 import { useAuth } from "./auth/auth-provider"
 
 export function ProfileButton() {
-  const { isLoggedIn, username, avatarUrl } = useAuth()
+  const { isLoggedIn, username, avatarUrl, email } = useAuth()
 
   const handleLogout = async () => {
     try {
@@ -65,7 +65,7 @@ export function ProfileButton() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none text-amber-900">{username}</p>
-                <p className="text-xs leading-none text-amber-700">user@example.com</p>
+                <p className="text-xs leading-none text-amber-700">{email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-amber-800/20" />

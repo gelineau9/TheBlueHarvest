@@ -1,7 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { loginSchema } from './validations'
+import { loginSchema, registerSchema } from './validations'
 import { API_CONFIG } from '@/config/api'
 
 export async function login(formData: FormData) {
@@ -69,6 +69,76 @@ export async function logout() {
   return { success: true }
 }
 
+export async function register(formData: FormData) {
+  try {
+    const email = formData.get('email')
+    const username = formData.get('username')
+    const password = formData.get('password')
+    const firstName = formData.get('first_name')
+    const lastName = formData.get('last_name')
+
+    // Validate input
+    const result = registerSchema.safeParse({
+      email,
+      username,
+      password,
+      confirmPassword: password, // For validation, we'll use the same password
+      firstName,
+      lastName
+    })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error.errors[0].message
+      }
+    }
+
+    // Call backend API
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/signup`)
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        username,
+        password,
+        first_name: firstName,
+        last_name: lastName
+      }),
+    })
+
+    console.log('Backend response status:', response.status)
+
+    if (!response.ok) {
+      const data = await response.json()
+      console.log('Backend error:', data)
+      return { success: false, error: data.message || 'Registration failed' }
+    }
+
+    const data = await response.json()
+    console.log('Backend success data:', data)
+
+    const cookieStore = await cookies()
+    await cookieStore.set({
+      name: 'auth_token',
+      value: data.token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    })
+
+    console.log('Cookie set successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('Registration action error:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
 export async function getSession() {
   try {
     const cookieStore = await cookies()
@@ -95,13 +165,13 @@ export async function getSession() {
     }
 
     const data = await response.json()
-    console.log('Backend /me success data:', data)
 
     return {
       isLoggedIn: true,
       username: data.username,
       firstName: data.firstName,
       lastName: data.lastName,
+      email: data.email,
     }
   } catch (error) {
     console.error('Get session error:', error)
