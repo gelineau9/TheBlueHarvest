@@ -115,8 +115,8 @@ async (req: Request, res: Response) => {
       return;
     }
 
-    // Verify password (temporary simple check for testing)
-    const isValid = user.hashed_password === password;
+    // Verify password
+    const isValid = await argon2.verify(user.hashed_password, password);
     if (!isValid) {
       res.status(401).json({ message: 'Invalid email or password' });
       return;
