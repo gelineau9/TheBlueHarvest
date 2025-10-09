@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: secondbreakfast
       POSTGRES_DB: bha_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./db/schema:/docker-entrypoint-initdb.d/
     healthcheck:
@@ -15,3 +15,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: bha-backend
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_USER=merry
+      - DB_PASSWORD=secondbreakfast
+      - DB_NAME=bha_db
+      - DB_PORT=5432
+      - JWT_SECRET=yourjwtsecret
+      - PORT=4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: bha-frontend
+    environment:
+      - NODE_ENV=development
+      - BACKEND_URL=http://backend:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next

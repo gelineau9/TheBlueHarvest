@@ -1,7 +1,8 @@
 import { createPool, DatabasePool } from 'slonik';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '../../.env' });
+dotenv.config();
+
 const {
   DB_USER,
   DB_PASSWORD,

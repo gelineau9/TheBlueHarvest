@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { loginSchema } from './validations'
+import { API_CONFIG } from '@/config/api'
 
 export async function login(formData: FormData) {
   try {
@@ -17,23 +18,39 @@ export async function login(formData: FormData) {
       }
     }
 
-    // TODO: Replace with actual API call to backend
-    // For now, we'll use the test user
-    if (email === 'test@test.com' && password === 'admin12345') {
-      const cookieStore = await cookies()
-      await cookieStore.set({
-        name: 'auth_token',
-        value: 'sample-token',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 24 * 7 // 1 week
-      })
+    // Call backend API
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/login`)
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    })
 
-      return { success: true }
+    console.log('Backend response status:', response.status)
+
+    if (!response.ok) {
+      const data = await response.json()
+      console.log('Backend error:', data)
+      return { success: false, error: data.message || 'Login failed' }
     }
 
-    return { success: false, error: 'Invalid email or password' }
+    const data = await response.json()
+    console.log('Backend success data:', data)
+
+    const cookieStore = await cookies()
+    await cookieStore.set({
+      name: 'auth_token',
+      value: data.token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    })
+
+    console.log('Cookie set successfully')
+    return { success: true }
   } catch (error) {
     console.error('Login action error:', error)
     return { success: false, error: 'An unexpected error occurred' }
@@ -53,18 +70,41 @@ export async function logout() {
 }
 
 export async function getSession() {
-  const cookieStore = await cookies()
-  const authToken = cookieStore.get('auth_token')
+  try {
+    const cookieStore = await cookies()
+    const authToken = cookieStore.get('auth_token')
 
-  if (!authToken) {
+    console.log('Auth token exists:', !!authToken)
+
+    if (!authToken) {
+      return { isLoggedIn: false }
+    }
+
+    // Call backend API
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/me`)
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`,
+      },
+    })
+
+    console.log('Backend /me response status:', response.status)
+
+    if (!response.ok) {
+      return { isLoggedIn: false }
+    }
+
+    const data = await response.json()
+    console.log('Backend /me success data:', data)
+
+    return {
+      isLoggedIn: true,
+      username: data.username,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    }
+  } catch (error) {
+    console.error('Get session error:', error)
     return { isLoggedIn: false }
-  }
-
-  // TODO: Replace with actual API call to backend
-  // For now, we'll use the sample user from the seed data
-  return {
-    isLoggedIn: true,
-    username: 'Legolas',
-    avatarUrl: '',
   }
 }
