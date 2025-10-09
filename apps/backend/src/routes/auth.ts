@@ -42,7 +42,7 @@ router.post('/signup', [
       const pool = await getPool();
 
       // Check for existing user
-      const existing = await pool.one(sql.unsafe`
+      const existing = await pool.maybeOne(sql.unsafe`
         SELECT 1 FROM accounts WHERE email = ${email}
         OR username = ${username}
       `);
