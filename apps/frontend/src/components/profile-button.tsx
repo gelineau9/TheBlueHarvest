@@ -15,7 +15,7 @@ import { AuthDialog } from "./auth/auth-dialog"
 import { useAuth } from "./auth/auth-provider"
 
 export function ProfileButton() {
-  const { isLoggedIn, username, avatarUrl, email } = useAuth()
+  const { isLoggedIn, isLoading, username, avatarUrl, email } = useAuth()
 
   const handleLogout = async () => {
     try {
@@ -42,7 +42,11 @@ export function ProfileButton() {
           className="relative h-10 w-10 rounded-full bg-amber-50/30 backdrop-blur-sm hover:bg-amber-50/50 cursor-pointer"
         >
           <Avatar className="h-10 w-10 border border-amber-800/20">
-            {isLoggedIn ? (
+            {isLoading ? (
+              <AvatarFallback className="bg-amber-100 text-amber-900">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-600 border-t-transparent"></div>
+              </AvatarFallback>
+            ) : isLoggedIn ? (
               <>
                 <AvatarImage src={avatarUrl} alt={username} />
                 <AvatarFallback className="bg-amber-100 text-amber-900">
@@ -60,7 +64,14 @@ export function ProfileButton() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 border-amber-800/20 bg-amber-50" align="end" forceMount>
-        {isLoggedIn ? (
+        {isLoading ? (
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-600 border-t-transparent"></div>
+              <p className="text-sm font-medium leading-none text-amber-900">Loading...</p>
+            </div>
+          </DropdownMenuLabel>
+        ) : isLoggedIn ? (
           <>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">

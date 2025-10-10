@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 
 interface AuthContextType {
   isLoggedIn: boolean
+  isLoading: boolean
   username?: string
   avatarUrl?: string
   email?: string
@@ -14,10 +15,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
+  isLoading: true,
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authState, setAuthState] = useState<AuthContextType>({ isLoggedIn: false })
+  const [authState, setAuthState] = useState<AuthContextType>({
+    isLoggedIn: false,
+    isLoading: true
+  })
   const pathname = usePathname()
 
   const checkAuth = async () => {
@@ -27,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json()
         setAuthState({
           isLoggedIn: true,
+          isLoading: false,
           username: data.username,
           avatarUrl: data.avatarUrl,
           email: data.email,
@@ -34,11 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastName: data.lastName,
         })
       } else {
-        setAuthState({ isLoggedIn: false })
+        setAuthState({ isLoggedIn: false, isLoading: false })
       }
     } catch (err) {
       console.error('Auth check error:', err)
-      setAuthState({ isLoggedIn: false })
+      setAuthState({ isLoggedIn: false, isLoading: false })
     }
   }
 
