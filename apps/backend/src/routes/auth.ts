@@ -42,6 +42,7 @@ router.post('/signup', [
       const pool = await getPool();
 
       // Check for existing user
+      // TODO: Add types so we can remove unsafe
       const existing = await pool.maybeOne(sql.unsafe`
         SELECT 1 FROM accounts WHERE email = ${email}
         OR username = ${username}
@@ -56,6 +57,7 @@ router.post('/signup', [
       const hashedPassword = await argon2.hash(password);
 
       // Create user
+      // TODO: Add types so we can remove unsafe
       const result = await pool.one(sql.unsafe`
         INSERT INTO accounts (email, username, hashed_password, first_name, last_name, user_role_id)
         VALUES (${email}, ${username}, ${hashedPassword}, ${first_name}, ${last_name}, 1)
@@ -104,6 +106,7 @@ async (req: Request, res: Response) => {
     const pool = await getPool();
 
     // Find user
+    // TODO: Add types so we can remove unsafe
     const user = await pool.one(sql.unsafe`
       SELECT account_id, hashed_password, username, first_name, last_name
       FROM accounts
@@ -157,6 +160,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
     const pool = await getPool();
 
+    // TODO: Add types so we can remove unsafe
     const user = await pool.one(sql.unsafe`
       SELECT account_id, username, first_name, last_name, email
       FROM accounts
@@ -221,6 +225,7 @@ async (req: Request, res: Response) => {
 
     // Check if username is already taken by another user
     if (username) {
+      // TODO: Add types so we can remove unsafe
       const existingUser = await pool.maybeOne(sql.unsafe`
         SELECT account_id FROM accounts
         WHERE username = ${username} AND account_id != ${decoded.userId}
@@ -250,6 +255,7 @@ async (req: Request, res: Response) => {
       return;
     }
 
+    // TODO: Add types so we can remove unsafe
     const result = await pool.one(sql.unsafe`
       UPDATE accounts
       SET ${sql.join(updateFragments, sql.fragment`, `)}
