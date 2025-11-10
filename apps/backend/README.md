@@ -41,7 +41,7 @@ The project relies on the following dependencies:
    DB_USER=username
    DB_PASSWORD=yourpassword
    DB_NAME=theblueharvest
-   DB_PORT=5432
+   DB_PORT=5433
    JWT_SECRET=yourjwtsecret
    PORT=4000
    NODE_ENV=development

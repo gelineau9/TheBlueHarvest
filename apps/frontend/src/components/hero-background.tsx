@@ -11,7 +11,7 @@ export function HeroBackground() {
         src="/hero-image.jpeg"
         alt="Middle-earth landscape"
         fill
-        className="object-cover object-[center_80%]"
+        className="object-cover object-[center_90%]"
         priority
       />
 

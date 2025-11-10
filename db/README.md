@@ -51,7 +51,7 @@ These files will be used to set up and maintain the database for the project.
    DB_USER=merry
    DB_PASSWORD=secondbreakfast
    DB_NAME=bha_db
-   DB_PORT=5432
+   DB_PORT=5433
    . . .
    ```
 
