@@ -1,0 +1,27 @@
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.turbo/
+coverage/
+
+# Next.js build artifacts
+apps/frontend/.next/
+apps/frontend/out/
+
+# Express build artifacts
+apps/backend/dist/
+apps/backend/build/
+
+# Lockfiles and logs
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+*.log
+
+# Env/config artifacts
+.env
+.env.*
