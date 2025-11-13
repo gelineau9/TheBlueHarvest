@@ -1,8 +1,8 @@
 // /apps/backend/src/index.ts
 
-import express, { Request, Response } from "express";
-import dotenv from "dotenv";
-import authRoutes from "./routes/auth";
+import express, { Request, Response } from 'express';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth';
 
 // Load environment variables
 dotenv.config();
@@ -18,8 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 
 //Basic route
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Welcome to the BHA Backend!" });
+app.get('/', (req: Request, res: Response) => {
+  res.json({ message: 'Welcome to the BHA Backend!' });
 });
 
 app.listen(PORT, () => {

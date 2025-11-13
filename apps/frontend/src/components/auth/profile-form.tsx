@@ -1,24 +1,26 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { profileUpdateSchema, type ProfileUpdateInput } from '@/app/lib/validations'
-import { useAuth } from './auth-provider'
-import Link from 'next/link'
+import { useState, useEffect } from 'react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { profileUpdateSchema, type ProfileUpdateInput } from '@/app/lib/validations';
+import { useAuth } from './auth-provider';
+import Link from 'next/link';
 
 export function ProfileForm() {
-  const { username, firstName, lastName, email } = useAuth()
+  const { username, firstName, lastName, email } = useAuth();
   const [formData, setFormData] = useState<ProfileUpdateInput>({
     username: '',
     firstName: '',
-    lastName: ''
-  })
-  const [errors, setErrors] = useState<Partial<Record<keyof ProfileUpdateInput, string>> & { general?: string }>({})
-  const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+    lastName: '',
+  });
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ProfileUpdateInput, string>> & { general?: string }
+  >({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   // Initialize form with current user data
   useEffect(() => {
@@ -26,28 +28,28 @@ export function ProfileForm() {
       setFormData({
         username,
         firstName,
-        lastName
-      })
+        lastName,
+      });
     }
-  }, [username, firstName, lastName])
+  }, [username, firstName, lastName]);
 
   const handleInputChange = (field: keyof ProfileUpdateInput, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setErrors({})
-    setSuccess(false)
+    e.preventDefault();
+    setIsLoading(true);
+    setErrors({});
+    setSuccess(false);
 
     try {
       // Validate form data
-      const validatedData = profileUpdateSchema.parse(formData)
+      const validatedData = profileUpdateSchema.parse(formData);
 
       const response = await fetch('/api/auth/profile', {
         method: 'POST',
@@ -55,36 +57,36 @@ export function ProfileForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(validatedData),
-      })
+      });
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Profile update failed')
+        const data = await response.json();
+        throw new Error(data.error || 'Profile update failed');
       }
 
-      setSuccess(true)
+      setSuccess(true);
       // Refresh the page to update auth state
       setTimeout(() => {
-        window.location.reload()
-      }, 1500)
+        window.location.reload();
+      }, 1500);
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
         // Handle validation errors
-        const zodError = err as any
-        const fieldErrors: Partial<Record<keyof ProfileUpdateInput, string>> = {}
+        const zodError = err as any;
+        const fieldErrors: Partial<Record<keyof ProfileUpdateInput, string>> = {};
         zodError.errors?.forEach((error: any) => {
           if (error.path[0]) {
-            fieldErrors[error.path[0] as keyof ProfileUpdateInput] = error.message
+            fieldErrors[error.path[0] as keyof ProfileUpdateInput] = error.message;
           }
-        })
-        setErrors(fieldErrors)
+        });
+        setErrors(fieldErrors);
       } else {
-        setErrors({ general: err instanceof Error ? err.message : 'Profile update failed' })
+        setErrors({ general: err instanceof Error ? err.message : 'Profile update failed' });
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -97,7 +99,9 @@ export function ProfileForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-amber-900">Email</Label>
+            <Label htmlFor="email" className="text-amber-900">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
@@ -109,7 +113,9 @@ export function ProfileForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-amber-900">Username</Label>
+            <Label htmlFor="username" className="text-amber-900">
+              Username
+            </Label>
             <Input
               id="username"
               value={formData.username || ''}
@@ -118,14 +124,14 @@ export function ProfileForm() {
               className="text-amber-900"
               aria-invalid={!!errors.username}
             />
-            {errors.username && (
-              <p className="text-sm text-red-500">{errors.username}</p>
-            )}
+            {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-amber-900">First Name</Label>
+              <Label htmlFor="firstName" className="text-amber-900">
+                First Name
+              </Label>
               <Input
                 id="firstName"
                 value={formData.firstName || ''}
@@ -134,12 +140,12 @@ export function ProfileForm() {
                 className="text-amber-900"
                 aria-invalid={!!errors.firstName}
               />
-              {errors.firstName && (
-                <p className="text-sm text-red-500">{errors.firstName}</p>
-              )}
+              {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-amber-900">Last Name</Label>
+              <Label htmlFor="lastName" className="text-amber-900">
+                Last Name
+              </Label>
               <Input
                 id="lastName"
                 value={formData.lastName || ''}
@@ -148,9 +154,7 @@ export function ProfileForm() {
                 className="text-amber-900"
                 aria-invalid={!!errors.lastName}
               />
-              {errors.lastName && (
-                <p className="text-sm text-red-500">{errors.lastName}</p>
-              )}
+              {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
             </div>
           </div>
 
@@ -174,5 +178,5 @@ export function ProfileForm() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

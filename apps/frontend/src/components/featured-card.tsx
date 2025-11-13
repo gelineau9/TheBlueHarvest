@@ -1,11 +1,11 @@
-import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import Link from "next/link"
+import Image from 'next/image';
+import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
 
 interface FeaturedCardProps {
-  title: string
-  subtitle: string
-  imageSrc: string
+  title: string;
+  subtitle: string;
+  imageSrc: string;
 }
 
 export function FeaturedCard({ title, subtitle, imageSrc }: FeaturedCardProps) {
@@ -14,7 +14,7 @@ export function FeaturedCard({ title, subtitle, imageSrc }: FeaturedCardProps) {
       <Card className="grid h-full grid-rows-subgrid overflow-hidden border-amber-800/20 bg-amber-50/90 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
         <div className="relative h-48">
           <Image
-            src={imageSrc || "/placeholder.svg"}
+            src={imageSrc || '/placeholder.svg'}
             alt={title}
             fill
             className="object-cover transition-transform duration-500 hover:scale-105"
@@ -27,5 +27,5 @@ export function FeaturedCard({ title, subtitle, imageSrc }: FeaturedCardProps) {
         </CardContent>
       </Card>
     </Link>
-  )
+  );
 }
