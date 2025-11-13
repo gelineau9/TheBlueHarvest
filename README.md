@@ -1,14 +1,17 @@
 # The Blue Harvest
 
-Welcome to The Blue Harvest project! This is a monorepo containing both the frontend and backend applications with a complete authentication system.
+Welcome to The Blue Harvest project! This is a monorepo containing both the
+frontend and backend applications with a complete authentication system.
 
 ## Structure
 
 - **Frontend**: A Next.js application located in `apps/frontend`.
-- **Backend**: A TypeScript-based Node.js+Express service located in `apps/backend`.
+- **Backend**: A TypeScript-based Node.js+Express service located in
+  `apps/backend`.
 - **Database**: PostgreSQL database with Docker Compose setup.
 
-This project uses [Turborepo](https://turbo.build) to manage multiple apps and packages efficiently.
+This project uses [Turborepo](https://turbo.build) to manage multiple apps and
+packages efficiently.
 
 ## Prerequisites
 
@@ -56,7 +59,8 @@ If you prefer to run components separately:
    npm install
    ```
 
-2. Set up environment variables in `apps/frontend/.env` and `apps/backend/.env` (see respective READMEs for details).
+2. Set up environment variables in `apps/frontend/.env` and `apps/backend/.env`
+   (see respective READMEs for details).
 
 3. Start the database:
 
@@ -79,5 +83,8 @@ If you prefer to run components separately:
 
 ## Configuration
 
-- Environment variables should be set in each app's directory (e.g., .env files). See `apps/backend/README.md` and `apps/frontend/README.md` for specifics.
-- The .gitignore excludes common build artifacts, node modules, and environment files.
+- Environment variables should be set in each app's directory (e.g., .env
+  files). See `apps/backend/README.md` and `apps/frontend/README.md` for
+  specifics.
+- The .gitignore excludes common build artifacts, node modules, and environment
+  files.

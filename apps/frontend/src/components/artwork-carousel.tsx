@@ -1,19 +1,25 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import Image from 'next/image';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 const artworks = [
-  { id: 1, title: "Elven Forest", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 2, title: "Minas Tirith", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 3, title: "Hobbiton", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 4, title: "Mordor", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 5, title: "Lothlorien", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 6, title: "Rohan", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 7, title: "Gondor", imageSrc: "/placeholder.svg?height=400&width=600" },
-  { id: 8, title: "Shire", imageSrc: "/placeholder.svg?height=400&width=600" },
-]
+  { id: 1, title: 'Elven Forest', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 2, title: 'Minas Tirith', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 3, title: 'Hobbiton', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 4, title: 'Mordor', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 5, title: 'Lothlorien', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 6, title: 'Rohan', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 7, title: 'Gondor', imageSrc: '/placeholder.svg?height=400&width=600' },
+  { id: 8, title: 'Shire', imageSrc: '/placeholder.svg?height=400&width=600' },
+];
 
 export function ArtworkCarousel() {
   return (
@@ -29,7 +35,7 @@ export function ArtworkCarousel() {
                 <CardContent className="p-0">
                   <div className="relative aspect-[4/3] w-full overflow-hidden">
                     <Image
-                      src={artwork.imageSrc || "/placeholder.svg"}
+                      src={artwork.imageSrc || '/placeholder.svg'}
                       alt={artwork.title}
                       fill
                       className="object-cover transition-transform duration-300 hover:scale-105"
@@ -49,5 +55,5 @@ export function ArtworkCarousel() {
         <CarouselNext className="relative inset-0 h-8 w-8 translate-y-0 border-amber-800/30 bg-amber-50/80 text-amber-900 hover:bg-amber-100" />
       </div>
     </Carousel>
-  )
+  );
 }

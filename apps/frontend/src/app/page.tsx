@@ -1,14 +1,14 @@
-import Image from "next/image"
-import { Calendar, Menu, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { LeftSidebar } from "@/components/left-side-bar"
-import { RightSidebar } from "@/components/right-sidebar"
-import { featuredCards } from "@/data/featured-cards"
-import { ProfileButton } from "@/components/profile-button"
-import { FeaturedCard } from "@/components/featured-card"
-import { ArtworkCarousel } from "@/components/artwork-carousel"
-import { HeroBackground } from "@/components/hero-background"
+import Image from 'next/image';
+import { Calendar, Menu, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { LeftSidebar } from '@/components/left-side-bar';
+import { RightSidebar } from '@/components/right-sidebar';
+import { featuredCards } from '@/data/featured-cards';
+import { ProfileButton } from '@/components/profile-button';
+import { FeaturedCard } from '@/components/featured-card';
+import { ArtworkCarousel } from '@/components/artwork-carousel';
+import { HeroBackground } from '@/components/hero-background';
 
 export default function Home() {
   return (
@@ -73,12 +73,16 @@ export default function Home() {
               </div>
             </div>
 
-
             {/* Featured Cards - Positioned to overlap the hero background */}
             <div className="relative mx-auto -mt-20 grid max-w-5xl gap-4 px-4 sm:grid-cols-2 lg:grid-cols-3 z-10">
               <div className="contents">
                 {featuredCards.map((card) => (
-                  <FeaturedCard key={card.id} title={card.title} subtitle={card.subtitle} imageSrc={card.imageSrc} />
+                  <FeaturedCard
+                    key={card.id}
+                    title={card.title}
+                    subtitle={card.subtitle}
+                    imageSrc={card.imageSrc}
+                  />
                 ))}
               </div>
             </div>
@@ -104,8 +108,8 @@ export default function Home() {
               </div>
             </div>
             <p className="mb-4 text-amber-800">
-              Join us at the famous inn of Bree for tales, songs, and merriment! All are welcome to share stories of
-              their adventures throughout Middle-earth.
+              Join us at the famous inn of Bree for tales, songs, and merriment! All are welcome to
+              share stories of their adventures throughout Middle-earth.
             </p>
             <Button className="bg-amber-800 text-amber-50 hover:bg-amber-700">Learn More</Button>
           </div>
@@ -117,5 +121,5 @@ export default function Home() {
         </aside>
       </div>
     </div>
-  )
+  );
 }

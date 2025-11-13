@@ -2,8 +2,10 @@
 
 The db/ folder contains database-related files for TheBlueHarvest:
 
-- **Schema Definitions**: Files that define the structure of the database, including tables, relationships, and constraints.
-- **Seed Data**: Scripts to populate the database with initial sample data for development and testing purposes.
+- **Schema Definitions**: Files that define the structure of the database,
+  including tables, relationships, and constraints.
+- **Seed Data**: Scripts to populate the database with initial sample data for
+  development and testing purposes.
 
 These files will be used to set up and maintain the database for the project.
 
@@ -11,7 +13,8 @@ These files will be used to set up and maintain the database for the project.
 
 ### Prerequisites
 
-- Ensure you have docker installed and working (`docker --version` should return properly)
+- Ensure you have docker installed and working (`docker --version` should return
+  properly)
 - `psql` (for seed loading, assumption is you're on Linux/WSL)
   - Install: `sudo apt update && sudo apt install postgresql-client`
   - Verify: `psql --version` (e.g., 16.8).
@@ -55,13 +58,16 @@ These files will be used to set up and maintain the database for the project.
    . . .
    ```
 
-Since we mounted the schema and seed data in `docker-compose.yml` to the proper folders, they will populate the database schema automatically.
+Since we mounted the schema and seed data in `docker-compose.yml` to the proper
+folders, they will populate the database schema automatically.
 
 ### Loading Seed Data
 
-Seed data (`db/seeds/*.sql`) is loaded manually after the schema. Again, this is assuming you're on Linux or WSL.
+Seed data (`db/seeds/*.sql`) is loaded manually after the schema. Again, this is
+assuming you're on Linux or WSL.
 
-0. (Optional) For ease of use, feel free to store password in the "PGPASSWORD" environment variable so you don't need to type it out every loop.
+0. (Optional) For ease of use, feel free to store password in the "PGPASSWORD"
+   environment variable so you don't need to type it out every loop.
 
    ```bash
    export PGPASSWORD="secondbreakfast"
@@ -81,7 +87,8 @@ Seed data (`db/seeds/*.sql`) is loaded manually after the schema. Again, this is
     psql -h localhost -U merry -d bha_db
    ```
 
-   - Run `\dt` (list tables) and `SELECT * FROM accounts;` (check sample users like `Deleted-Account`)
+   - Run `\dt` (list tables) and `SELECT * FROM accounts;` (check sample users
+     like `Deleted-Account`)
 
 ### Stopping the Container and Cleanup
 

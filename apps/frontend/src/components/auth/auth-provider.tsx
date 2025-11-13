@@ -1,35 +1,35 @@
-'use client'
+'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface AuthContextType {
-  isLoggedIn: boolean
-  isLoading: boolean
-  username?: string
-  avatarUrl?: string
-  email?: string
-  firstName?: string
-  lastName?: string
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  username?: string;
+  avatarUrl?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   isLoading: true,
-})
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthContextType>({
     isLoggedIn: false,
-    isLoading: true
-  })
-  const pathname = usePathname()
+    isLoading: true,
+  });
+  const pathname = usePathname();
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch('/api/auth/me');
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         setAuthState({
           isLoggedIn: true,
           isLoading: false,
@@ -38,27 +38,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.email,
           firstName: data.firstName,
           lastName: data.lastName,
-        })
+        });
       } else {
-        setAuthState({ isLoggedIn: false, isLoading: false })
+        setAuthState({ isLoggedIn: false, isLoading: false });
       }
     } catch (err) {
-      console.error('Auth check error:', err)
-      setAuthState({ isLoggedIn: false, isLoading: false })
+      console.error('Auth check error:', err);
+      setAuthState({ isLoggedIn: false, isLoading: false });
     }
-  }
+  };
 
   useEffect(() => {
-    checkAuth()
-  }, [pathname]) // Recheck auth when route changes
+    checkAuth();
+  }, [pathname]); // Recheck auth when route changes
 
-  return (
-    <AuthContext.Provider value={authState}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={authState}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  return useContext(AuthContext)
+  return useContext(AuthContext);
 }

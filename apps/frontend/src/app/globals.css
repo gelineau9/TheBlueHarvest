@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @plugin "tailwindcss-animate";
 
@@ -43,7 +43,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --animate-wiggle: wiggle .2s ease-in infinite;
+  --animate-wiggle: wiggle 0.2s ease-in infinite;
   @keyframes wiggle {
     0%,
     100% {

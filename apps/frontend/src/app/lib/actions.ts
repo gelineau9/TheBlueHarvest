@@ -1,81 +1,81 @@
-'use server'
+'use server';
 
-import { cookies } from 'next/headers'
-import { loginSchema, registerSchema, profileUpdateSchema } from './validations'
-import { API_CONFIG } from '@/config/api'
+import { cookies } from 'next/headers';
+import { loginSchema, registerSchema, profileUpdateSchema } from './validations';
+import { API_CONFIG } from '@/config/api';
 
 export async function login(formData: FormData) {
   try {
-    const email = formData.get('email')
-    const password = formData.get('password')
+    const email = formData.get('email');
+    const password = formData.get('password');
 
     // Validate input
-    const result = loginSchema.safeParse({ email, password })
+    const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message
-      }
+        error: result.error.errors[0].message,
+      };
     }
 
     // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/login`)
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/login`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, password }),
-    })
+    });
 
-    console.log('Backend response status:', response.status)
+    console.log('Backend response status:', response.status);
 
     if (!response.ok) {
-      const data = await response.json()
-      console.log('Backend error:', data)
-      return { success: false, error: data.message || 'Login failed' }
+      const data = await response.json();
+      console.log('Backend error:', data);
+      return { success: false, error: data.message || 'Login failed' };
     }
 
-    const data = await response.json()
-    console.log('Backend success data:', data)
+    const data = await response.json();
+    console.log('Backend success data:', data);
 
-    const cookieStore = await cookies()
+    const cookieStore = await cookies();
     await cookieStore.set({
       name: 'auth_token',
       value: data.token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7 // 1 week
-    })
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+    });
 
-    console.log('Cookie set successfully')
-    return { success: true }
+    console.log('Cookie set successfully');
+    return { success: true };
   } catch (error) {
-    console.error('Login action error:', error)
-    return { success: false, error: 'An unexpected error occurred' }
+    console.error('Login action error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 export async function logout() {
-  const cookieStore = await cookies()
+  const cookieStore = await cookies();
   await cookieStore.set('auth_token', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 0 // Expire immediately
-  })
+    maxAge: 0, // Expire immediately
+  });
 
-  return { success: true }
+  return { success: true };
 }
 
 export async function register(formData: FormData) {
   try {
-    const email = formData.get('email')
-    const username = formData.get('username')
-    const password = formData.get('password')
-    const firstName = formData.get('first_name')
-    const lastName = formData.get('last_name')
+    const email = formData.get('email');
+    const username = formData.get('username');
+    const password = formData.get('password');
+    const firstName = formData.get('first_name');
+    const lastName = formData.get('last_name');
 
     // Validate input
     const result = registerSchema.safeParse({
@@ -84,18 +84,18 @@ export async function register(formData: FormData) {
       password,
       confirmPassword: password, // For validation, we'll use the same password
       firstName,
-      lastName
-    })
+      lastName,
+    });
 
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message
-      }
+        error: result.error.errors[0].message,
+      };
     }
 
     // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/signup`)
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/signup`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/signup`, {
       method: 'POST',
       headers: {
@@ -106,65 +106,65 @@ export async function register(formData: FormData) {
         username,
         password,
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
       }),
-    })
+    });
 
-    console.log('Backend response status:', response.status)
+    console.log('Backend response status:', response.status);
 
     if (!response.ok) {
-      const data = await response.json()
-      console.log('Backend error:', data)
-      return { success: false, error: data.message || 'Registration failed' }
+      const data = await response.json();
+      console.log('Backend error:', data);
+      return { success: false, error: data.message || 'Registration failed' };
     }
 
-    const data = await response.json()
-    console.log('Backend success data:', data)
+    const data = await response.json();
+    console.log('Backend success data:', data);
 
-    const cookieStore = await cookies()
+    const cookieStore = await cookies();
     await cookieStore.set({
       name: 'auth_token',
       value: data.token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7 // 1 week
-    })
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+    });
 
-    console.log('Cookie set successfully')
-    return { success: true }
+    console.log('Cookie set successfully');
+    return { success: true };
   } catch (error) {
-    console.error('Registration action error:', error)
-    return { success: false, error: 'An unexpected error occurred' }
+    console.error('Registration action error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 export async function updateProfile(formData: FormData) {
   try {
-    const username = formData.get('username')
-    const firstName = formData.get('firstName')
-    const lastName = formData.get('lastName')
+    const username = formData.get('username');
+    const firstName = formData.get('firstName');
+    const lastName = formData.get('lastName');
 
     // Validate input
     const result = profileUpdateSchema.safeParse({
       username: username || undefined,
       firstName: firstName || undefined,
-      lastName: lastName || undefined
-    })
+      lastName: lastName || undefined,
+    });
 
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message
-      }
+        error: result.error.errors[0].message,
+      };
     }
 
     // Get auth token
-    const cookieStore = await cookies()
-    const authToken = cookieStore.get('auth_token')
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
 
     if (!authToken) {
-      return { success: false, error: 'Not authenticated' }
+      return { success: false, error: 'Not authenticated' };
     }
 
     // Call backend API
@@ -172,54 +172,54 @@ export async function updateProfile(formData: FormData) {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken.value}`,
+        Authorization: `Bearer ${authToken.value}`,
       },
       body: JSON.stringify({
         username: result.data.username,
         firstName: result.data.firstName,
-        lastName: result.data.lastName
+        lastName: result.data.lastName,
       }),
-    })
+    });
 
     if (!response.ok) {
-      const data = await response.json()
-      return { success: false, error: data.message || 'Profile update failed' }
+      const data = await response.json();
+      return { success: false, error: data.message || 'Profile update failed' };
     }
 
-    const data = await response.json()
-    return { success: true, user: data }
+    const data = await response.json();
+    return { success: true, user: data };
   } catch (error) {
-    console.error('Profile update error:', error)
-    return { success: false, error: 'An unexpected error occurred' }
+    console.error('Profile update error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 export async function getSession() {
   try {
-    const cookieStore = await cookies()
-    const authToken = cookieStore.get('auth_token')
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
 
-    console.log('Auth token exists:', !!authToken)
+    console.log('Auth token exists:', !!authToken);
 
     if (!authToken) {
-      return { isLoggedIn: false }
+      return { isLoggedIn: false };
     }
 
     // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/me`)
+    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/me`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/me`, {
       headers: {
-        'Authorization': `Bearer ${authToken.value}`,
+        Authorization: `Bearer ${authToken.value}`,
       },
-    })
+    });
 
-    console.log('Backend /me response status:', response.status)
+    console.log('Backend /me response status:', response.status);
 
     if (!response.ok) {
-      return { isLoggedIn: false }
+      return { isLoggedIn: false };
     }
 
-    const data = await response.json()
+    const data = await response.json();
 
     return {
       isLoggedIn: true,
@@ -227,9 +227,9 @@ export async function getSession() {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-    }
+    };
   } catch (error) {
-    console.error('Get session error:', error)
-    return { isLoggedIn: false }
+    console.error('Get session error:', error);
+    return { isLoggedIn: false };
   }
 }

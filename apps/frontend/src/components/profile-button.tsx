@@ -1,7 +1,7 @@
-"use client"
-import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+'use client';
+import Link from 'next/link';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,30 +9,30 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User } from "lucide-react"
-import { AuthDialog } from "./auth/auth-dialog"
-import { useAuth } from "./auth/auth-provider"
+} from '@/components/ui/dropdown-menu';
+import { LogOut, Settings, User } from 'lucide-react';
+import { AuthDialog } from './auth/auth-dialog';
+import { useAuth } from './auth/auth-provider';
 
 export function ProfileButton() {
-  const { isLoggedIn, isLoading, username, avatarUrl, email } = useAuth()
+  const { isLoggedIn, isLoading, username, avatarUrl, email } = useAuth();
 
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Logout failed')
+        throw new Error('Logout failed');
       }
 
       // Refresh the page to update auth state
-      window.location.reload()
+      window.location.reload();
     } catch (err) {
-      console.error('Logout error:', err)
+      console.error('Logout error:', err);
     }
-  }
+  };
 
   return (
     <DropdownMenu>
@@ -91,10 +91,7 @@ export function ProfileButton() {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-amber-800/20" />
-            <DropdownMenuItem
-              className="text-amber-900 hover:bg-amber-100"
-              onClick={handleLogout}
-            >
+            <DropdownMenuItem className="text-amber-900 hover:bg-amber-100" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4 text-amber-700" />
               <span>Log out</span>
             </DropdownMenuItem>
@@ -125,5 +122,5 @@ export function ProfileButton() {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
