@@ -29,7 +29,7 @@
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "slonik": "^46.4.0",
+    "slonik": "^47.3.2",
     "winston": "^3.17.0"
   },
   "devDependencies": {
