@@ -21,21 +21,20 @@
     "docs": "echo 'Add Swagger generation here'"
   },
   "dependencies": {
-    "argon2": "^0.41.1",
-    "config": "^3.3.12",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
+    "argon2": "^0.44.0",
+    "config": "^4.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "slonik": "^47.3.2",
+    "slonik": "^48.8.5",
     "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "eslint": "^9.23.0",
