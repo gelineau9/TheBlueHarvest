@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { loginSchema, registerSchema, profileUpdateSchema } from './validations';
 import { API_CONFIG } from '@/config/api';
+import { ZodError } from 'zod';
 
 export async function login(formData: FormData) {
   try {
@@ -14,7 +15,9 @@ export async function login(formData: FormData) {
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message,
+        // error: result.error.errors[0].message,
+        // Zod breaking change from upgrade, issue #12
+        error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
@@ -90,7 +93,9 @@ export async function register(formData: FormData) {
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message,
+        // error: result.error.errors[0].message,
+        // Zod breaking change from upgrade, issue #12
+        error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
@@ -155,7 +160,9 @@ export async function updateProfile(formData: FormData) {
     if (!result.success) {
       return {
         success: false,
-        error: result.error.errors[0].message,
+        // error: result.error.errors[0].message,
+        // Zod breaking change from upgrade, issue #12
+        error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
