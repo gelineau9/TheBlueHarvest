@@ -14,8 +14,8 @@
       "dependsOn": ["^lint"]
     },
     "start": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**"]
+      "dependsOn": ["build"],
+      "cache": false
     },
     "check-types": {
       "dependsOn": ["^check-types"]

@@ -1,4 +1,6 @@
 {
+  "name": "the-brandy-hall-archives",
+  "version": "0.1.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -8,7 +10,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "start": "turbo run start",
-    "lint": "eslint apps/frontend/src apps/backend/src --ext .ts,.tsx,.js,.jsx",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write ."
@@ -19,8 +21,8 @@
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "@types/node": "^25.0.2",
-    "@typescript-eslint/eslint-plugin": "^8.49.0",
-    "@typescript-eslint/parser": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "8.49.0",
+    "@typescript-eslint/parser": "8.49.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.0.10",
     "eslint-config-prettier": "^10.1.8",
@@ -33,7 +35,12 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
-    "turbo": "latest",
-    "typescript-eslint": "^8.49.0"
-  }
+    "turbo": "^2.6.3",
+    "typescript": "^5",
+    "typescript-eslint": "8.49.0"
+  },
+  "engines": {
+    "node": ">=25.0.0"
+  },
+  "license": "UNLICENSED"
 }

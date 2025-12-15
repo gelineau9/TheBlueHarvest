@@ -2,6 +2,7 @@
   "name": "blue-harvest-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -27,16 +28,13 @@
     "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.1.13"
+    "zod": "^4.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "^16.0.10",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5"
+    "tailwindcss": "^4.1.18"
   }
 }
