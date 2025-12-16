@@ -13,11 +13,30 @@ frontend and backend applications with a complete authentication system.
 This project uses [Turborepo](https://turbo.build) to manage multiple apps and
 packages efficiently.
 
+---
+
 ## Prerequisites
 
-- **Node.js**: Version 23.7.0 or higher.
-- **npm**: Version 11.2.0 (specified as the package manager).
+- **Node.js**: Version 20 LTS or newer (Node 24 LTS supported).
+- **npm**: Version 11.7.0 (specified as the package manager).
 - **Docker & Docker Compose**: For running the database and full stack.
+
+---
+
+## Environment Variables
+
+The project uses a single root `.env` file as the source for runtime
+configuration. Environment variables are not loaded by application code, but
+provided externally by:
+
+- Docker (`env_file`)
+- The host shell (for non-Docker runs)
+- Eventually CI environments
+
+### Notes
+
+- Secrets (database credentials, JWT secret) live only in the root `.env` file.
+- The frontend does not have access to backend secrets
 
 ## Quick Start with Docker Compose
 
@@ -30,10 +49,10 @@ The easiest way to run the entire application:
    cd TheBlueHarvest
    ```
 
-2. Set up environment variables:
-   - Copy `apps/backend/env.example` to `apps/backend/.env`
-   - Copy `apps/frontend/env.example` to `apps/frontend/.env`
-
+2. Create the environment file(s):
+   ```bash
+   cp env.example .env
+   ```
 3. Start the entire stack:
 
    ```bash
@@ -51,16 +70,14 @@ The easiest way to run the entire application:
 
 ## Manual Development Setup
 
-If you prefer to run components separately:
-
 1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Set up environment variables in `apps/frontend/.env` and `apps/backend/.env`
-   (see respective READMEs for details).
+2. Ensure environment variables are set in your shell (see `env.example` for
+   reference)
 
 3. Start the database:
 
@@ -83,8 +100,8 @@ If you prefer to run components separately:
 
 ## Configuration
 
-- Environment variables should be set in each app's directory (e.g., .env
-  files). See `apps/backend/README.md` and `apps/frontend/README.md` for
-  specifics.
+- Backend and infrastructure environment variables are defined at the repo root.
+  Frontend public configuration is defined in `apps/frontend/.env`
+- Applications assume environment variables are already present at runtime.
 - The .gitignore excludes common build artifacts, node modules, and environment
   files.

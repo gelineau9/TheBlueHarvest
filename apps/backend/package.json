@@ -15,15 +15,16 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "start": "node -r dotenv/config dist/index.js",
-    "dev": "nodemon --exec node --loader ts-node/esm -r dotenv/config src/index.ts",
-    "lint": "eslint 'src/**/*.{ts,js}' --fix",
+    "start": "node dist/index.js",
+    "dev": "nodemon --signal SIGTERM --exec node --import ts-node/register/esm src/index.ts",
+    "lint": "eslint 'src/**/*.{ts,js}'",
+    "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
+    "check-types": "tsc --noEmit",
     "docs": "echo 'Add Swagger generation here'"
   },
   "dependencies": {
     "argon2": "^0.44.0",
     "config": "^4.1.1",
-    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.3.1",
