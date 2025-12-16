@@ -7,6 +7,10 @@ node_modules
 package-lock.json
 
 .turbo
+**/.turbo/
+**/.next/
+**/dist/
+**/tsconfig.tsbuildinfo
 
 *.tsbuildinfo
 
