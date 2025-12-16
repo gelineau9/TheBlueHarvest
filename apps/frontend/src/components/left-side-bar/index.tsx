@@ -14,9 +14,7 @@ export function LeftSidebar() {
           height={120}
           className="mx-auto mb-2"
         />
-        <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">
-          Brandy Hall Archives
-        </h1>
+        <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">Brandy Hall Archives</h1>
       </div>
 
       <div className="mb-4">

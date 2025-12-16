@@ -27,12 +27,7 @@ export default function RootLayout({
       </head>
       <body className={inter.variable}>
         <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             {children}
           </ThemeProvider>
         </AuthProvider>

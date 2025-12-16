@@ -1,12 +1,4 @@
-export function EventItem({
-  date,
-  title,
-  location,
-}: {
-  date: string;
-  title: string;
-  location: string;
-}) {
+export function EventItem({ date, title, location }: { date: string; title: string; location: string }) {
   return (
     <div className="flex gap-3 rounded-md border border-amber-800/20 bg-amber-50/50 p-3">
       <div className="flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-md bg-amber-100 text-center">

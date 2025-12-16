@@ -21,9 +21,7 @@ export function RightSidebar() {
               <div
                 key={i}
                 className={`rounded p-1 ${
-                  [7, 14, 21, 28].includes(i + 1)
-                    ? 'bg-amber-200/50 font-medium text-amber-900'
-                    : ''
+                  [7, 14, 21, 28].includes(i + 1) ? 'bg-amber-200/50 font-medium text-amber-900' : ''
                 }`}
               >
                 {i + 1}
@@ -44,30 +42,11 @@ export function RightSidebar() {
       <div>
         <h2 className="mb-3 font-fantasy text-xl font-semibold text-amber-900">Recent Activity</h2>
         <div className="space-y-3">
-          <ActivityItem
-            username="Nenenas"
-            action="liked a post by"
-            target="Aranarion"
-            time="2 hours ago"
-          />
-          <ActivityItem
-            username="Aranarion"
-            action="posted a piece of writing"
-            target="'TBD'"
-            time="3 hours ago"
-          />
+          <ActivityItem username="Nenenas" action="liked a post by" target="Aranarion" time="2 hours ago" />
+          <ActivityItem username="Aranarion" action="posted a piece of writing" target="'TBD'" time="3 hours ago" />
           <ActivityItem username="Eldarion" action="posted a piece of art" time="5 hours ago" />
-          <ActivityItem
-            username="Aranarion"
-            action="commented 'LOL' on"
-            target="Elva's post"
-            time="6 hours ago"
-          />
-          <ActivityItem
-            username="Nenenas"
-            action="created a new character profile"
-            time="1 day ago"
-          />
+          <ActivityItem username="Aranarion" action="commented 'LOL' on" target="Elva's post" time="6 hours ago" />
+          <ActivityItem username="Nenenas" action="created a new character profile" time="1 day ago" />
           <ActivityItem username="Nenenas" action="joined" time="2 days ago" />
         </div>
       </div>
