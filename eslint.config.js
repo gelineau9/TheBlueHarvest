@@ -6,9 +6,10 @@ const prettierPlugin = require('eslint-plugin-prettier');
 const nextPlugin = require('@next/eslint-plugin-next');
 
 module.exports = [
+  // Next.js frontend rules
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
-    ignores: ['node_modules/**', '.next/**', 'dist/**', 'build/**', '.turbo/**'],
+    ignores: ['node_modules/**', '.next/**', 'dist/**', 'build/**', '.turbo/**', '**/next-env.d.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -36,7 +37,12 @@ module.exports = [
 
       'consistent-return': 'warn',
       'prettier/prettier': 'error',
+
+      // Next
+      '@next/next/no-img-element': 'warn',
+      '@next/next/no-html-link-for-pages': 'off',
     },
+
     settings: {
       react: { version: 'detect' },
     },
@@ -46,15 +52,11 @@ module.exports = [
   // Frontend (Next.js) specific rules
   {
     files: ['/apps/frontend/**/*.{ts,tsx,js,jsx}'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        ecmaFeatures: { jsx: true },
-      },
+    globals: {
+      window: 'readonly',
+      document: 'readonly',
+      console: 'readonly',
     },
-    env: { browser: true, es2022: true },
     rules: {
       'react/jsx-filename-extension': ['warn', { extensions: ['.tsx', '.jsx'] }],
       '@next/next/no-img-element': 'warn',
@@ -66,16 +68,20 @@ module.exports = [
   {
     files: ['/apps/backend/**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
         project: ['./tsconfig.eslint.json'],
         tsconfigRootDir: __dirname,
       },
     },
 
-    env: { node: true, es2022: true },
+    globals: {
+      process: 'readonly',
+      __dirname: 'readonly',
+      module: 'readonly',
+      require: 'readonly',
+      console: 'readonly',
+    },
+
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-var-requires': 'off',

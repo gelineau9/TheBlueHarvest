@@ -16,9 +16,7 @@ export function ProfileForm() {
     firstName: '',
     lastName: '',
   });
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof ProfileUpdateInput, string>> & { general?: string }
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfileUpdateInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -92,9 +90,7 @@ export function ProfileForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl text-amber-900">Profile Settings</CardTitle>
-        <CardDescription className="text-amber-700">
-          Update your account information
-        </CardDescription>
+        <CardDescription className="text-amber-700">Update your account information</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,13 +98,7 @@ export function ProfileForm() {
             <Label htmlFor="email" className="text-amber-900">
               Email
             </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email || ''}
-              disabled
-              className="text-amber-900 bg-gray-100"
-            />
+            <Input id="email" type="email" value={email || ''} disabled className="text-amber-900 bg-gray-100" />
             <p className="text-xs text-amber-600">Email cannot be changed</p>
           </div>
 
@@ -158,13 +148,9 @@ export function ProfileForm() {
             </div>
           </div>
 
-          {errors.general && (
-            <div className="text-sm text-red-500 text-center">{errors.general}</div>
-          )}
+          {errors.general && <div className="text-sm text-red-500 text-center">{errors.general}</div>}
 
-          {success && (
-            <div className="text-sm text-green-600 text-center">Profile updated successfully!</div>
-          )}
+          {success && <div className="text-sm text-green-600 text-center">Profile updated successfully!</div>}
 
           <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
             {isLoading ? 'Updating...' : 'Update Profile'}

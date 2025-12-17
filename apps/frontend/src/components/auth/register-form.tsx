@@ -17,9 +17,7 @@ export function RegisterForm() {
     firstName: '',
     lastName: '',
   });
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof RegisterInput, string>> & { general?: string }
-  >({});
+  const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -202,14 +200,10 @@ export function RegisterForm() {
               className="text-amber-900"
               aria-invalid={!!errors.confirmPassword}
             />
-            {errors.confirmPassword && (
-              <p className="text-sm text-red-500">{errors.confirmPassword}</p>
-            )}
+            {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
           </div>
 
-          {errors.general && (
-            <div className="text-sm text-red-500 text-center">{errors.general}</div>
-          )}
+          {errors.general && <div className="text-sm text-red-500 text-center">{errors.general}</div>}
 
           <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
             {isLoading ? 'Creating Account...' : 'Create Account'}

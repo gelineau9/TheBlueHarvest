@@ -1,12 +1,14 @@
 name: Lint and Format
 
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   lint-and-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repo
@@ -15,15 +17,13 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '25'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm install
 
       - name: Format according to prettier config
-        run: npm run format:fix
-      
+        run: npm run format
+
       - name: Run ESLint (fails on any lint errors)
         run: npm run lint
-
-     

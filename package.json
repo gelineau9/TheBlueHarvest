@@ -1,4 +1,6 @@
 {
+  "name": "the-brandy-hall-archives",
+  "version": "0.1.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -8,21 +10,26 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "start": "turbo run start",
-    "lint": "eslint apps/frontend/src apps/backend/src --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "check-types": "turbo run check-types",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "lint:all": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --check .",
-    "format:fix": "prettier --write ."
+    "format:fix": "prettier --write .",
+    "clean": "npm run clean:build && npm run clean:turbo && npm run clean:deps",
+    "clean:build": "rm -rf apps/frontend/.next apps/backend/dist **/*.tsbuildinfo",
+    "clean:turbo": "rm -rf .turbo apps/*/.turbo",
+    "clean:deps": "rm -rf node_modules apps/*/node_modules package-lock.json",
+    "clean:docker": "docker compose down -v --remove-orphans && docker builder prune -f"
   },
-  "packageManager": "npm@11.2.0",
+  "packageManager": "npm@11.7.0",
   "devDependencies": {
-    "@eslint/compat": "^2.0.0",
-    "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.46.4",
-    "@typescript-eslint/parser": "^8.46.4",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.1",
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^25.0.2",
+    "@typescript-eslint/eslint-plugin": "8.49.0",
+    "@typescript-eslint/parser": "8.49.0",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.0.10",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
@@ -32,8 +39,13 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "prettier": "^3.6.2",
-    "turbo": "latest",
-    "typescript-eslint": "^8.46.4"
-  }
+    "prettier": "^3.7.4",
+    "turbo": "^2.6.3",
+    "typescript": "^5",
+    "typescript-eslint": "8.49.0"
+  },
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "license": "UNLICENSED"
 }

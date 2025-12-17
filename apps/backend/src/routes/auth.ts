@@ -18,13 +18,8 @@ router.post(
   '/signup',
   [
     body('email').isEmail().withMessage('Please enter a valid email address.'),
-    body('username')
-      .trim()
-      .isLength({ min: 3 })
-      .withMessage('Username must be at least 3 characters long.'),
-    body('password')
-      .isLength({ min: 8 })
-      .withMessage('Password must be at least 8 characters long.'),
+    body('username').trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -84,9 +79,7 @@ router.post(
   '/login',
   [
     body('email').isEmail().withMessage('Please enter a valid email address.'),
-    body('password')
-      .isLength({ min: 8 })
-      .withMessage('Password must be at least 8 characters long.'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
   ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -188,11 +181,7 @@ router.get('/me', async (req: Request, res: Response) => {
 router.put(
   '/profile',
   [
-    body('username')
-      .optional()
-      .trim()
-      .isLength({ min: 3 })
-      .withMessage('Username must be at least 3 characters long.'),
+    body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.'),
     body('firstName').optional().trim().isLength({ min: 1 }).withMessage('First name is required.'),
     body('lastName').optional().trim().isLength({ min: 1 }).withMessage('Last name is required.'),
   ],

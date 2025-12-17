@@ -1,74 +1,81 @@
-# The Blue Harvest Backend
+# The Brandy Hall Archives - Backend
 
-This is the backend service for The Blue Harvest project. It provides APIs and
-handles business logic for the application. The project is built with TypeScript
-and is currently in the planning and skeleton development phase.
+This is the backend service for The Brandy Hall Archives project. It provides
+REST APIs, auth, and handles business logic for the application. The project is
+built with TypeScript and runs on Node.js. It is part of a Turborepo-managed
+monorepo and is typically run alongside the frontend and database via Docker
+Compose.
 
-## Dependencies
+---
+
+## Requirements
 
 The project relies on the following dependencies:
 
-- **Node.js**: JavaScript runtime environment. Requires version 23.7.0 or higher
-  installed (see `engines` in `package.json`).
-- **Argon2**: A password hashing library used for securely hashing and verifying
-  passwords.
-- **config**: A configuration management library for organizing settings across
-  environments.
-- **dotenv**: A module that loads environment variables from a `.env` file into
-  `process.env`.
-- **Express**: A minimal Node.js web application framework for building APIs and
-  web applications.
-- **express-rate-limit**: Middleware to limit repeated requests to public APIs
-  and endpoints.
-- **express-validator**: Middleware for validating and sanitizing request data.
-- **helmet**: Middleware to secure Express apps by setting various HTTP headers.
-- **jsonwebtoken**: A library to create and verify JSON Web Tokens (JWT) for
-  authentication and secure data exchange.
-- **slonik**: A PostgreSQL client for Node.js with a focus on type safety and
-  modern JavaScript/TypeScript features.
-- **winston**: A versatile logging library for Node.js.
+- **Node.js**: JavaScript runtime environment. Targets v20+ (supports 24 LTS).
+- **npm**: As specified in the root `package.json`.
+- **Docker**: Recommended for local development.
 
-### Development Dependencies
+---
 
-- **TypeScript**: Adds static typing to JavaScript, used for development and
-  building the project.
-- **ts-node**: Executes TypeScript files directly during development.
-- **nodemon**: Monitors file changes and restarts the server during development.
-- **eslint**: Linting tool with TypeScript support for code quality and
-  consistency.
-- **@types/\* packages**: Type definitions for TypeScript compatibility.
+### Tech Stack
 
-## Installation
+- **Node.js + Express** — API server
+- **TypeScript** — Static typing and build step
+- **PostgreSQL** — Primary database
+- **Slonik** — PostgreSQL client with type safety
+- **Argon2** — Secure password hashing
+- **jsonwebtoken (JWT)** — Authentication tokens
+- **helmet** — HTTP security headers
+- **express-rate-limit** — API rate limiting
+- **express-validator** — Request validation
+- **winston** — Structured logging
 
-1. After cloning the repository (see root [README.md](../../README.md)), install
-   dependencies with `npm install` at the root.
+---
 
-2. Set up environment variables:
-   - Create a `.env` file in `apps/backend/`.
-   - A `.env.example` file has been provided as a template.
-   - Add the required variables:
+## Environment Variables
 
-   ```text
-   DB_HOST=localhost
-   DB_USER=username
-   DB_PASSWORD=yourpassword
-   DB_NAME=theblueharvest
-   DB_PORT=5433
-   JWT_SECRET=yourjwtsecret
-   PORT=4000
-   NODE_ENV=development
-   ```
+The backend does not load environment variables itself.
 
-3. Follow root level installation in [README.md](../../README.md)
+All configuration is provided externally via:
 
-## Scripts
+- Docker (`env_file`).
+- The host shell (for non-Docker runs).
+- Eventually CI environments.
 
-- `npm run build`: Compiles TypeScript files to JavaScript in the dist
-  directory.
-- `npm start`: Runs the compiled application with environment variables loaded.
-- `npm run dev`: Runs the app in development mode with nodemon and ts-node.
-- `npm run lint`: Lints and fixes TypeScript and JavaScript files using ESLint.
-- `npm run docs`: Placeholder for future Swagger documentation generation.
+### Required Variables
+
+These variables are defined in the root `.env` file (see `env.example`):
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `BACKEND_PORT`
+- `NODE_ENV`
+
+The backend assumes these variables are present at startup.
+
+---
+
+## Development
+
+Backend development is typically started from the **repository root** using
+Turborepo:
+
+```bash
+npm run dev
+```
+
+This will start the backend along with the frontend and other services.
+
+For database-only startup:
+
+```bash
+docker compose up postgres
+```
 
 ## License
 

@@ -2,13 +2,7 @@
 
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const artworks = [
   { id: 1, title: 'Elven Forest', imageSrc: '/placeholder.svg?height=400&width=600' },
