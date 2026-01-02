@@ -1,14 +1,10 @@
 // /apps/backend/src/index.ts
 
 import express, { Request, Response } from 'express';
-import dotenv from 'dotenv';
-import authRoutes from './routes/auth';
-
-// Load environment variables
-dotenv.config();
+import authRoutes from './routes/auth.js';
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.BACKEND_PORT ?? 4000);
 
 //Middleware
 app.use(express.json());

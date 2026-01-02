@@ -1,6 +1,7 @@
 {
   "name": "blue-harvest-backend",
   "version": "0.1.0",
+  "private": true,
   "description": "Backend for TheBlueHarvest",
   "homepage": "https://github.com/gelineau9/TheBlueHarvest#readme",
   "bugs": {
@@ -10,41 +11,33 @@
     "type": "git",
     "url": "git+https://github.com/gelineau9/TheBlueHarvest.git"
   },
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "start": "node -r dotenv/config dist/index.js",
-    "dev": "nodemon --exec 'ts-node -r dotenv/config src/index.ts'",
-    "lint": "eslint 'src/**/*.{ts,js}' --fix",
-    "prestart": "npm run build",
+    "start": "node dist/index.js",
+    "dev": "nodemon --signal SIGTERM --exec node --import ts-node/register/esm src/index.ts",
+    "lint": "eslint 'src/**/*.{ts,js}'",
+    "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
+    "check-types": "tsc --noEmit",
     "docs": "echo 'Add Swagger generation here'"
   },
   "dependencies": {
     "argon2": "^0.44.0",
     "config": "^4.1.1",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
-    "express-validator": "^7.2.1",
+    "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "slonik": "^48.8.5",
-    "winston": "^3.17.0",
-    "yn": "^3.1.1"
+    "jsonwebtoken": "^9.0.3",
+    "slonik": "^48.8.7",
+    "winston": "^3.19.0",
+    "yn": "^5.1.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.23.0",
-    "eslint-plugin-import": "^2.31.0",
-    "nodemon": "^3.1.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
-  },
-  "engines": {
-    "node": ">=23.7.0"
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2"
   }
 }

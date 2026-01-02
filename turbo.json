@@ -4,21 +4,24 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["NODE_ENV"]
+      "env": ["NODE_ENV", "BACKEND_", "BACKEND_INTERNAL_*", "DB_*", "POSTGRES_*", "JWT_SECRET"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
     "start": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**"]
+      "dependsOn": ["build"],
+      "cache": false
     },
+    "lint": {
+      "dependsOn": ["^lint"],
+      "outputs": []
+    },
+
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "outputs": []
     }
   }
 }
