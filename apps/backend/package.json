@@ -17,10 +17,13 @@
     "build": "tsc --project tsconfig.json",
     "start": "node dist/index.js",
     "dev": "nodemon --signal SIGTERM --exec node --import ts-node/register/esm src/index.ts",
-    "lint": "eslint 'src/**/*.{ts,js}'",
-    "lint:fix": "eslint 'src/**/*.{ts,js}' --fix",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src/**/*.{ts,js} --fix",
     "check-types": "tsc --noEmit",
-    "docs": "echo 'Add Swagger generation here'"
+    "docs": "echo 'Add Swagger generation here'",
+    "test": "npx vitest run",
+    "test:ui": "npx vitest --ui",
+    "test:watch": "npx vitest"
   },
   "dependencies": {
     "argon2": "^0.44.0",
@@ -37,7 +40,13 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitest/ui": "^2.1.8",
+    "eslint": "^9.39.2",
     "nodemon": "^3.1.11",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
   }
 }

@@ -14,6 +14,7 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint -- --fix",
     "lint:all": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "test": "turbo run test",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "clean": "npm run clean:build && npm run clean:turbo && npm run clean:deps",
@@ -42,7 +43,8 @@
     "prettier": "^3.7.4",
     "turbo": "^2.6.3",
     "typescript": "^5",
-    "typescript-eslint": "8.49.0"
+    "typescript-eslint": "8.49.0",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=24.12.0"
