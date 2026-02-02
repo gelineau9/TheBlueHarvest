@@ -20,7 +20,6 @@
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/**/*.{ts,js} --fix",
     "check-types": "tsc --noEmit",
-    "docs": "echo 'Add Swagger generation here'",
     "test": "npx vitest run",
     "test:ui": "npx vitest --ui",
     "test:watch": "npx vitest"
