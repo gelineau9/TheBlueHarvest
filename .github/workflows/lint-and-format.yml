@@ -23,7 +23,7 @@ jobs:
         run: npm install
 
       - name: Format according to prettier config
-        run: npm run format
+        run: npm run format:fix
 
       - name: Run ESLint (fails on any lint errors)
         run: npm run lint
