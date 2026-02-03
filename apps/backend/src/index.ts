@@ -1,5 +1,4 @@
 // /apps/backend/src/index.ts
-
 import express, { Request, Response } from 'express';
 import authRoutes from './routes/auth.js';
 

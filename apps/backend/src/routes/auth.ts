@@ -3,14 +3,14 @@ import { sql, createPool } from 'slonik';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+import pool from '../config/database.js';
 
 const router = Router();
 
 // Helper function to get database pool
 async function getPool() {
-  return await createPool(
-    `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
-  );
+  console.log('Using database pool:', pool);
+  return await pool;
 }
 
 // Signup route
@@ -53,11 +53,11 @@ router.post(
       // Hash password
       const hashedPassword = await argon2.hash(password);
 
-      // Create user
+      // Create user (convert undefined to null for optional fields)
       // TODO: Add types so we can remove unsafe
       const result = await pool.one(sql.unsafe`
         INSERT INTO accounts (email, username, hashed_password, first_name, last_name, user_role_id)
-        VALUES (${email}, ${username}, ${hashedPassword}, ${first_name}, ${last_name}, 1)
+        VALUES (${email}, ${username}, ${hashedPassword}, ${first_name ?? null}, ${last_name ?? null}, 1)
         RETURNING account_id
       `);
 
@@ -98,9 +98,9 @@ router.post(
     try {
       const pool = await getPool();
 
-      // Find user
+      // Find user (use maybeOne to avoid throwing error if not found)
       // TODO: Add types so we can remove unsafe
-      const user = await pool.one(sql.unsafe`
+      const user = await pool.maybeOne(sql.unsafe`
       SELECT account_id, hashed_password, username, first_name, last_name
       FROM accounts
       WHERE email = ${email}
@@ -112,7 +112,7 @@ router.post(
       }
 
       // Verify password
-      const isValid = await argon2.verify(user.hashed_password, password);
+      const isValid = await argon2.verify(user.hashed_password as string, password);
       if (!isValid) {
         res.status(401).json({ message: 'Invalid email or password' });
         return;
@@ -153,7 +153,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const pool = await getPool();
 
     // TODO: Add types so we can remove unsafe
-    const user = await pool.one(sql.unsafe`
+    const user = await pool.maybeOne(sql.unsafe`
       SELECT account_id, username, first_name, last_name, email
       FROM accounts
       WHERE account_id = ${decoded.userId}
