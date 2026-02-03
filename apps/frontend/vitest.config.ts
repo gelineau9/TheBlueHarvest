@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 export default defineConfig({
-  plugins: [],  // Remove the React plugin entirely
+  plugins: [], // Remove the React plugin entirely
   test: {
     environment: 'jsdom',
     globals: true,
@@ -19,6 +19,6 @@ export default defineConfig({
     },
   },
   esbuild: {
-    jsx: 'automatic',  // Enable JSX transformation
+    jsx: 'automatic', // Enable JSX transformation
   },
 });
