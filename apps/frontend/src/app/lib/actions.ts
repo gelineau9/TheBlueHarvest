@@ -189,6 +189,18 @@ export async function updateProfile(formData: FormData) {
     });
 
     if (!response.ok) {
+      // If unauthorized (401), token is invalid/expired - clean up the cookie
+      if (response.status === 401) {
+        console.log('Token invalid/expired during profile update, clearing cookie');
+        await cookieStore.set('auth_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 0,
+        });
+        return { success: false, error: 'Session expired. Please log in again.' };
+      }
+
       const data = await response.json();
       return { success: false, error: data.message || 'Profile update failed' };
     }
@@ -223,6 +235,14 @@ export async function getSession() {
     console.log('Backend /me response status:', response.status);
 
     if (!response.ok) {
+      // Token is invalid or expired - clean up the cookie
+      console.log('Token invalid/expired, clearing cookie');
+      await cookieStore.set('auth_token', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 0, // Expire immediately
+      });
       return { isLoggedIn: false };
     }
 
