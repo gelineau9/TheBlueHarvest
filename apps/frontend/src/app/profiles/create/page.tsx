@@ -42,6 +42,7 @@ export default function CreateProfilePage() {
         2: 'item',
         3: 'kinship',
         4: 'organization',
+        5: 'location',
       };
 
       const typeName = typeRoutes[selectedType];

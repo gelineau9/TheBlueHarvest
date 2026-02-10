@@ -49,6 +49,16 @@ beforeAll(async () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/profiles', profilesRoutes);
 
+  // Clean up any existing test account from previous failed runs
+  await pool.query(sql.unsafe`
+    DELETE FROM profiles WHERE account_id IN (
+      SELECT account_id FROM accounts WHERE email = 'test@example.com'
+    )
+  `);
+  await pool.query(sql.unsafe`
+    DELETE FROM accounts WHERE email = 'test@example.com'
+  `);
+
   // Create test account
   const result = await pool.one(sql.unsafe`
     INSERT INTO accounts (username, email, hashed_password)
@@ -127,6 +137,17 @@ describe('Authentication Middleware', () => {
 });
 
 describe('POST /api/profiles', () => {
+  let parentCharacterId: number;
+
+  beforeAll(async () => {
+    // Create a parent character for testing child profiles (Items, Kinships, Organizations)
+    const charResponse = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 1,
+      name: 'Test Parent Character',
+    });
+    parentCharacterId = charResponse.body.profile_id;
+  });
+
   describe('Success Cases', () => {
     it('should create character profile (type_id: 1) with valid token and data', async () => {
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
@@ -148,6 +169,7 @@ describe('POST /api/profiles', () => {
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
         profile_type_id: 2,
         name: 'One Ring',
+        parent_profile_id: parentCharacterId,
       });
 
       expect(response.status).toBe(201);
@@ -164,6 +186,7 @@ describe('POST /api/profiles', () => {
         profile_type_id: 3,
         name: 'Fellowship of the Ring',
         details: 'A fellowship formed in Rivendell to destroy the One Ring',
+        parent_profile_id: parentCharacterId,
       });
 
       expect(response.status).toBe(201);
@@ -179,6 +202,7 @@ describe('POST /api/profiles', () => {
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
         profile_type_id: 4,
         name: 'White Council',
+        parent_profile_id: parentCharacterId,
       });
 
       expect(response.status).toBe(201);
@@ -243,9 +267,9 @@ describe('POST /api/profiles', () => {
       expect(typeError).toBeDefined();
     });
 
-    it('should return 400 for invalid profile_type_id (5)', async () => {
+    it('should return 400 for invalid profile_type_id (6)', async () => {
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
-        profile_type_id: 5,
+        profile_type_id: 6,
         name: 'Test Profile',
       });
 
@@ -411,7 +435,13 @@ describe('GET /api/profiles/:id', () => {
     });
 
     it('should include all profile fields (name, details, created_at, etc.)', async () => {
-      // Create a profile
+      // Create a parent character first
+      const charResponse = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+        profile_type_id: 1,
+        name: 'Bilbo for Item Test',
+      });
+
+      // Create an item profile
       const createResponse = await request(app)
         .post('/api/profiles')
         .set('Authorization', `Bearer ${validToken}`)
@@ -419,6 +449,7 @@ describe('GET /api/profiles/:id', () => {
           profile_type_id: 2,
           name: 'Sting',
           details: 'Elven blade that glows blue',
+          parent_profile_id: charResponse.body.profile_id,
         });
 
       testProfileId = createResponse.body.profile_id;

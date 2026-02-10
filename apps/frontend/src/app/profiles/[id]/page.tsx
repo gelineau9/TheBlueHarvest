@@ -17,6 +17,9 @@ interface Profile {
   created_at: string;
   updated_at: string;
   username: string;
+  parent_profile_id?: number | null;
+  parent_name?: string | null;
+  parent_id?: number | null;
 }
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -120,6 +123,24 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <span>{formattedDate}</span>
             </div>
           </div>
+
+          {/* Show parent ownership for character-level profiles */}
+          {profile.parent_name && profile.parent_id && (
+            <div className="mt-4 pt-4 border-t border-amber-200">
+              <div className="flex items-center gap-2 text-sm text-amber-700">
+                <User className="w-4 h-4" />
+                <span>
+                  Owned by{' '}
+                  <Link
+                    href={`/profiles/${profile.parent_id}`}
+                    className="text-amber-900 hover:underline font-semibold"
+                  >
+                    {profile.parent_name}
+                  </Link>
+                </span>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Profile Details */}

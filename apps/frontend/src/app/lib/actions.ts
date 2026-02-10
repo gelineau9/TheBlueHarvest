@@ -245,6 +245,7 @@ export async function createProfile(formData: CreateProfileInput) {
         profile_type_id: result.data.profile_type_id,
         name: result.data.name.trim(),
         details: result.data.details ? { description: result.data.details } : null,
+        parent_profile_id: result.data.parent_profile_id,
       }),
     });
     if (!response.ok) {

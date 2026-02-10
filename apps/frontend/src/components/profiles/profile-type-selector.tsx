@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Sword, Package, Building2 } from 'lucide-react';
+import { Users, Sword, Package, Building2, MapPin } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 type ProfileType = {
@@ -39,6 +39,13 @@ const profileTypes: ProfileType[] = [
     label: 'Organization',
     description: 'Create an organization',
     icon: Building2,
+  },
+  {
+    id: 5,
+    name: 'location',
+    label: 'Location',
+    description: 'Document a location in Middle-earth',
+    icon: MapPin,
   },
 ];
 

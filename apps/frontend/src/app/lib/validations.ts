@@ -26,9 +26,10 @@ export const profileUpdateSchema = z.object({
 });
 
 export const createProfileSchema = z.object({
-  profile_type_id: z.number().int().min(1).max(4),
+  profile_type_id: z.number().int().min(1).max(5),
   name: z.string().min(1, 'Profile name is required').max(100, 'Profile name must not exceed 100 characters'),
   details: z.string().optional(),
+  parent_profile_id: z.number().int().optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
