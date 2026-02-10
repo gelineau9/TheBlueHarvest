@@ -34,7 +34,7 @@ describe('Profile Type Validation', () => {
 });
 
 describe('Profile Name Validation', () => {
-  it.skip('should validate profile names are not empty (TODO: implement in 2.1.2)', () => {
+  it('should validate profile names are not empty', () => {
     const validNames = ['Aragorn', 'The Fellowship', 'Andúril'];
     const invalidNames = ['', '   ', null, undefined];
 
@@ -44,12 +44,12 @@ describe('Profile Name Validation', () => {
     });
 
     invalidNames.forEach((name) => {
-      const isValid = name && typeof name === 'string' && name.trim().length > 0;
+      const isValid = !!(name && typeof name === 'string' && name.trim().length > 0);
       expect(isValid).toBe(false);
     });
   });
 
-  it.skip('should validate profile names do not exceed 100 characters (TODO: implement in 2.1.2)', () => {
+  it('should validate profile names do not exceed 100 characters', () => {
     const validName = 'A'.repeat(100);
     const invalidName = 'A'.repeat(101);
 
@@ -132,7 +132,7 @@ describe('Profile Ownership Validation', () => {
 });
 
 describe('Duplicate Name Detection (Commit 2.1.3)', () => {
-  it.skip('should detect duplicate profile names (case-insensitive) (TODO: implement in 2.1.3)', () => {
+  it('should detect duplicate profile names (case-insensitive) (TODO: implement in 2.1.3)', () => {
     const existingProfiles = [
       { profile_id: 1, name: 'Aragorn', deleted: false },
       { profile_id: 2, name: 'Gandalf', deleted: false },
@@ -153,7 +153,7 @@ describe('Duplicate Name Detection (Commit 2.1.3)', () => {
     });
   });
 
-  it.skip('should allow reusing names from soft-deleted profiles (TODO: implement in 2.1.3)', () => {
+  it('should allow reusing names from soft-deleted profiles (TODO: implement in 2.1.3)', () => {
     const deletedProfile = { name: 'Boromir', deleted: true };
     const newProfile = { name: 'Boromir', deleted: false };
 
@@ -181,7 +181,7 @@ describe('HTTP Status Code Expectations', () => {
 });
 
 describe('Profile Creation Request Validation', () => {
-  it.skip('should validate complete profile creation request (TODO: implement in 2.1.2)', () => {
+  it('should validate complete profile creation request', () => {
     const validRequest = {
       profile_type_id: 1,
       name: 'Aragorn',

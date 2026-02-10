@@ -25,6 +25,13 @@ export const profileUpdateSchema = z.object({
   lastName: z.string().min(1, 'Last name is required').optional(),
 });
 
+export const createProfileSchema = z.object({
+  profile_type_id: z.number().int().min(1).max(4),
+  name: z.string().min(1, 'Profile name is required').max(100, 'Profile name must not exceed 100 characters'),
+  details: z.string().optional(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type CreateProfileInput = z.infer<typeof createProfileSchema>;

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { sql, createPool } from 'slonik';
+import { sql } from 'slonik';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';

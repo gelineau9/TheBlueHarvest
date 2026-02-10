@@ -36,9 +36,16 @@ export default function CreateProfilePage() {
 
   const handleContinue = () => {
     if (selectedType) {
-      // TODO: Navigate to form in Commit 2.1.2
-      console.log('Selected profile type:', selectedType);
-      alert(`Profile type ${selectedType} selected. Form will be implemented in Commit 2.1.2`);
+      // Map profile type ID to route name
+      const typeRoutes: { [key: number]: string } = {
+        1: 'character',
+        2: 'item',
+        3: 'kinship',
+        4: 'organization',
+      };
+
+      const typeName = typeRoutes[selectedType];
+      router.push(`/profiles/create/${typeName}`);
     }
   };
 
