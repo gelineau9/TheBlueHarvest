@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, afterEach } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import express, { Express } from 'express';
@@ -132,7 +132,9 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       });
 
       expect(response2.status).toBe(409);
-      expect(response2.body.error).toBe('There is already a profile with this name');
+      expect(response2.body.error).toBe(
+        'This character name is already taken. Character names must be unique across all users.',
+      );
     });
 
     it('should prevent duplicate character name from DIFFERENT account (global uniqueness)', async () => {
@@ -152,7 +154,9 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       });
 
       expect(response2.status).toBe(409);
-      expect(response2.body.message).toBe('There is already a profile with this name');
+      expect(response2.body.message).toBe(
+        'This character name is already taken. Character names must be unique across all users.',
+      );
     });
 
     it('should allow reusing character name after soft delete', async () => {
@@ -264,7 +268,7 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       });
 
       expect(response2.status).toBe(409);
-      expect(response2.body.error).toBe('There is already a profile with this name');
+      expect(response2.body.error).toBe('You already have a item with this name. Please choose a different name.');
     });
 
     it('should allow same kinship name across DIFFERENT accounts', async () => {
@@ -334,7 +338,7 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       });
 
       expect(response2.status).toBe(409);
-      expect(response2.body.error).toBe('There is already a profile with this name');
+      expect(response2.body.error).toBe('You already have a location with this name. Please choose a different name.');
     });
   });
 

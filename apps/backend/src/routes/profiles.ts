@@ -41,18 +41,21 @@ router.post(
 
       // Characters (1) and Locations (5) CANNOT have a parent
       if ([1, 5].includes(profile_type_id) && parent_profile_id) {
+        const profileType = profile_type_id === 1 ? 'Characters' : 'Locations';
         res.status(400).json({
-          error: 'Characters and Locations cannot belong to another profile',
-          message: 'Characters and Locations cannot belong to another profile',
+          error: `${profileType} are independent profiles and cannot belong to other profiles`,
+          message: `${profileType} are independent profiles and cannot belong to other profiles`,
         });
         return;
       }
 
       // Items (2), Kinships (3), Organizations (4) MUST have a parent
       if ([2, 3, 4].includes(profile_type_id) && !parent_profile_id) {
+        const typeNames: { [key: number]: string } = { 2: 'Items', 3: 'Kinships', 4: 'Organizations' };
+        const typeName = typeNames[profile_type_id] || 'This profile type';
         res.status(400).json({
-          error: 'Items, Kinships, and Organizations must belong to a character',
-          message: 'Items, Kinships, and Organizations must belong to a character',
+          error: `${typeName} must belong to a character. Please select a character first.`,
+          message: `${typeName} must belong to a character. Please select a character first.`,
         });
         return;
       }
@@ -106,9 +109,22 @@ router.post(
       // Handle unique constraint violation
       // Check both err.code and err.cause?.code for Slonik v48+ compatibility
       if (err.code === '23505' || err.cause?.code === '23505') {
+        let errorMessage = 'There is already a profile with this name';
+
+        // Provide context-specific error messages based on profile type
+        if (profile_type_id === 1) {
+          errorMessage = 'This character name is already taken. Character names must be unique across all users.';
+        } else if ([2, 3, 4].includes(profile_type_id)) {
+          const typeNames: { [key: number]: string } = { 2: 'item', 3: 'kinship', 4: 'organization' };
+          const typeName = typeNames[profile_type_id];
+          errorMessage = `You already have a ${typeName} with this name. Please choose a different name.`;
+        } else if (profile_type_id === 5) {
+          errorMessage = 'You already have a location with this name. Please choose a different name.';
+        }
+
         res.status(409).json({
-          error: 'There is already a profile with this name',
-          message: 'There is already a profile with this name',
+          error: errorMessage,
+          message: errorMessage,
         });
         return;
       }
@@ -116,8 +132,10 @@ router.post(
       // Handle CHECK constraint violation (ownership hierarchy)
       if (err.code === '23514' || err.cause?.code === '23514') {
         res.status(400).json({
-          error: 'Invalid profile ownership structure',
-          message: 'Invalid profile ownership structure',
+          error:
+            'This profile cannot be created due to ownership rules. Items, Kinships, and Organizations must belong to a character you own.',
+          message:
+            'This profile cannot be created due to ownership rules. Items, Kinships, and Organizations must belong to a character you own.',
         });
         return;
       }

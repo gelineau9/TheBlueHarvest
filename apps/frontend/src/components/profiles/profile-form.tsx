@@ -44,6 +44,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   });
 
   const selectedParentId = watch('parent_profile_id');
+  const nameValue = watch('name') || '';
+  const nameLength = nameValue.length;
 
   // Fetch user's characters if this profile type needs a parent
   useEffect(() => {
@@ -162,15 +164,21 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-amber-900 font-semibold">
-          {getProfileTypeLabel()} Name *
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="name" className="text-amber-900 font-semibold">
+            {getProfileTypeLabel()} Name *
+          </Label>
+          <span className={`text-xs ${nameLength > 100 ? 'text-red-600 font-semibold' : 'text-amber-600'}`}>
+            {nameLength}/100 characters
+          </span>
+        </div>
         <Input
           id="name"
           {...register('name')}
           placeholder={`Enter a name for your ${getProfileTypeLabel().toLowerCase()}`}
           className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
           disabled={isSubmitting}
+          maxLength={100}
         />
         {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
       </div>
