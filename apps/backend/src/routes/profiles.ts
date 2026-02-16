@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { sql } from 'slonik';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
@@ -191,6 +191,54 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     res.json(profiles);
   } catch (err) {
     console.error('Profiles fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get public profiles (no authentication required)
+// Note: Returns first N profiles only. OFFSET support will be added in 2.1.6 for infinite scroll.
+router.get('/public', async (req: Request, res: Response) => {
+  // Parse limit parameter with defaults and handle negative values
+  const parsedLimit = parseInt(req.query.limit as string) || 50;
+  const limit = Math.min(Math.max(parsedLimit, 1), 100); // Min 1, Max 100
+
+  try {
+    const db = await getPool();
+
+    // Get profiles with limit only (no offset until infinite scroll implementation)
+    const profiles = await db.any(sql.unsafe`
+      SELECT 
+        p.profile_id, 
+        p.profile_type_id, 
+        p.name, 
+        p.created_at,
+        pt.type_name,
+        a.username
+      FROM profiles p
+      JOIN profile_types pt ON p.profile_type_id = pt.type_id
+      JOIN accounts a ON p.account_id = a.account_id
+      WHERE p.deleted = false
+      ORDER BY p.created_at DESC, p.profile_id DESC
+      LIMIT ${limit}
+    `);
+
+    // Get total count for hasMore calculation
+    const countResult = await db.one(sql.unsafe`
+      SELECT COUNT(*) as total
+      FROM profiles
+      WHERE deleted = false
+    `);
+
+    const total = parseInt(countResult.total as string);
+    const hasMore = profiles.length === limit && total > limit;
+
+    res.json({
+      profiles,
+      total,
+      hasMore,
+    });
+  } catch (err) {
+    console.error('Public profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

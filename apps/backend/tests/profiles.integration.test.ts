@@ -369,6 +369,185 @@ describe('POST /api/profiles', () => {
   });
 });
 
+describe('GET /api/profiles/public', () => {
+  let publicProfile1Id: number;
+  let publicProfile2Id: number;
+  let publicProfile3Id: number;
+
+  beforeAll(async () => {
+    // Create multiple test profiles for pagination testing
+    const profile1 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 1,
+      name: 'Public Character 1',
+      details: 'First test character',
+    });
+    publicProfile1Id = profile1.body.profile_id;
+
+    const profile2 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 5,
+      name: 'Public Location 1',
+      details: 'Test location',
+    });
+    publicProfile2Id = profile2.body.profile_id;
+
+    const profile3 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 1,
+      name: 'Public Character 2',
+      details: 'Second test character',
+    });
+    publicProfile3Id = profile3.body.profile_id;
+  });
+
+  afterAll(async () => {
+    // Clean up test profiles
+    if (publicProfile1Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile1Id}`);
+    }
+    if (publicProfile2Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile2Id}`);
+    }
+    if (publicProfile3Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile3Id}`);
+    }
+  });
+
+  describe('Success Cases', () => {
+    it('should return all profiles without authentication', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+      expect(response.body).toHaveProperty('total');
+      expect(response.body).toHaveProperty('hasMore');
+      expect(Array.isArray(response.body.profiles)).toBe(true);
+    });
+
+    it('should include profile_id, name, profile_type_id, type_name, created_at, and username in response', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+
+      const profile = response.body.profiles[0];
+      expect(profile).toHaveProperty('profile_id');
+      expect(profile).toHaveProperty('name');
+      expect(profile).toHaveProperty('profile_type_id');
+      expect(profile).toHaveProperty('type_name');
+      expect(profile).toHaveProperty('created_at');
+      expect(profile).toHaveProperty('username');
+    });
+
+    it('should exclude soft-deleted profiles (deleted=true)', async () => {
+      // Create a profile and soft-delete it
+      const createResponse = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          profile_type_id: 1,
+          name: 'To Be Deleted Profile',
+        });
+
+      const deletedProfileId = createResponse.body.profile_id;
+
+      // Soft delete the profile
+      await pool.query(sql.unsafe`
+        UPDATE profiles SET deleted = true WHERE profile_id = ${deletedProfileId}
+      `);
+
+      // Fetch public profiles
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      const profileIds = response.body.profiles.map((p: any) => p.profile_id);
+      expect(profileIds).not.toContain(deletedProfileId);
+
+      // Clean up
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${deletedProfileId}`);
+    });
+
+    it('should sort profiles by created_at DESC (newest first)', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by created_at in descending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should return accurate total count', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(typeof response.body.total).toBe('number');
+      expect(response.body.total).toBeGreaterThan(0);
+    });
+
+    it('should return hasMore as false when all profiles fit in one page', async () => {
+      // Request with very high limit to ensure all profiles fit
+      const response = await request(app).get('/api/profiles/public?limit=100');
+
+      expect(response.status).toBe(200);
+      expect(response.body.hasMore).toBe(false);
+    });
+  });
+
+  describe('Pagination', () => {
+    it('should respect limit parameter (default 50)', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeLessThanOrEqual(50);
+    });
+
+    it('should respect custom limit parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=2');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should enforce maximum limit of 100', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=500');
+
+      expect(response.status).toBe(200);
+      // Should cap at 100 even though we requested 500
+      expect(response.body.profiles.length).toBeLessThanOrEqual(100);
+    });
+
+    it('should set hasMore to true when more profiles exist than limit', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=1');
+
+      expect(response.status).toBe(200);
+      if (response.body.total > 1) {
+        expect(response.body.hasMore).toBe(true);
+      }
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle invalid limit parameter (default to 50)', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=invalid');
+
+      expect(response.status).toBe(200);
+      // Should fall back to default behavior
+      expect(response.body.profiles.length).toBeLessThanOrEqual(50);
+    });
+
+    it('should handle negative limit gracefully', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=-10');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+    });
+  });
+});
+
 describe('GET /api/profiles/:id', () => {
   describe('Success Cases', () => {
     it('should fetch existing profile by valid ID', async () => {
