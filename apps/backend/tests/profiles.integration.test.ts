@@ -480,6 +480,77 @@ describe('GET /api/profiles/public', () => {
       }
     });
 
+    it('should sort profiles by created_at ASC when order=asc', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=created_at&order=asc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by created_at in ascending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeLessThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should sort profiles by name ASC alphabetically', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=name&order=asc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by name in ascending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        expect(profiles[i].name.localeCompare(profiles[i + 1].name)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('should sort profiles by name DESC alphabetically', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=name&order=desc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by name in descending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        expect(profiles[i].name.localeCompare(profiles[i + 1].name)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('should default to created_at DESC for invalid sortBy parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=invalid_column');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Should fall back to created_at DESC
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should default to DESC for invalid order parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=created_at&order=invalid');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Should fall back to DESC
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
     it('should return accurate total count', async () => {
       const response = await request(app).get('/api/profiles/public');
 

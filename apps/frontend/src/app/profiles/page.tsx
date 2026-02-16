@@ -2,9 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, ArrowUpDown } from 'lucide-react';
 import { ProfileCard } from '@/components/profiles/profile-card';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Profile {
   profile_id: number;
@@ -21,16 +30,52 @@ interface ProfilesResponse {
   hasMore: boolean;
 }
 
+// Sort options configuration
+const SORT_OPTIONS = [
+  { value: 'created_at:desc', label: 'Newest First' },
+  { value: 'created_at:asc', label: 'Oldest First' },
+  { value: 'name:asc', label: 'Name (A-Z)' },
+  { value: 'name:desc', label: 'Name (Z-A)' },
+  { value: 'updated_at:desc', label: 'Recently Updated' },
+] as const;
+
 export default function ProfilesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
+  // Get current sort from URL params or use default
+  const sortBy = searchParams.get('sortBy') || 'created_at';
+  const order = searchParams.get('order') || 'desc';
+  const currentSort = `${sortBy}:${order}`;
+
+  // Get the label for the current sort option
+  const currentSortLabel = SORT_OPTIONS.find((opt) => opt.value === currentSort)?.label || 'Newest First';
+
+  // Update URL params when sort changes
+  const handleSortChange = (value: string) => {
+    const [newSortBy, newOrder] = value.split(':');
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sortBy', newSortBy);
+    params.set('order', newOrder);
+    router.push(`/profiles?${params.toString()}`);
+  };
+
   useEffect(() => {
     const fetchProfiles = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch('/api/profiles/public?limit=20&offset=0');
+        const params = new URLSearchParams();
+        params.set('limit', '20');
+        params.set('offset', '0');
+        params.set('sortBy', sortBy);
+        params.set('order', order);
+
+        const response = await fetch(`/api/profiles/public?${params.toString()}`);
 
         if (!response.ok) {
           setError('Failed to load profiles');
@@ -48,7 +93,7 @@ export default function ProfilesPage() {
     };
 
     fetchProfiles();
-  }, []);
+  }, [sortBy, order]);
 
   if (isLoading) {
     return (
@@ -127,6 +172,31 @@ export default function ProfilesPage() {
               {total} {total === 1 ? 'profile' : 'profiles'} total
             </p>
           </div>
+        </div>
+
+        {/* Controls Bar */}
+        <div className="flex items-center justify-end mb-6">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-amber-300 bg-white text-amber-900 hover:bg-amber-50">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                {currentSortLabel}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white border-amber-300">
+              <DropdownMenuRadioGroup value={currentSort} onValueChange={handleSortChange}>
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className="text-amber-900 focus:bg-amber-50 focus:text-amber-900"
+                  >
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Empty State */}

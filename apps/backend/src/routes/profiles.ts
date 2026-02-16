@@ -1,5 +1,6 @@
 import { Router, Response, Request } from 'express';
 import { sql } from 'slonik';
+import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
@@ -202,34 +203,77 @@ router.get('/public', async (req: Request, res: Response) => {
   const parsedLimit = parseInt(req.query.limit as string) || 50;
   const limit = Math.min(Math.max(parsedLimit, 1), 100); // Min 1, Max 100
 
+  // Parse and validate sort parameters (2.1.3)
+  // Whitelist of allowed sort columns to prevent SQL injection
+  const allowedSortColumns = ['created_at', 'updated_at', 'name'] as const;
+  type SortColumn = (typeof allowedSortColumns)[number];
+  const sortByParam = req.query.sortBy as string;
+  const sortBy: SortColumn = allowedSortColumns.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : 'created_at';
+
+  // Validate sort order - only allow ASC or DESC
+  const orderParam = ((req.query.order as string) || 'desc').toUpperCase();
+  const sortOrder: 'ASC' | 'DESC' = orderParam === 'ASC' ? 'ASC' : 'DESC';
+
   try {
     const db = await getPool();
 
+    // Build query dynamically based on sort parameters
+    // Using a map of pre-defined SQL fragments ensures type safety and prevents SQL injection
+    const sortQueries = {
+      created_at: {
+        ASC: sql.fragment`ORDER BY p.created_at ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.created_at DESC, p.profile_id DESC`,
+      },
+      updated_at: {
+        ASC: sql.fragment`ORDER BY p.updated_at ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.updated_at DESC, p.profile_id DESC`,
+      },
+      name: {
+        ASC: sql.fragment`ORDER BY p.name ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.name DESC, p.profile_id DESC`,
+      },
+    };
+
+    const orderByFragment = sortQueries[sortBy][sortOrder];
+
     // Get profiles with limit only (no offset until infinite scroll implementation)
-    const profiles = await db.any(sql.unsafe`
+    const profiles = await db.any(sql.type(
+      z.object({
+        profile_id: z.number(),
+        profile_type_id: z.number(),
+        name: z.string(),
+        created_at: z.string(),
+        type_name: z.string(),
+        username: z.string(),
+      })
+    )`
       SELECT 
         p.profile_id, 
         p.profile_type_id, 
         p.name, 
-        p.created_at,
+        p.created_at::text,
         pt.type_name,
         a.username
       FROM profiles p
       JOIN profile_types pt ON p.profile_type_id = pt.type_id
       JOIN accounts a ON p.account_id = a.account_id
       WHERE p.deleted = false
-      ORDER BY p.created_at DESC, p.profile_id DESC
+      ${orderByFragment}
       LIMIT ${limit}
     `);
 
     // Get total count for hasMore calculation
-    const countResult = await db.one(sql.unsafe`
+    const countResult = await db.one(sql.type(
+      z.object({ total: z.string() })
+    )`
       SELECT COUNT(*) as total
       FROM profiles
       WHERE deleted = false
     `);
 
-    const total = parseInt(countResult.total as string);
+    const total = parseInt(countResult.total);
     const hasMore = profiles.length === limit && total > limit;
 
     res.json({
