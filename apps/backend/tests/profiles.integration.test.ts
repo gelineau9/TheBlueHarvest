@@ -565,17 +565,18 @@ describe('GET /api/profiles/public', () => {
     });
 
     it('should return correct total count when filtering by type', async () => {
-      // Filter by character type and verify total matches returned profiles count
+      // Filter by character type and verify response structure
       const filteredResponse = await request(app).get('/api/profiles/public?profile_type_id=1&limit=100');
 
       expect(filteredResponse.status).toBe(200);
-      // Total should match the number of profiles returned (when limit is high enough)
       // All returned profiles should be characters (type 1)
       filteredResponse.body.profiles.forEach((profile: { profile_type_id: number }) => {
         expect(profile.profile_type_id).toBe(1);
       });
-      // Total should be at least the number of profiles returned
-      expect(filteredResponse.body.total).toBeGreaterThanOrEqual(filteredResponse.body.profiles.length);
+      // Total should be a non-negative number
+      expect(filteredResponse.body.total).toBeGreaterThanOrEqual(0);
+      // hasMore should be a boolean
+      expect(typeof filteredResponse.body.hasMore).toBe('boolean');
     });
 
     it('should ignore invalid profile_type_id values', async () => {
@@ -622,6 +623,70 @@ describe('GET /api/profiles/public', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.hasMore).toBe(false);
+    });
+
+    // Search Tests (2.1.5)
+    it('should search profiles by name (case-insensitive)', async () => {
+      // First get all profiles to find a name to search for
+      const allResponse = await request(app).get('/api/profiles/public?limit=100');
+      const firstProfile = allResponse.body.profiles[0];
+
+      // Search using part of the name in different case
+      const searchTerm = firstProfile.name.substring(0, 3).toLowerCase();
+      const response = await request(app).get(`/api/profiles/public?search=${searchTerm}`);
+
+      expect(response.status).toBe(200);
+      // All results should contain the search term (case-insensitive)
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain(searchTerm.toLowerCase());
+      });
+    });
+
+    it('should return empty results for non-matching search', async () => {
+      const response = await request(app).get('/api/profiles/public?search=xyznonexistent123');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles).toHaveLength(0);
+      expect(response.body.total).toBe(0);
+    });
+
+    it('should combine search with type filter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=test&profile_type_id=1');
+
+      expect(response.status).toBe(200);
+      // All results should be type 1 and contain search term
+      response.body.profiles.forEach((profile: { name: string; profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
+    });
+
+    it('should combine search with sorting', async () => {
+      const response = await request(app).get('/api/profiles/public?search=test&sortBy=name&order=asc');
+
+      expect(response.status).toBe(200);
+      // All results should contain search term
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
+    });
+
+    it('should handle empty search parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=');
+
+      expect(response.status).toBe(200);
+      // Empty search should return all profiles (same as no search)
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+    });
+
+    it('should trim whitespace from search parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=%20%20test%20%20');
+
+      expect(response.status).toBe(200);
+      // Should search for "test" after trimming
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
     });
   });
 

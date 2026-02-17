@@ -215,7 +215,7 @@ router.get('/public', async (req: Request, res: Response) => {
   const orderParam = ((req.query.order as string) || 'desc').toUpperCase();
   const sortOrder: 'ASC' | 'DESC' = orderParam === 'ASC' ? 'ASC' : 'DESC';
 
-  // Parse and validate profile_type_id filter (2.1.4)
+  // Parse and validate profile_type_id filter (2.2.4)
   // Accepts single ID or comma-separated IDs (e.g., "1" or "1,2,3")
   const validTypeIds = [1, 2, 3, 4, 5]; // Character, Item, Kinship, Organization, Location
   const profileTypeParam = req.query.profile_type_id as string;
@@ -227,6 +227,11 @@ router.get('/public', async (req: Request, res: Response) => {
       .map((id) => parseInt(id.trim(), 10))
       .filter((id) => !isNaN(id) && validTypeIds.includes(id));
   }
+
+  // Parse search parameter (2.2.5)
+  // Sanitize by trimming and limiting length to prevent abuse
+  const searchParam = req.query.search as string;
+  const searchTerm = searchParam ? searchParam.trim().slice(0, 100) : '';
 
   try {
     const db = await getPool();
@@ -250,7 +255,7 @@ router.get('/public', async (req: Request, res: Response) => {
 
     const orderByFragment = sortQueries[sortBy][sortOrder];
 
-    // Build WHERE clause with optional profile type filter (2.1.4)
+    // Build WHERE clause with optional profile type filter (2.2.4)
     const typeFilterFragment =
       profileTypeIds.length > 0
         ? sql.fragment`AND p.profile_type_id IN (${sql.join(
@@ -258,6 +263,10 @@ router.get('/public', async (req: Request, res: Response) => {
             sql.fragment`, `,
           )})`
         : sql.fragment``;
+
+    // Build search filter fragment (2.2.5)
+    // Uses ILIKE for case-insensitive partial matching
+    const searchFilterFragment = searchTerm ? sql.fragment`AND p.name ILIKE ${'%' + searchTerm + '%'}` : sql.fragment``;
 
     // Get profiles with limit only (no offset until infinite scroll implementation)
     const profiles = await db.any(
@@ -283,18 +292,20 @@ router.get('/public', async (req: Request, res: Response) => {
       JOIN accounts a ON p.account_id = a.account_id
       WHERE p.deleted = false
       ${typeFilterFragment}
+      ${searchFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
     `,
     );
 
-    // Get total count for hasMore calculation (with same filter)
+    // Get total count for hasMore calculation (with same filters)
     const countResult = await db.one(
       sql.type(z.object({ total: z.string() }))`
       SELECT COUNT(*) as total
       FROM profiles p
       WHERE p.deleted = false
       ${typeFilterFragment}
+      ${searchFilterFragment}
     `,
     );
 
