@@ -196,11 +196,15 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // Get public profiles (no authentication required)
-// Note: Returns first N profiles only. OFFSET support will be added in 2.2.6 for infinite scroll.
+// Supports pagination with limit/offset for infinite scroll (2.2.6)
 router.get('/public', async (req: Request, res: Response) => {
   // Parse limit parameter with defaults and handle negative values
   const parsedLimit = parseInt(req.query.limit as string) || 50;
   const limit = Math.min(Math.max(parsedLimit, 1), 100); // Min 1, Max 100
+
+  // Parse offset parameter for pagination (2.2.6)
+  const parsedOffset = parseInt(req.query.offset as string) || 0;
+  const offset = Math.max(parsedOffset, 0); // Ensure non-negative
 
   // Parse and validate sort parameters (2.2.3)
   // Whitelist of allowed sort columns to prevent SQL injection
@@ -268,7 +272,7 @@ router.get('/public', async (req: Request, res: Response) => {
     // Uses ILIKE for case-insensitive partial matching
     const searchFilterFragment = searchTerm ? sql.fragment`AND p.name ILIKE ${'%' + searchTerm + '%'}` : sql.fragment``;
 
-    // Get profiles with limit only (no offset until infinite scroll implementation)
+    // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
         z.object({
@@ -295,6 +299,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${searchFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
+      OFFSET ${offset}
     `,
     );
 
@@ -310,7 +315,8 @@ router.get('/public', async (req: Request, res: Response) => {
     );
 
     const total = parseInt(countResult.total);
-    const hasMore = profiles.length === limit && total > limit;
+    // hasMore is true if there are more profiles beyond the current page (2.2.6)
+    const hasMore = offset + profiles.length < total;
 
     res.json({
       profiles,

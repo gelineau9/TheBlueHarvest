@@ -739,6 +739,88 @@ describe('GET /api/profiles/public', () => {
       expect(response.body).toHaveProperty('profiles');
     });
   });
+
+  // 2.2.6 Offset Pagination Tests
+  describe('Offset Pagination (2.2.6)', () => {
+    it('should return different profiles when offset is provided', async () => {
+      // Get first page
+      const firstPage = await request(app).get('/api/profiles/public?limit=2&offset=0');
+      expect(firstPage.status).toBe(200);
+
+      // Get second page
+      const secondPage = await request(app).get('/api/profiles/public?limit=2&offset=2');
+      expect(secondPage.status).toBe(200);
+
+      // If we have enough profiles, pages should have different content
+      if (firstPage.body.total > 2 && secondPage.body.profiles.length > 0) {
+        const firstPageIds = firstPage.body.profiles.map((p: any) => p.profile_id);
+        const secondPageIds = secondPage.body.profiles.map((p: any) => p.profile_id);
+        // No overlap between pages
+        const overlap = firstPageIds.filter((id: number) => secondPageIds.includes(id));
+        expect(overlap.length).toBe(0);
+      }
+    });
+
+    it('should return empty array when offset exceeds total', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=10&offset=999999');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles).toEqual([]);
+      expect(response.body.hasMore).toBe(false);
+    });
+
+    it('should set hasMore correctly based on offset and remaining profiles', async () => {
+      // Get total count first
+      const initial = await request(app).get('/api/profiles/public?limit=1&offset=0');
+      const total = initial.body.total;
+
+      if (total >= 3) {
+        // With offset near the end, hasMore should be false
+        const nearEnd = await request(app).get(`/api/profiles/public?limit=10&offset=${total - 1}`);
+        expect(nearEnd.status).toBe(200);
+        expect(nearEnd.body.hasMore).toBe(false);
+
+        // With offset at beginning, hasMore should be true (if total > limit)
+        const atStart = await request(app).get('/api/profiles/public?limit=1&offset=0');
+        expect(atStart.status).toBe(200);
+        if (total > 1) {
+          expect(atStart.body.hasMore).toBe(true);
+        }
+      }
+    });
+
+    it('should handle offset=0 the same as no offset', async () => {
+      const withOffset = await request(app).get('/api/profiles/public?limit=5&offset=0');
+      const withoutOffset = await request(app).get('/api/profiles/public?limit=5');
+
+      expect(withOffset.status).toBe(200);
+      expect(withoutOffset.status).toBe(200);
+      expect(withOffset.body.profiles.length).toBe(withoutOffset.body.profiles.length);
+      expect(withOffset.body.total).toBe(withoutOffset.body.total);
+    });
+
+    it('should handle negative offset as 0', async () => {
+      const negativeOffset = await request(app).get('/api/profiles/public?limit=5&offset=-10');
+      const zeroOffset = await request(app).get('/api/profiles/public?limit=5&offset=0');
+
+      expect(negativeOffset.status).toBe(200);
+      expect(zeroOffset.status).toBe(200);
+      // Should return same results as offset=0
+      expect(negativeOffset.body.profiles.length).toBe(zeroOffset.body.profiles.length);
+    });
+
+    it('should work with filters, search, and sorting combined', async () => {
+      // Test that offset works correctly with other query params
+      const response = await request(app).get(
+        '/api/profiles/public?limit=2&offset=0&sortBy=name&order=asc&profile_type_id=1',
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+      expect(response.body).toHaveProperty('total');
+      expect(response.body).toHaveProperty('hasMore');
+    });
+  });
 });
 
 describe('GET /api/profiles/:id', () => {
