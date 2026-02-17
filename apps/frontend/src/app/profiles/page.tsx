@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, Users, Sword, Package, Building2, MapPin } from 'lucide-react';
 import { ProfileCard } from '@/components/profiles/profile-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,15 @@ const SORT_OPTIONS = [
   { value: 'updated_at:desc', label: 'Recently Updated' },
 ] as const;
 
+// Profile type filter configuration (2.1.4)
+const PROFILE_TYPES = [
+  { id: 1, name: 'Character', icon: Users },
+  { id: 2, name: 'Item', icon: Sword },
+  { id: 3, name: 'Kinship', icon: Package },
+  { id: 4, name: 'Organization', icon: Building2 },
+  { id: 5, name: 'Location', icon: MapPin },
+] as const;
+
 export default function ProfilesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,6 +62,15 @@ export default function ProfilesPage() {
   const order = searchParams.get('order') || 'desc';
   const currentSort = `${sortBy}:${order}`;
 
+  // Get current type filters from URL params (2.1.4)
+  const profileTypeParam = searchParams.get('profile_type_id') || '';
+  const selectedTypes = profileTypeParam
+    ? profileTypeParam
+        .split(',')
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id))
+    : [];
+
   // Get the label for the current sort option
   const currentSortLabel = SORT_OPTIONS.find((opt) => opt.value === currentSort)?.label || 'Newest First';
 
@@ -65,6 +83,35 @@ export default function ProfilesPage() {
     router.push(`/profiles?${params.toString()}`);
   };
 
+  // Toggle profile type filter (2.1.4)
+  const handleTypeToggle = (typeId: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    let newSelectedTypes: number[];
+
+    if (selectedTypes.includes(typeId)) {
+      // Remove type from selection
+      newSelectedTypes = selectedTypes.filter((id) => id !== typeId);
+    } else {
+      // Add type to selection
+      newSelectedTypes = [...selectedTypes, typeId];
+    }
+
+    if (newSelectedTypes.length > 0) {
+      params.set('profile_type_id', newSelectedTypes.join(','));
+    } else {
+      params.delete('profile_type_id');
+    }
+
+    router.push(`/profiles?${params.toString()}`);
+  };
+
+  // Clear all type filters (2.1.4)
+  const handleClearFilters = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('profile_type_id');
+    router.push(`/profiles?${params.toString()}`);
+  };
+
   useEffect(() => {
     const fetchProfiles = async () => {
       setIsLoading(true);
@@ -74,6 +121,11 @@ export default function ProfilesPage() {
         params.set('offset', '0');
         params.set('sortBy', sortBy);
         params.set('order', order);
+
+        // Add type filter if selected (2.1.4)
+        if (selectedTypes.length > 0) {
+          params.set('profile_type_id', selectedTypes.join(','));
+        }
 
         const response = await fetch(`/api/profiles/public?${params.toString()}`);
 
@@ -93,7 +145,7 @@ export default function ProfilesPage() {
     };
 
     fetchProfiles();
-  }, [sortBy, order]);
+  }, [sortBy, order, selectedTypes.join(',')]); // Use joined string for stable dependency
 
   if (isLoading) {
     return (
@@ -169,13 +221,52 @@ export default function ProfilesPage() {
           <div className="flex items-baseline justify-between">
             <h1 className="text-4xl font-bold text-amber-900">Profile Catalog</h1>
             <p className="text-sm text-amber-700">
-              {total} {total === 1 ? 'profile' : 'profiles'} total
+              {total} {total === 1 ? 'profile' : 'profiles'}
+              {selectedTypes.length > 0 ? ' (filtered)' : ' total'}
             </p>
           </div>
         </div>
 
         {/* Controls Bar */}
-        <div className="flex items-center justify-end mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* Type Filters (2.1.4) */}
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            {PROFILE_TYPES.map((type) => {
+              const Icon = type.icon;
+              const isSelected = selectedTypes.includes(type.id);
+              return (
+                <Button
+                  key={type.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTypeToggle(type.id)}
+                  className={`
+                    border-amber-300 transition-all
+                    ${
+                      isSelected
+                        ? 'bg-amber-800 text-amber-50 border-amber-800 hover:bg-amber-700 hover:border-amber-700'
+                        : 'bg-white text-amber-900 hover:bg-amber-50'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4 mr-1.5" />
+                  {type.name}
+                </Button>
+              );
+            })}
+            {selectedTypes.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+
+          {/* Sort Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="border-amber-300 bg-white text-amber-900 hover:bg-amber-50">
@@ -202,14 +293,26 @@ export default function ProfilesPage() {
         {/* Empty State */}
         {profiles.length === 0 && (
           <Card className="p-12 bg-white border-amber-300 text-center">
-            <h2 className="text-2xl font-bold text-amber-900 mb-2">No profiles yet</h2>
-            <p className="text-amber-700 mb-6">Be the first to create a profile!</p>
-            <Link
-              href="/profiles/create"
-              className="inline-block px-6 py-3 bg-amber-800 text-amber-50 rounded-md hover:bg-amber-700 transition-colors font-semibold"
-            >
-              Create Profile
-            </Link>
+            <h2 className="text-2xl font-bold text-amber-900 mb-2">
+              {selectedTypes.length > 0 ? 'No matching profiles' : 'No profiles yet'}
+            </h2>
+            <p className="text-amber-700 mb-6">
+              {selectedTypes.length > 0
+                ? 'Try adjusting your filters to see more results.'
+                : 'Be the first to create a profile!'}
+            </p>
+            {selectedTypes.length > 0 ? (
+              <Button onClick={handleClearFilters} className="bg-amber-800 text-amber-50 hover:bg-amber-700">
+                Clear filters
+              </Button>
+            ) : (
+              <Link
+                href="/profiles/create"
+                className="inline-block px-6 py-3 bg-amber-800 text-amber-50 rounded-md hover:bg-amber-700 transition-colors font-semibold"
+              >
+                Create Profile
+              </Link>
+            )}
           </Card>
         )}
 

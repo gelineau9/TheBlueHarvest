@@ -81,7 +81,7 @@ router.post(
         }
       }
 
-      // ===== CREATE THE PROFILE =====
+      // ===== CREATE PROFILE =====
 
       const result = await db.one(sql.unsafe`
         INSERT INTO profiles (account_id, profile_type_id, name, details, parent_profile_id)
@@ -108,7 +108,6 @@ router.post(
       console.error('Profile creation error:', err);
 
       // Handle unique constraint violation
-      // Check both err.code and err.cause?.code for Slonik v48+ compatibility
       if (err.code === '23505' || err.cause?.code === '23505') {
         let errorMessage = 'There is already a profile with this name';
 
@@ -197,13 +196,13 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // Get public profiles (no authentication required)
-// Note: Returns first N profiles only. OFFSET support will be added in 2.1.6 for infinite scroll.
+// Note: Returns first N profiles only. OFFSET support will be added in 2.2.6 for infinite scroll.
 router.get('/public', async (req: Request, res: Response) => {
   // Parse limit parameter with defaults and handle negative values
   const parsedLimit = parseInt(req.query.limit as string) || 50;
   const limit = Math.min(Math.max(parsedLimit, 1), 100); // Min 1, Max 100
 
-  // Parse and validate sort parameters (2.1.3)
+  // Parse and validate sort parameters (2.2.3)
   // Whitelist of allowed sort columns to prevent SQL injection
   const allowedSortColumns = ['created_at', 'updated_at', 'name'] as const;
   type SortColumn = (typeof allowedSortColumns)[number];
@@ -215,6 +214,19 @@ router.get('/public', async (req: Request, res: Response) => {
   // Validate sort order - only allow ASC or DESC
   const orderParam = ((req.query.order as string) || 'desc').toUpperCase();
   const sortOrder: 'ASC' | 'DESC' = orderParam === 'ASC' ? 'ASC' : 'DESC';
+
+  // Parse and validate profile_type_id filter (2.1.4)
+  // Accepts single ID or comma-separated IDs (e.g., "1" or "1,2,3")
+  const validTypeIds = [1, 2, 3, 4, 5]; // Character, Item, Kinship, Organization, Location
+  const profileTypeParam = req.query.profile_type_id as string;
+  let profileTypeIds: number[] = [];
+
+  if (profileTypeParam) {
+    profileTypeIds = profileTypeParam
+      .split(',')
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && validTypeIds.includes(id));
+  }
 
   try {
     const db = await getPool();
@@ -238,17 +250,27 @@ router.get('/public', async (req: Request, res: Response) => {
 
     const orderByFragment = sortQueries[sortBy][sortOrder];
 
+    // Build WHERE clause with optional profile type filter (2.1.4)
+    const typeFilterFragment =
+      profileTypeIds.length > 0
+        ? sql.fragment`AND p.profile_type_id IN (${sql.join(
+            profileTypeIds.map((id) => sql.fragment`${id}`),
+            sql.fragment`, `,
+          )})`
+        : sql.fragment``;
+
     // Get profiles with limit only (no offset until infinite scroll implementation)
-    const profiles = await db.any(sql.type(
-      z.object({
-        profile_id: z.number(),
-        profile_type_id: z.number(),
-        name: z.string(),
-        created_at: z.string(),
-        type_name: z.string(),
-        username: z.string(),
-      })
-    )`
+    const profiles = await db.any(
+      sql.type(
+        z.object({
+          profile_id: z.number(),
+          profile_type_id: z.number(),
+          name: z.string(),
+          created_at: z.string(),
+          type_name: z.string(),
+          username: z.string(),
+        }),
+      )`
       SELECT 
         p.profile_id, 
         p.profile_type_id, 
@@ -260,18 +282,21 @@ router.get('/public', async (req: Request, res: Response) => {
       JOIN profile_types pt ON p.profile_type_id = pt.type_id
       JOIN accounts a ON p.account_id = a.account_id
       WHERE p.deleted = false
+      ${typeFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
-    `);
+    `,
+    );
 
-    // Get total count for hasMore calculation
-    const countResult = await db.one(sql.type(
-      z.object({ total: z.string() })
-    )`
+    // Get total count for hasMore calculation (with same filter)
+    const countResult = await db.one(
+      sql.type(z.object({ total: z.string() }))`
       SELECT COUNT(*) as total
-      FROM profiles
-      WHERE deleted = false
-    `);
+      FROM profiles p
+      WHERE p.deleted = false
+      ${typeFilterFragment}
+    `,
+    );
 
     const total = parseInt(countResult.total);
     const hasMore = profiles.length === limit && total > limit;
