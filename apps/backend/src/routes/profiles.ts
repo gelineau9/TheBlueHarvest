@@ -1,5 +1,6 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { sql } from 'slonik';
+import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
@@ -80,7 +81,7 @@ router.post(
         }
       }
 
-      // ===== CREATE THE PROFILE =====
+      // ===== CREATE PROFILE =====
 
       const result = await db.one(sql.unsafe`
         INSERT INTO profiles (account_id, profile_type_id, name, details, parent_profile_id)
@@ -107,7 +108,6 @@ router.post(
       console.error('Profile creation error:', err);
 
       // Handle unique constraint violation
-      // Check both err.code and err.cause?.code for Slonik v48+ compatibility
       if (err.code === '23505' || err.cause?.code === '23505') {
         let errorMessage = 'There is already a profile with this name';
 
@@ -191,6 +191,140 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     res.json(profiles);
   } catch (err) {
     console.error('Profiles fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get public profiles (no authentication required)
+// Supports pagination with limit/offset for infinite scroll (2.2.6)
+router.get('/public', async (req: Request, res: Response) => {
+  // Parse limit parameter with defaults and handle negative values
+  const parsedLimit = parseInt(req.query.limit as string) || 50;
+  const limit = Math.min(Math.max(parsedLimit, 1), 100); // Min 1, Max 100
+
+  // Parse offset parameter for pagination (2.2.6)
+  const parsedOffset = parseInt(req.query.offset as string) || 0;
+  const offset = Math.max(parsedOffset, 0); // Ensure non-negative
+
+  // Parse and validate sort parameters (2.2.3)
+  // Whitelist of allowed sort columns to prevent SQL injection
+  const allowedSortColumns = ['created_at', 'updated_at', 'name'] as const;
+  type SortColumn = (typeof allowedSortColumns)[number];
+  const sortByParam = req.query.sortBy as string;
+  const sortBy: SortColumn = allowedSortColumns.includes(sortByParam as SortColumn)
+    ? (sortByParam as SortColumn)
+    : 'created_at';
+
+  // Validate sort order - only allow ASC or DESC
+  const orderParam = ((req.query.order as string) || 'desc').toUpperCase();
+  const sortOrder: 'ASC' | 'DESC' = orderParam === 'ASC' ? 'ASC' : 'DESC';
+
+  // Parse and validate profile_type_id filter (2.2.4)
+  // Accepts single ID or comma-separated IDs (e.g., "1" or "1,2,3")
+  const validTypeIds = [1, 2, 3, 4, 5]; // Character, Item, Kinship, Organization, Location
+  const profileTypeParam = req.query.profile_type_id as string;
+  let profileTypeIds: number[] = [];
+
+  if (profileTypeParam) {
+    profileTypeIds = profileTypeParam
+      .split(',')
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && validTypeIds.includes(id));
+  }
+
+  // Parse search parameter (2.2.5)
+  // Sanitize by trimming and limiting length to prevent abuse
+  const searchParam = req.query.search as string;
+  const searchTerm = searchParam ? searchParam.trim().slice(0, 100) : '';
+
+  try {
+    const db = await getPool();
+
+    // Build query dynamically based on sort parameters
+    // Using a map of pre-defined SQL fragments ensures type safety and prevents SQL injection
+    const sortQueries = {
+      created_at: {
+        ASC: sql.fragment`ORDER BY p.created_at ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.created_at DESC, p.profile_id DESC`,
+      },
+      updated_at: {
+        ASC: sql.fragment`ORDER BY p.updated_at ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.updated_at DESC, p.profile_id DESC`,
+      },
+      name: {
+        ASC: sql.fragment`ORDER BY p.name ASC, p.profile_id ASC`,
+        DESC: sql.fragment`ORDER BY p.name DESC, p.profile_id DESC`,
+      },
+    };
+
+    const orderByFragment = sortQueries[sortBy][sortOrder];
+
+    // Build WHERE clause with optional profile type filter (2.2.4)
+    const typeFilterFragment =
+      profileTypeIds.length > 0
+        ? sql.fragment`AND p.profile_type_id IN (${sql.join(
+            profileTypeIds.map((id) => sql.fragment`${id}`),
+            sql.fragment`, `,
+          )})`
+        : sql.fragment``;
+
+    // Build search filter fragment (2.2.5)
+    // Uses ILIKE for case-insensitive partial matching
+    const searchFilterFragment = searchTerm ? sql.fragment`AND p.name ILIKE ${'%' + searchTerm + '%'}` : sql.fragment``;
+
+    // Get profiles with limit and offset for pagination (2.2.6)
+    const profiles = await db.any(
+      sql.type(
+        z.object({
+          profile_id: z.number(),
+          profile_type_id: z.number(),
+          name: z.string(),
+          created_at: z.string(),
+          type_name: z.string(),
+          username: z.string(),
+        }),
+      )`
+      SELECT 
+        p.profile_id, 
+        p.profile_type_id, 
+        p.name, 
+        p.created_at::text,
+        pt.type_name,
+        a.username
+      FROM profiles p
+      JOIN profile_types pt ON p.profile_type_id = pt.type_id
+      JOIN accounts a ON p.account_id = a.account_id
+      WHERE p.deleted = false
+      ${typeFilterFragment}
+      ${searchFilterFragment}
+      ${orderByFragment}
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `,
+    );
+
+    // Get total count for hasMore calculation (with same filters)
+    const countResult = await db.one(
+      sql.type(z.object({ total: z.string() }))`
+      SELECT COUNT(*) as total
+      FROM profiles p
+      WHERE p.deleted = false
+      ${typeFilterFragment}
+      ${searchFilterFragment}
+    `,
+    );
+
+    const total = parseInt(countResult.total);
+    // hasMore is true if there are more profiles beyond the current page (2.2.6)
+    const hasMore = offset + profiles.length < total;
+
+    res.json({
+      profiles,
+      total,
+      hasMore,
+    });
+  } catch (err) {
+    console.error('Public profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

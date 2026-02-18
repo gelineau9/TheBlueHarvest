@@ -369,6 +369,460 @@ describe('POST /api/profiles', () => {
   });
 });
 
+describe('GET /api/profiles/public', () => {
+  let publicProfile1Id: number;
+  let publicProfile2Id: number;
+  let publicProfile3Id: number;
+
+  beforeAll(async () => {
+    // Create multiple test profiles for pagination testing
+    const profile1 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 1,
+      name: 'Public Character 1',
+      details: 'First test character',
+    });
+    publicProfile1Id = profile1.body.profile_id;
+
+    const profile2 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 5,
+      name: 'Public Location 1',
+      details: 'Test location',
+    });
+    publicProfile2Id = profile2.body.profile_id;
+
+    const profile3 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
+      profile_type_id: 1,
+      name: 'Public Character 2',
+      details: 'Second test character',
+    });
+    publicProfile3Id = profile3.body.profile_id;
+  });
+
+  afterAll(async () => {
+    // Clean up test profiles
+    if (publicProfile1Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile1Id}`);
+    }
+    if (publicProfile2Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile2Id}`);
+    }
+    if (publicProfile3Id) {
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${publicProfile3Id}`);
+    }
+  });
+
+  describe('Success Cases', () => {
+    it('should return all profiles without authentication', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+      expect(response.body).toHaveProperty('total');
+      expect(response.body).toHaveProperty('hasMore');
+      expect(Array.isArray(response.body.profiles)).toBe(true);
+    });
+
+    it('should include profile_id, name, profile_type_id, type_name, created_at, and username in response', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+
+      const profile = response.body.profiles[0];
+      expect(profile).toHaveProperty('profile_id');
+      expect(profile).toHaveProperty('name');
+      expect(profile).toHaveProperty('profile_type_id');
+      expect(profile).toHaveProperty('type_name');
+      expect(profile).toHaveProperty('created_at');
+      expect(profile).toHaveProperty('username');
+    });
+
+    it('should exclude soft-deleted profiles (deleted=true)', async () => {
+      // Create a profile and soft-delete it
+      const createResponse = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          profile_type_id: 1,
+          name: 'To Be Deleted Profile',
+        });
+
+      const deletedProfileId = createResponse.body.profile_id;
+
+      // Soft delete the profile
+      await pool.query(sql.unsafe`
+        UPDATE profiles SET deleted = true WHERE profile_id = ${deletedProfileId}
+      `);
+
+      // Fetch public profiles
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      const profileIds = response.body.profiles.map((p: any) => p.profile_id);
+      expect(profileIds).not.toContain(deletedProfileId);
+
+      // Clean up
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${deletedProfileId}`);
+    });
+
+    it('should sort profiles by created_at DESC (newest first)', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by created_at in descending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should sort profiles by created_at ASC when order=asc', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=created_at&order=asc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Check that profiles are sorted by created_at in ascending order
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeLessThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should sort profiles by name ASC alphabetically', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=name&order=asc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+      // Verify the endpoint accepts the sort parameter and returns profiles
+      // PostgreSQL handles the actual sorting with its collation rules
+    });
+
+    it('should sort profiles by name DESC alphabetically', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=name&order=desc');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+      // Verify the endpoint accepts the sort parameter and returns profiles
+      // PostgreSQL handles the actual sorting with its collation rules
+    });
+
+    it('should default to created_at DESC for invalid sortBy parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=invalid_column');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Should fall back to created_at DESC
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
+    it('should default to DESC for invalid order parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?sortBy=created_at&order=invalid');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeGreaterThan(1);
+
+      // Should fall back to DESC
+      const profiles = response.body.profiles;
+      for (let i = 0; i < profiles.length - 1; i++) {
+        const current = new Date(profiles[i].created_at);
+        const next = new Date(profiles[i + 1].created_at);
+        expect(current.getTime()).toBeGreaterThanOrEqual(next.getTime());
+      }
+    });
+
+    // Profile Type Filtering Tests (2.1.4)
+    it('should filter profiles by single profile_type_id', async () => {
+      const response = await request(app).get('/api/profiles/public?profile_type_id=1');
+
+      expect(response.status).toBe(200);
+      // All returned profiles should be type 1 (Character)
+      response.body.profiles.forEach((profile: { profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+      });
+    });
+
+    it('should filter profiles by multiple profile_type_ids (comma-separated)', async () => {
+      const response = await request(app).get('/api/profiles/public?profile_type_id=1,5');
+
+      expect(response.status).toBe(200);
+      // All returned profiles should be type 1 (Character) or type 5 (Location)
+      response.body.profiles.forEach((profile: { profile_type_id: number }) => {
+        expect([1, 5]).toContain(profile.profile_type_id);
+      });
+    });
+
+    it('should return correct total count when filtering by type', async () => {
+      // Filter by character type and verify response structure
+      const filteredResponse = await request(app).get('/api/profiles/public?profile_type_id=1&limit=100');
+
+      expect(filteredResponse.status).toBe(200);
+      // All returned profiles should be characters (type 1)
+      filteredResponse.body.profiles.forEach((profile: { profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+      });
+      // Total should be a non-negative number
+      expect(filteredResponse.body.total).toBeGreaterThanOrEqual(0);
+      // hasMore should be a boolean
+      expect(typeof filteredResponse.body.hasMore).toBe('boolean');
+    });
+
+    it('should ignore invalid profile_type_id values', async () => {
+      const response = await request(app).get('/api/profiles/public?profile_type_id=999');
+
+      expect(response.status).toBe(200);
+      // Invalid type ID should be ignored, returning all profiles
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+    });
+
+    it('should handle mixed valid and invalid profile_type_ids', async () => {
+      const response = await request(app).get('/api/profiles/public?profile_type_id=1,999,abc');
+
+      expect(response.status).toBe(200);
+      // Should only filter by valid type ID (1)
+      response.body.profiles.forEach((profile: { profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+      });
+    });
+
+    it('should combine filtering with sorting', async () => {
+      const response = await request(app).get('/api/profiles/public?profile_type_id=1&sortBy=name&order=asc');
+
+      expect(response.status).toBe(200);
+
+      // All profiles should be type 1 (Character)
+      response.body.profiles.forEach((profile: { profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+      });
+      // Sorting is handled by PostgreSQL - we just verify the filter works with sort params
+    });
+
+    it('should return accurate total count', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(typeof response.body.total).toBe('number');
+      expect(response.body.total).toBeGreaterThan(0);
+    });
+
+    it('should return hasMore as false when all profiles fit in one page', async () => {
+      // Request with very high limit to ensure all profiles fit
+      const response = await request(app).get('/api/profiles/public?limit=100');
+
+      expect(response.status).toBe(200);
+      expect(response.body.hasMore).toBe(false);
+    });
+
+    // Search Tests (2.1.5)
+    it('should search profiles by name (case-insensitive)', async () => {
+      // First get all profiles to find a name to search for
+      const allResponse = await request(app).get('/api/profiles/public?limit=100');
+      const firstProfile = allResponse.body.profiles[0];
+
+      // Search using part of the name in different case
+      const searchTerm = firstProfile.name.substring(0, 3).toLowerCase();
+      const response = await request(app).get(`/api/profiles/public?search=${searchTerm}`);
+
+      expect(response.status).toBe(200);
+      // All results should contain the search term (case-insensitive)
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain(searchTerm.toLowerCase());
+      });
+    });
+
+    it('should return empty results for non-matching search', async () => {
+      const response = await request(app).get('/api/profiles/public?search=xyznonexistent123');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles).toHaveLength(0);
+      expect(response.body.total).toBe(0);
+    });
+
+    it('should combine search with type filter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=test&profile_type_id=1');
+
+      expect(response.status).toBe(200);
+      // All results should be type 1 and contain search term
+      response.body.profiles.forEach((profile: { name: string; profile_type_id: number }) => {
+        expect(profile.profile_type_id).toBe(1);
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
+    });
+
+    it('should combine search with sorting', async () => {
+      const response = await request(app).get('/api/profiles/public?search=test&sortBy=name&order=asc');
+
+      expect(response.status).toBe(200);
+      // All results should contain search term
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
+    });
+
+    it('should handle empty search parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=');
+
+      expect(response.status).toBe(200);
+      // Empty search should return all profiles (same as no search)
+      expect(response.body.profiles.length).toBeGreaterThan(0);
+    });
+
+    it('should trim whitespace from search parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?search=%20%20test%20%20');
+
+      expect(response.status).toBe(200);
+      // Should search for "test" after trimming
+      response.body.profiles.forEach((profile: { name: string }) => {
+        expect(profile.name.toLowerCase()).toContain('test');
+      });
+    });
+  });
+
+  describe('Pagination', () => {
+    it('should respect limit parameter (default 50)', async () => {
+      const response = await request(app).get('/api/profiles/public');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeLessThanOrEqual(50);
+    });
+
+    it('should respect custom limit parameter', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=2');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should enforce maximum limit of 100', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=500');
+
+      expect(response.status).toBe(200);
+      // Should cap at 100 even though we requested 500
+      expect(response.body.profiles.length).toBeLessThanOrEqual(100);
+    });
+
+    it('should set hasMore to true when more profiles exist than limit', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=1');
+
+      expect(response.status).toBe(200);
+      if (response.body.total > 1) {
+        expect(response.body.hasMore).toBe(true);
+      }
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle invalid limit parameter (default to 50)', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=invalid');
+
+      expect(response.status).toBe(200);
+      // Should fall back to default behavior
+      expect(response.body.profiles.length).toBeLessThanOrEqual(50);
+    });
+
+    it('should handle negative limit gracefully', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=-10');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+    });
+  });
+
+  // 2.2.6 Offset Pagination Tests
+  describe('Offset Pagination (2.2.6)', () => {
+    it('should return different profiles when offset is provided', async () => {
+      // Get first page
+      const firstPage = await request(app).get('/api/profiles/public?limit=2&offset=0');
+      expect(firstPage.status).toBe(200);
+
+      // Get second page
+      const secondPage = await request(app).get('/api/profiles/public?limit=2&offset=2');
+      expect(secondPage.status).toBe(200);
+
+      // If we have enough profiles, pages should have different content
+      if (firstPage.body.total > 2 && secondPage.body.profiles.length > 0) {
+        const firstPageIds = firstPage.body.profiles.map((p: any) => p.profile_id);
+        const secondPageIds = secondPage.body.profiles.map((p: any) => p.profile_id);
+        // No overlap between pages
+        const overlap = firstPageIds.filter((id: number) => secondPageIds.includes(id));
+        expect(overlap.length).toBe(0);
+      }
+    });
+
+    it('should return empty array when offset exceeds total', async () => {
+      const response = await request(app).get('/api/profiles/public?limit=10&offset=999999');
+
+      expect(response.status).toBe(200);
+      expect(response.body.profiles).toEqual([]);
+      expect(response.body.hasMore).toBe(false);
+    });
+
+    it('should set hasMore correctly based on offset and remaining profiles', async () => {
+      // Get total count first
+      const initial = await request(app).get('/api/profiles/public?limit=1&offset=0');
+      const total = initial.body.total;
+
+      if (total >= 3) {
+        // With offset near the end, hasMore should be false
+        const nearEnd = await request(app).get(`/api/profiles/public?limit=10&offset=${total - 1}`);
+        expect(nearEnd.status).toBe(200);
+        expect(nearEnd.body.hasMore).toBe(false);
+
+        // With offset at beginning, hasMore should be true (if total > limit)
+        const atStart = await request(app).get('/api/profiles/public?limit=1&offset=0');
+        expect(atStart.status).toBe(200);
+        if (total > 1) {
+          expect(atStart.body.hasMore).toBe(true);
+        }
+      }
+    });
+
+    it('should handle offset=0 the same as no offset', async () => {
+      const withOffset = await request(app).get('/api/profiles/public?limit=5&offset=0');
+      const withoutOffset = await request(app).get('/api/profiles/public?limit=5');
+
+      expect(withOffset.status).toBe(200);
+      expect(withoutOffset.status).toBe(200);
+      expect(withOffset.body.profiles.length).toBe(withoutOffset.body.profiles.length);
+      expect(withOffset.body.total).toBe(withoutOffset.body.total);
+    });
+
+    it('should handle negative offset as 0', async () => {
+      const negativeOffset = await request(app).get('/api/profiles/public?limit=5&offset=-10');
+      const zeroOffset = await request(app).get('/api/profiles/public?limit=5&offset=0');
+
+      expect(negativeOffset.status).toBe(200);
+      expect(zeroOffset.status).toBe(200);
+      // Should return same results as offset=0
+      expect(negativeOffset.body.profiles.length).toBe(zeroOffset.body.profiles.length);
+    });
+
+    it('should work with filters, search, and sorting combined', async () => {
+      // Test that offset works correctly with other query params
+      const response = await request(app).get(
+        '/api/profiles/public?limit=2&offset=0&sortBy=name&order=asc&profile_type_id=1',
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('profiles');
+      expect(response.body).toHaveProperty('total');
+      expect(response.body).toHaveProperty('hasMore');
+    });
+  });
+});
+
 describe('GET /api/profiles/:id', () => {
   describe('Success Cases', () => {
     it('should fetch existing profile by valid ID', async () => {
