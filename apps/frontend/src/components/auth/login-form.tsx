@@ -69,6 +69,7 @@ export function LoginForm() {
           disabled={isLoading}
           className="text-amber-900"
         />
+        <p className="text-xs text-amber-600">Minimum 8 characters required</p>
       </div>
       {error && <div className="text-sm text-red-500">{error}</div>}
       <DialogClose asChild>

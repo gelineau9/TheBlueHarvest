@@ -1,9 +1,28 @@
+'use client';
+
 import Image from 'next/image';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { NavItem } from '@/components/nav-item';
-import { Search } from 'lucide-react';
+import { Search, PlusCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/components/auth/auth-provider';
 
 export function LeftSidebar() {
+  const router = useRouter();
+  const { isLoggedIn } = useAuth();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+
+  const handleCreateProfileClick = () => {
+    if (isLoggedIn) {
+      router.push('/profiles/create');
+    } else {
+      setShowLoginDialog(true);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
@@ -27,6 +46,24 @@ export function LeftSidebar() {
           />
         </div>
       </div>
+
+      <div className="mb-4">
+        <Button onClick={handleCreateProfileClick} className="w-full bg-amber-800 text-amber-50 hover:bg-amber-700">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create Profile
+        </Button>
+      </div>
+
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="bg-[#f5e6c8] border-amber-800/30">
+          <DialogHeader>
+            <DialogTitle className="text-amber-900">Login Required</DialogTitle>
+            <DialogDescription className="text-amber-800">
+              You need to be logged in to create a profile. Please log in or create an account to continue.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       <nav className="flex-1 space-y-1">
         <NavItem href="#" label="Home" active />

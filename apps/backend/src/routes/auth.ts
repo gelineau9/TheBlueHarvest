@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { sql, createPool } from 'slonik';
+import { sql } from 'slonik';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
@@ -173,7 +173,16 @@ router.get('/me', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(401).json({ message: 'Invalid token' });
+    // Distinguish between expired and invalid tokens
+    if (err instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ message: 'Token expired' });
+      return;
+    }
+    if (err instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ message: 'Invalid token' });
+      return;
+    }
+    res.status(401).json({ message: 'Authentication failed' });
   }
 });
 
@@ -254,6 +263,15 @@ router.put(
       });
     } catch (err) {
       console.error(err);
+      // Distinguish between expired and invalid tokens
+      if (err instanceof jwt.TokenExpiredError) {
+        res.status(401).json({ message: 'Token expired' });
+        return;
+      }
+      if (err instanceof jwt.JsonWebTokenError) {
+        res.status(401).json({ message: 'Invalid token' });
+        return;
+      }
       res.status(500).json({ message: 'Internal server error' });
     }
   },

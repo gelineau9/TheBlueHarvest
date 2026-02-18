@@ -1,9 +1,14 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { loginSchema, registerSchema, profileUpdateSchema } from './validations';
+import {
+  loginSchema,
+  registerSchema,
+  profileUpdateSchema,
+  createProfileSchema,
+  CreateProfileInput,
+} from './validations';
 import { API_CONFIG } from '@/config/api';
-import { ZodError } from 'zod';
 
 export async function login(formData: FormData) {
   try {
@@ -189,6 +194,18 @@ export async function updateProfile(formData: FormData) {
     });
 
     if (!response.ok) {
+      // If unauthorized (401), token is invalid/expired - clean up the cookie
+      if (response.status === 401) {
+        console.log('Token invalid/expired during profile update, clearing cookie');
+        await cookieStore.set('auth_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 0,
+        });
+        return { success: false, error: 'Session expired. Please log in again.' };
+      }
+
       const data = await response.json();
       return { success: false, error: data.message || 'Profile update failed' };
     }
@@ -197,6 +214,65 @@ export async function updateProfile(formData: FormData) {
     return { success: true, user: data };
   } catch (error) {
     console.error('Profile update error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+export async function createProfile(formData: CreateProfileInput) {
+  try {
+    // Validate input
+    const result = createProfileSchema.safeParse(formData);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error.issues[0]?.message || 'Invalid input',
+      };
+    }
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
+    if (!authToken) {
+      return { success: false, error: 'Not authenticated. Please log in.' };
+    }
+    // Call backend API
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/profiles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken.value}`,
+      },
+      body: JSON.stringify({
+        profile_type_id: result.data.profile_type_id,
+        name: result.data.name.trim(),
+        details: result.data.details ? { description: result.data.details } : null,
+        parent_profile_id: result.data.parent_profile_id,
+      }),
+    });
+    if (!response.ok) {
+      // If unauthorized (401), token is invalid/expired - clean up the cookie
+      if (response.status === 401) {
+        console.log('Token invalid/expired during profile creation, clearing cookie');
+        await cookieStore.set('auth_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 0,
+        });
+        return { success: false, error: 'Session expired. Please log in again.' };
+      }
+      const errorData = await response.json();
+      return {
+        success: false,
+        error: errorData.message || 'Failed to create profile',
+      };
+    }
+    const data = await response.json();
+    return {
+      success: true,
+      profile: data,
+    };
+  } catch (error) {
+    console.error('Profile creation error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }
@@ -223,6 +299,14 @@ export async function getSession() {
     console.log('Backend /me response status:', response.status);
 
     if (!response.ok) {
+      // Token is invalid or expired - clean up the cookie
+      console.log('Token invalid/expired, clearing cookie');
+      await cookieStore.set('auth_token', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 0, // Expire immediately
+      });
       return { isLoggedIn: false };
     }
 

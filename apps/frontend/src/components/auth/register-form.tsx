@@ -166,6 +166,7 @@ export function RegisterForm() {
               className="text-amber-900"
               aria-invalid={!!errors.username}
             />
+            <p className="text-xs text-amber-600">Must be at least 3 characters</p>
             {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
           </div>
 
@@ -183,6 +184,7 @@ export function RegisterForm() {
               className="text-amber-900"
               aria-invalid={!!errors.password}
             />
+            <p className="text-xs text-amber-600">Must be at least 8 characters</p>
             {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
           </div>
 

@@ -1,6 +1,7 @@
 // /apps/backend/src/index.ts
 import express, { Request, Response } from 'express';
 import authRoutes from './routes/auth.js';
+import profilesRoutes from './routes/profiles.js';
 
 const app = express();
 const PORT = Number(process.env.BACKEND_PORT ?? 4000);
@@ -11,6 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profiles', profilesRoutes);
 
 //Basic route
 app.get('/', (req: Request, res: Response) => {
