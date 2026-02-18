@@ -966,6 +966,87 @@ describe('GET /api/profiles/:id', () => {
       expect(response.body.error).toBe('Invalid profile ID');
     });
   });
+
+  // 2.3.4 - can_edit ownership verification tests
+  describe('can_edit field (2.3.4)', () => {
+    let ownedProfileId: number;
+
+    beforeEach(async () => {
+      // Create a profile owned by testAccountId
+      const response = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          profile_type_id: 1,
+          name: `Ownership Test Profile ${Date.now()}`,
+        });
+
+      ownedProfileId = response.body.profile_id;
+    });
+
+    afterEach(async () => {
+      if (ownedProfileId) {
+        await pool.query(sql.unsafe`
+          DELETE FROM profiles WHERE profile_id = ${ownedProfileId}
+        `);
+      }
+    });
+
+    it('should return can_edit: false for unauthenticated users', async () => {
+      const response = await request(app).get(`/api/profiles/${ownedProfileId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(false);
+    });
+
+    it('should return can_edit: false for users who do not own the profile', async () => {
+      // Create token for a different user
+      const otherUserId = testAccountId + 1000;
+      const otherToken = generateToken(otherUserId);
+
+      const response = await request(app)
+        .get(`/api/profiles/${ownedProfileId}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(false);
+    });
+
+    it('should return can_edit: true for the profile owner', async () => {
+      const response = await request(app)
+        .get(`/api/profiles/${ownedProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(true);
+    });
+
+    it('should return can_edit: false with invalid token', async () => {
+      const response = await request(app)
+        .get(`/api/profiles/${ownedProfileId}`)
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(false);
+    });
+
+    it('should return can_edit: false with expired token', async () => {
+      // Create an expired token
+      const jwt = await import('jsonwebtoken');
+      const expiredToken = jwt.default.sign(
+        { userId: testAccountId },
+        process.env.JWT_SECRET || 'test-secret',
+        { expiresIn: '-1h' }, // Expired 1 hour ago
+      );
+
+      const response = await request(app)
+        .get(`/api/profiles/${ownedProfileId}`)
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(false);
+    });
+  });
 });
 
 // 2.3.2 - PUT /api/profiles/:id tests

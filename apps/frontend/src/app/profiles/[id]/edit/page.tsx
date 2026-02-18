@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface Profile {
   profile_id: number;
@@ -37,6 +38,16 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
+  // Original values for dirty checking (2.3.3)
+  const [originalName, setOriginalName] = useState('');
+  const [originalDescription, setOriginalDescription] = useState('');
+
+  // Check if form has unsaved changes (2.3.3)
+  const isDirty = name !== originalName || description !== originalDescription;
+
+  // Use the unsaved changes hook for navigation warnings (2.3.3)
+  const { navigateWithWarning } = useUnsavedChanges(isDirty);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -60,8 +71,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         }
 
         setProfile(data);
-        setName(data.name);
-        setDescription(data.details?.description || '');
+        // Set both current and original values
+        const initialName = data.name;
+        const initialDescription = data.details?.description || '';
+        setName(initialName);
+        setDescription(initialDescription);
+        setOriginalName(initialName);
+        setOriginalDescription(initialDescription);
       } catch (err) {
         setError('An error occurred while loading the profile');
       } finally {
@@ -94,6 +110,10 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         setSaveError(data.message || 'Failed to save changes');
         return;
       }
+
+      // Update original values to match saved state (prevents warning on redirect)
+      setOriginalName(name.trim());
+      setOriginalDescription(description.trim());
 
       // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
@@ -143,14 +163,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <Link
-          href={`/profiles/${id}`}
+        {/* Back Button - with unsaved changes warning (2.3.3) */}
+        <button
+          onClick={() => navigateWithWarning(`/profiles/${id}`)}
           className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Profile
-        </Link>
+        </button>
 
         {/* Edit Form */}
         <Card className="p-8 bg-white border-amber-300">
@@ -159,6 +179,8 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
             </div>
             <h1 className="text-3xl font-bold text-amber-900">Edit Profile</h1>
+            {/* Unsaved changes indicator (2.3.3) */}
+            {isDirty && <p className="text-sm text-amber-600 mt-2">You have unsaved changes</p>}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -221,10 +243,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   </>
                 )}
               </Button>
+              {/* Cancel button - with unsaved changes warning (2.3.3) */}
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(`/profiles/${id}`)}
+                onClick={() => navigateWithWarning(`/profiles/${id}`)}
                 className="border-amber-300 text-amber-800 hover:bg-amber-50"
               >
                 Cancel
