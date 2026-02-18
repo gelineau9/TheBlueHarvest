@@ -81,9 +81,9 @@ export function ProfileButton() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-amber-800/20" />
             <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-              <Link href="/profile">
+              <Link href="/account">
                 <User className="mr-2 h-4 w-4 text-amber-700" />
-                <span>Profile</span>
+                <span>Account</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
