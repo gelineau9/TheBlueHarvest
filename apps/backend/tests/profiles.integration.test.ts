@@ -967,3 +967,214 @@ describe('GET /api/profiles/:id', () => {
     });
   });
 });
+
+// 2.3.2 - PUT /api/profiles/:id tests
+describe('PUT /api/profiles/:id', () => {
+  let editableProfileId: number;
+
+  beforeEach(async () => {
+    // Create a fresh profile for each test
+    const response = await request(app)
+      .post('/api/profiles')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({
+        profile_type_id: 1,
+        name: `Edit Test Profile ${Date.now()}`,
+        details: { description: 'Original description' },
+      });
+
+    editableProfileId = response.body.profile_id;
+  });
+
+  afterEach(async () => {
+    // Clean up test profile
+    if (editableProfileId) {
+      await pool.query(sql.unsafe`
+        DELETE FROM profiles WHERE profile_id = ${editableProfileId}
+      `);
+    }
+  });
+
+  describe('Successful Updates', () => {
+    it('should update profile name', async () => {
+      const newName = `Updated Name ${Date.now()}`;
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: newName });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe(newName);
+      expect(response.body.profile_id).toBe(editableProfileId);
+    });
+
+    it('should update profile details', async () => {
+      const newDescription = 'Updated description text';
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ details: { description: newDescription } });
+
+      expect(response.status).toBe(200);
+      expect(response.body.details.description).toBe(newDescription);
+    });
+
+    it('should update both name and details', async () => {
+      const newName = `Both Updated ${Date.now()}`;
+      const newDescription = 'Both updated description';
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          name: newName,
+          details: { description: newDescription },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe(newName);
+      expect(response.body.details.description).toBe(newDescription);
+    });
+
+    it('should update updated_at timestamp', async () => {
+      // Get original timestamp
+      const original = await request(app).get(`/api/profiles/${editableProfileId}`);
+      const originalUpdatedAt = original.body.updated_at;
+
+      // Wait a moment to ensure timestamp difference
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: `Timestamp Test ${Date.now()}` });
+
+      expect(response.status).toBe(200);
+      expect(response.body.updated_at).not.toBe(originalUpdatedAt);
+    });
+
+    it('should allow clearing details by setting to null', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ details: null });
+
+      expect(response.status).toBe(200);
+      expect(response.body.details).toBeNull();
+    });
+  });
+
+  describe('Authentication & Authorization', () => {
+    it('should return 401 without auth token', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .send({ name: 'Unauthorized Update' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 401 with invalid token', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', 'Bearer invalid-token')
+        .send({ name: 'Invalid Token Update' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 403 when updating profile owned by another user', async () => {
+      // Create a different user's token
+      const otherUserId = testAccountId + 1000; // Non-existent user ID
+      const otherToken = generateToken(otherUserId);
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({ name: 'Should Not Update' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('You do not have permission to edit this profile');
+    });
+  });
+
+  describe('Validation Errors', () => {
+    it('should return 400 for empty name', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: '' });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for name exceeding 100 characters', async () => {
+      const longName = 'a'.repeat(101);
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: longName });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 when no fields provided', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('No fields to update');
+    });
+
+    it('should return 400 for invalid profile ID', async () => {
+      const response = await request(app)
+        .put('/api/profiles/not-a-number')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: 'Test' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid profile ID');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should return 404 for non-existent profile', async () => {
+      const response = await request(app)
+        .put('/api/profiles/999999')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: 'Non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found');
+    });
+
+    it('should return 404 for soft-deleted profile', async () => {
+      // Soft delete the profile
+      await pool.query(sql.unsafe`
+        UPDATE profiles SET deleted = true WHERE profile_id = ${editableProfileId}
+      `);
+
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: 'Deleted Profile Update' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found');
+    });
+
+    it('should trim whitespace from name', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${editableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({ name: '  Trimmed Name  ' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe('Trimmed Name');
+    });
+  });
+});
