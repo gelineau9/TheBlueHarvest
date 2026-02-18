@@ -63,14 +63,23 @@ router.post(
 
       // If parent_profile_id is provided, verify it exists and is owned by the user
       if (parent_profile_id) {
-        const parent = await db.maybeOne(sql.unsafe`
+        const parent = await db.maybeOne(
+          sql.type(
+            z.object({
+              profile_id: z.number(),
+              profile_type_id: z.number(),
+              account_id: z.number(),
+              name: z.string(),
+            }),
+          )`
           SELECT profile_id, profile_type_id, account_id, name
           FROM profiles 
           WHERE profile_id = ${parent_profile_id} 
             AND account_id = ${userId}
             AND profile_type_id = 1
             AND deleted = false
-        `);
+        `,
+        );
 
         if (!parent) {
           res.status(400).json({
@@ -83,7 +92,18 @@ router.post(
 
       // ===== CREATE PROFILE =====
 
-      const result = await db.one(sql.unsafe`
+      const result = await db.one(
+        sql.type(
+          z.object({
+            profile_id: z.number(),
+            account_id: z.number(),
+            profile_type_id: z.number(),
+            name: z.string(),
+            details: z.any().nullable(),
+            parent_profile_id: z.number().nullable(),
+            created_at: z.string(),
+          }),
+        )`
         INSERT INTO profiles (account_id, profile_type_id, name, details, parent_profile_id)
         VALUES (
           ${userId}, 
@@ -92,8 +112,9 @@ router.post(
           ${details !== null && details !== undefined ? sql.jsonb(details) : null},
           ${parent_profile_id || null}
         )
-        RETURNING profile_id, account_id, profile_type_id, name, details, parent_profile_id, created_at
-      `);
+        RETURNING profile_id, account_id, profile_type_id, name, details, parent_profile_id, created_at::text
+      `,
+      );
 
       res.status(201).json({
         profile_id: result.profile_id,
@@ -155,39 +176,35 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const db = await getPool();
 
-    let query;
-    if (typeFilter) {
-      query = sql.unsafe`
-        SELECT 
-          p.profile_id, 
-          p.profile_type_id, 
-          p.name, 
-          p.created_at,
-          pt.type_name
-        FROM profiles p
-        JOIN profile_types pt ON p.profile_type_id = pt.type_id
-        WHERE p.account_id = ${userId} 
-          AND p.profile_type_id = ${typeFilter}
-          AND p.deleted = false
-        ORDER BY p.created_at DESC
-      `;
-    } else {
-      query = sql.unsafe`
-        SELECT 
-          p.profile_id, 
-          p.profile_type_id, 
-          p.name, 
-          p.created_at,
-          pt.type_name
-        FROM profiles p
-        JOIN profile_types pt ON p.profile_type_id = pt.type_id
-        WHERE p.account_id = ${userId} 
-          AND p.deleted = false
-        ORDER BY p.created_at DESC
-      `;
-    }
+    // Define the result schema for user profiles
+    const profileSchema = z.object({
+      profile_id: z.number(),
+      profile_type_id: z.number(),
+      name: z.string(),
+      created_at: z.string(),
+      type_name: z.string(),
+    });
 
-    const profiles = await db.any(query);
+    // Build type filter fragment if type is specified
+    const typeFilterFragment = typeFilter ? sql.fragment`AND p.profile_type_id = ${typeFilter}` : sql.fragment``;
+
+    const profiles = await db.any(
+      sql.type(profileSchema)`
+        SELECT 
+          p.profile_id, 
+          p.profile_type_id, 
+          p.name, 
+          p.created_at::text,
+          pt.type_name
+        FROM profiles p
+        JOIN profile_types pt ON p.profile_type_id = pt.type_id
+        WHERE p.account_id = ${userId} 
+          AND p.deleted = false
+          ${typeFilterFragment}
+        ORDER BY p.created_at DESC
+      `,
+    );
+
     res.json(profiles);
   } catch (err) {
     console.error('Profiles fetch error:', err);
@@ -341,9 +358,26 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const db = await getPool();
 
-    const profile = await db.maybeOne(sql.unsafe`
+    const profile = await db.maybeOne(
+      sql.type(
+        z.object({
+          profile_id: z.number(),
+          account_id: z.number(),
+          profile_type_id: z.number(),
+          name: z.string(),
+          details: z.any().nullable(),
+          parent_profile_id: z.number().nullable(),
+          created_at: z.string(),
+          updated_at: z.string().nullable(),
+          deleted: z.boolean(),
+          type_name: z.string(),
+          username: z.string(),
+          parent_name: z.string().nullable(),
+          parent_id: z.number().nullable(),
+        }),
+      )`
       SELECT p.profile_id, p.account_id, p.profile_type_id, p.name, p.details, 
-             p.parent_profile_id, p.created_at, p.updated_at, p.deleted, 
+             p.parent_profile_id, p.created_at::text, p.updated_at::text, p.deleted, 
              pt.type_name, a.username,
              parent_p.name as parent_name,
              parent_p.profile_id as parent_id
@@ -352,7 +386,8 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       JOIN accounts a ON p.account_id = a.account_id
       LEFT JOIN profiles parent_p ON p.parent_profile_id = parent_p.profile_id
       WHERE p.profile_id = ${profileId} AND p.deleted = false
-    `);
+    `,
+    );
 
     if (!profile) {
       res.status(404).json({ error: 'Profile not found' });

@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import {
   loginSchema,
   registerSchema,
-  profileUpdateSchema,
+  accountUpdateSchema,
   createProfileSchema,
   CreateProfileInput,
 } from './validations';
@@ -149,14 +149,14 @@ export async function register(formData: FormData) {
   }
 }
 
-export async function updateProfile(formData: FormData) {
+export async function updateAccount(formData: FormData) {
   try {
     const username = formData.get('username');
     const firstName = formData.get('firstName');
     const lastName = formData.get('lastName');
 
     // Validate input
-    const result = profileUpdateSchema.safeParse({
+    const result = accountUpdateSchema.safeParse({
       username: username || undefined,
       firstName: firstName || undefined,
       lastName: lastName || undefined,
@@ -180,7 +180,7 @@ export async function updateProfile(formData: FormData) {
     }
 
     // Call backend API
-    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/profile`, {
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/account`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ export async function updateProfile(formData: FormData) {
     if (!response.ok) {
       // If unauthorized (401), token is invalid/expired - clean up the cookie
       if (response.status === 401) {
-        console.log('Token invalid/expired during profile update, clearing cookie');
+        console.log('Token invalid/expired during account update, clearing cookie');
         await cookieStore.set('auth_token', '', {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -207,13 +207,13 @@ export async function updateProfile(formData: FormData) {
       }
 
       const data = await response.json();
-      return { success: false, error: data.message || 'Profile update failed' };
+      return { success: false, error: data.message || 'Account update failed' };
     }
 
     const data = await response.json();
     return { success: true, user: data };
   } catch (error) {
-    console.error('Profile update error:', error);
+    console.error('Account update error:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }

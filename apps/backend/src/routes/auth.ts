@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
+import { z } from 'zod';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
@@ -39,11 +40,12 @@ router.post(
       const pool = await getPool();
 
       // Check for existing user
-      // TODO: Add types so we can remove unsafe
-      const existing = await pool.maybeOne(sql.unsafe`
-        SELECT 1 FROM accounts WHERE email = ${email}
-        OR username = ${username}
-      `);
+      const existing = await pool.maybeOne(
+        sql.type(z.object({ exists: z.number() }))`
+          SELECT 1 as exists FROM accounts WHERE email = ${email}
+          OR username = ${username}
+        `,
+      );
 
       if (existing) {
         res.status(409).json({ message: 'User with that email or username already exists.' });
@@ -54,12 +56,13 @@ router.post(
       const hashedPassword = await argon2.hash(password);
 
       // Create user (convert undefined to null for optional fields)
-      // TODO: Add types so we can remove unsafe
-      const result = await pool.one(sql.unsafe`
-        INSERT INTO accounts (email, username, hashed_password, first_name, last_name, user_role_id)
-        VALUES (${email}, ${username}, ${hashedPassword}, ${first_name ?? null}, ${last_name ?? null}, 1)
-        RETURNING account_id
-      `);
+      const result = await pool.one(
+        sql.type(z.object({ account_id: z.number() }))`
+          INSERT INTO accounts (email, username, hashed_password, first_name, last_name, user_role_id)
+          VALUES (${email}, ${username}, ${hashedPassword}, ${first_name ?? null}, ${last_name ?? null}, 1)
+          RETURNING account_id
+        `,
+      );
 
       // Create JWT
       const token = jwt.sign({ userId: result.account_id }, process.env.JWT_SECRET!, {
@@ -99,12 +102,21 @@ router.post(
       const pool = await getPool();
 
       // Find user (use maybeOne to avoid throwing error if not found)
-      // TODO: Add types so we can remove unsafe
-      const user = await pool.maybeOne(sql.unsafe`
-      SELECT account_id, hashed_password, username, first_name, last_name
-      FROM accounts
-      WHERE email = ${email}
-    `);
+      const user = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            hashed_password: z.string(),
+            username: z.string(),
+            first_name: z.string().nullable(),
+            last_name: z.string().nullable(),
+          }),
+        )`
+          SELECT account_id, hashed_password, username, first_name, last_name
+          FROM accounts
+          WHERE email = ${email}
+        `,
+      );
 
       if (!user) {
         res.status(401).json({ message: 'Invalid email or password' });
@@ -152,12 +164,22 @@ router.get('/me', async (req: Request, res: Response) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
     const pool = await getPool();
 
-    // TODO: Add types so we can remove unsafe
-    const user = await pool.maybeOne(sql.unsafe`
-      SELECT account_id, username, first_name, last_name, email
-      FROM accounts
-      WHERE account_id = ${decoded.userId}
-    `);
+    // Get current user
+    const user = await pool.maybeOne(
+      sql.type(
+        z.object({
+          account_id: z.number(),
+          username: z.string(),
+          first_name: z.string().nullable(),
+          last_name: z.string().nullable(),
+          email: z.string(),
+        }),
+      )`
+        SELECT account_id, username, first_name, last_name, email
+        FROM accounts
+        WHERE account_id = ${decoded.userId}
+      `,
+    );
 
     if (!user) {
       res.status(401).json({ message: 'User not found' });
@@ -186,9 +208,9 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
-// Update user profile
+// Update user account
 router.put(
-  '/profile',
+  '/account',
   [
     body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.'),
     body('firstName').optional().trim().isLength({ min: 1 }).withMessage('First name is required.'),
@@ -216,11 +238,12 @@ router.put(
 
       // Check if username is already taken by another user
       if (username) {
-        // TODO: Add types so we can remove unsafe
-        const existingUser = await pool.maybeOne(sql.unsafe`
-        SELECT account_id FROM accounts
-        WHERE username = ${username} AND account_id != ${decoded.userId}
-      `);
+        const existingUser = await pool.maybeOne(
+          sql.type(z.object({ account_id: z.number() }))`
+            SELECT account_id FROM accounts
+            WHERE username = ${username} AND account_id != ${decoded.userId}
+          `,
+        );
 
         if (existingUser) {
           res.status(409).json({ message: 'Username already taken' });
@@ -228,7 +251,7 @@ router.put(
         }
       }
 
-      // Update user profile
+      // Update user account
       const updateFragments = [];
 
       if (username) {
@@ -246,13 +269,23 @@ router.put(
         return;
       }
 
-      // TODO: Add types so we can remove unsafe
-      const result = await pool.one(sql.unsafe`
-      UPDATE accounts
-      SET ${sql.join(updateFragments, sql.fragment`, `)}
-      WHERE account_id = ${decoded.userId}
-      RETURNING account_id, username, first_name, last_name, email
-    `);
+      // Update user account
+      const result = await pool.one(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            username: z.string(),
+            first_name: z.string().nullable(),
+            last_name: z.string().nullable(),
+            email: z.string(),
+          }),
+        )`
+          UPDATE accounts
+          SET ${sql.join(updateFragments, sql.fragment`, `)}
+          WHERE account_id = ${decoded.userId}
+          RETURNING account_id, username, first_name, last_name, email
+        `,
+      );
 
       res.json({
         id: result.account_id,

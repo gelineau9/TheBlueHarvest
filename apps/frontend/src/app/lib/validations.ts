@@ -19,7 +19,7 @@ export const registerSchema = z
     path: ['confirmPassword'],
   });
 
-export const profileUpdateSchema = z.object({
+export const accountUpdateSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').optional(),
   firstName: z.string().min(1, 'First name is required').optional(),
   lastName: z.string().min(1, 'Last name is required').optional(),
@@ -34,5 +34,5 @@ export const createProfileSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
-export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type AccountUpdateInput = z.infer<typeof accountUpdateSchema>;
 export type CreateProfileInput = z.infer<typeof createProfileSchema>;
