@@ -3,7 +3,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -346,8 +346,8 @@ router.get('/public', async (req: Request, res: Response) => {
   }
 });
 
-// Get profile by ID endpoint
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+// Get profile by ID endpoint (2.3.1 - adds is_owner for edit button visibility)
+router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   const profileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   if (isNaN(profileId)) {
@@ -394,6 +394,10 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Determine if current user can edit this profile (2.3.1)
+    // Future: will also check collaborators table
+    const canEdit = req.userId ? profile.account_id === req.userId : false;
+
     res.json({
       profile_id: profile.profile_id,
       account_id: profile.account_id,
@@ -408,6 +412,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       updated_at: profile.updated_at,
       deleted: profile.deleted,
       username: profile.username,
+      can_edit: canEdit,
     });
   } catch (err) {
     console.error('Profile fetch error:', err);

@@ -5,12 +5,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
 
+    // Get auth token from cookie to determine ownership (2.3.1)
+    const authToken = request.cookies.get('auth_token')?.value;
+
     // Fetch profile from backend using Docker service name
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/profiles/${id}`, {
       headers: {
-        // Forward any authorization headers if needed
-        ...(request.headers.get('authorization') && {
-          Authorization: request.headers.get('authorization')!,
+        // Forward auth token as Bearer if present (for can_edit check)
+        ...(authToken && {
+          Authorization: `Bearer ${authToken}`,
         }),
       },
       cache: 'no-store', // Ensure fresh data
