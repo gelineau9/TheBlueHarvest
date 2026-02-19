@@ -27,7 +27,7 @@ export function LeftSidebar() {
 
   const handleCreatePostClick = () => {
     if (isLoggedIn) {
-      router.push('/posts/create/writing');
+      router.push('/posts/create');
     } else {
       setLoginDialogType('post');
       setShowLoginDialog(true);
