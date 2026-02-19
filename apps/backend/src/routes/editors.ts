@@ -90,7 +90,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         sql.type(z.object({ id: z.number() }))`
           SELECT ${entityIdent} as id FROM ${entityTableIdent}
           WHERE ${entityIdent} = ${entityId} AND deleted = false
-        `
+        `,
       );
 
       if (!entityExists) {
@@ -113,7 +113,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           LEFT JOIN accounts inviter ON e.invited_by_account_id = inviter.account_id
           WHERE e.${entityIdent} = ${entityId} AND e.deleted = false
           ORDER BY e.created_at ASC
-        `
+        `,
       );
 
       res.json({ editors });
@@ -159,7 +159,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           sql.type(z.object({ account_id: z.number(), username: z.string() }))`
             SELECT account_id, username FROM accounts
             WHERE LOWER(username) = LOWER(${username}) AND deleted = false
-          `
+          `,
         );
 
         if (!targetAccount) {
@@ -177,7 +177,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           sql.type(EditorCheckSchema)`
             SELECT editor_id, deleted FROM ${editorTableIdent}
             WHERE ${entityIdent} = ${entityId} AND account_id = ${targetAccount.account_id}
-          `
+          `,
         );
 
         if (existingEditor) {
@@ -193,7 +193,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
               SET deleted = false, invited_by_account_id = ${userId}, created_at = NOW()
               WHERE editor_id = ${existingEditor.editor_id}
               RETURNING editor_id, account_id, created_at::text
-            `
+            `,
           );
 
           res.status(201).json({
@@ -211,7 +211,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
             INSERT INTO ${editorTableIdent} (${entityIdent}, account_id, invited_by_account_id)
             VALUES (${entityId}, ${targetAccount.account_id}, ${userId})
             RETURNING editor_id, account_id, created_at::text
-          `
+          `,
         );
 
         res.status(201).json({
@@ -224,7 +224,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         console.error(`Error adding ${entityName} editor:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
-    }
+    },
   );
 
   // DELETE /:entityId/editors/:editorId - Remove an editor (owner or self)
@@ -246,7 +246,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         sql.type(EditorDeleteSchema)`
           SELECT editor_id, account_id FROM ${editorTableIdent}
           WHERE editor_id = ${editorId} AND ${entityIdent} = ${entityId} AND deleted = false
-        `
+        `,
       );
 
       if (!editor) {
@@ -269,7 +269,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           UPDATE ${editorTableIdent}
           SET deleted = true
           WHERE editor_id = ${editorId}
-        `
+        `,
       );
 
       res.status(200).json({ message: 'Editor removed successfully' });
@@ -289,7 +289,7 @@ export async function isProfileOwner(db: any, profileId: number, userId: number)
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM profiles
       WHERE profile_id = ${profileId} AND deleted = false
-    `
+    `,
   );
   return profile?.account_id === userId;
 }
@@ -299,7 +299,7 @@ export async function isPostOwner(db: any, postId: number, userId: number): Prom
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM posts
       WHERE post_id = ${postId} AND deleted = false
-    `
+    `,
   );
   return post?.account_id === userId;
 }
@@ -309,7 +309,7 @@ export async function isCollectionOwner(db: any, collectionId: number, userId: n
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM collections
       WHERE collection_id = ${collectionId} AND deleted = false
-    `
+    `,
   );
   return collection?.account_id === userId;
 }
@@ -326,7 +326,7 @@ export async function canEditProfile(db: any, profileId: number, userId: number)
         SELECT 1 FROM profile_editors
         WHERE profile_id = ${profileId} AND account_id = ${userId} AND deleted = false
       ) as can_edit
-    `
+    `,
   );
   return result?.can_edit ?? false;
 }
@@ -341,7 +341,7 @@ export async function canEditPost(db: any, postId: number, userId: number): Prom
         SELECT 1 FROM post_editors
         WHERE post_id = ${postId} AND account_id = ${userId} AND deleted = false
       ) as can_edit
-    `
+    `,
   );
   return result?.can_edit ?? false;
 }
@@ -356,7 +356,7 @@ export async function canEditCollection(db: any, collectionId: number, userId: n
         SELECT 1 FROM collection_editors
         WHERE collection_id = ${collectionId} AND account_id = ${userId} AND deleted = false
       ) as can_edit
-    `
+    `,
   );
   return result?.can_edit ?? false;
 }
@@ -442,7 +442,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
           sql.type(AuthorCheckSchema)`
             SELECT author_id, deleted FROM ${authorTableIdent}
             WHERE ${entityIdent} = ${entityId} AND profile_id = ${profile_id}
-          `
+          `,
         );
 
         if (existingAuthor) {
@@ -458,7 +458,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
               SET deleted = false
               WHERE author_id = ${existingAuthor.author_id}
               RETURNING author_id, profile_id, is_primary
-            `
+            `,
           );
 
           res.status(201).json({
@@ -476,7 +476,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
             INSERT INTO ${authorTableIdent} (${entityIdent}, profile_id, is_primary)
             VALUES (${entityId}, ${profile_id}, false)
             RETURNING author_id, profile_id, is_primary
-          `
+          `,
         );
 
         res.status(201).json({
@@ -489,7 +489,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
         console.error(`Error adding ${entityName} author:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
-    }
+    },
   );
 
   // DELETE /:id/authors/:authorId - Remove an author
@@ -518,7 +518,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
         sql.type(AuthorDeleteSchema)`
           SELECT author_id, is_primary FROM ${authorTableIdent}
           WHERE author_id = ${authorId} AND ${entityIdent} = ${entityId} AND deleted = false
-        `
+        `,
       );
 
       if (!author) {
@@ -536,7 +536,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
       await db.query(
         sql.type(z.object({}))`
           UPDATE ${authorTableIdent} SET deleted = true WHERE author_id = ${authorId}
-        `
+        `,
       );
 
       res.status(200).json({ message: 'Author removed successfully' });

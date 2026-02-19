@@ -20,7 +20,7 @@ export const AUTHOR_PROFILE_TYPES = [1, 3, 4];
 export async function getAuthorableProfile(
   db: any,
   profileId: number,
-  userId: number
+  userId: number,
 ): Promise<{ profile_id: number; profile_type_id: number; name: string } | null> {
   const profile = await db.maybeOne(
     sql.type(
@@ -28,15 +28,18 @@ export async function getAuthorableProfile(
         profile_id: z.number(),
         profile_type_id: z.number(),
         name: z.string(),
-      })
+      }),
     )`
       SELECT profile_id, profile_type_id, name
       FROM profiles
       WHERE profile_id = ${profileId}
         AND account_id = ${userId}
-        AND profile_type_id IN (${sql.join(AUTHOR_PROFILE_TYPES.map(id => sql.fragment`${id}`), sql.fragment`, `)})
+        AND profile_type_id IN (${sql.join(
+          AUTHOR_PROFILE_TYPES.map((id) => sql.fragment`${id}`),
+          sql.fragment`, `,
+        )})
         AND deleted = false
-    `
+    `,
   );
   return profile;
 }
@@ -48,7 +51,7 @@ export async function getAuthorableProfile(
 export async function canAddPostToCollection(
   db: any,
   collectionId: number,
-  postId: number
+  postId: number,
 ): Promise<{ allowed: boolean; reason?: string }> {
   // Single query to get collection type info and post type together
   const result = await db.maybeOne(
@@ -58,7 +61,7 @@ export async function canAddPostToCollection(
         collection_type_name: z.string(),
         post_type_id: z.number().nullable(),
         post_type_name: z.string().nullable(),
-      })
+      }),
     )`
       SELECT 
         ct.allowed_post_types,
@@ -70,7 +73,7 @@ export async function canAddPostToCollection(
       LEFT JOIN posts p ON p.post_id = ${postId} AND p.deleted = false
       LEFT JOIN post_types pt ON p.post_type_id = pt.type_id
       WHERE c.collection_id = ${collectionId} AND c.deleted = false
-    `
+    `,
   );
 
   if (!result) {
@@ -107,7 +110,7 @@ export async function isPostInCollection(db: any, collectionId: number, postId: 
         SELECT 1 FROM collection_posts
         WHERE collection_id = ${collectionId} AND post_id = ${postId} AND deleted = false
       ) as exists
-    `
+    `,
   );
   return result?.exists ?? false;
 }
@@ -121,7 +124,7 @@ export async function getNextSortOrder(db: any, collectionId: number): Promise<n
       SELECT MAX(sort_order) as max_order
       FROM collection_posts
       WHERE collection_id = ${collectionId} AND deleted = false
-    `
+    `,
   );
   return (result?.max_order ?? -1) + 1;
 }

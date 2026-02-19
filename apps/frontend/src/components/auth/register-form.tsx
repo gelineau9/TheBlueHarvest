@@ -14,8 +14,6 @@ export function RegisterForm() {
     username: '',
     password: '',
     confirmPassword: '',
-    firstName: '',
-    lastName: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -47,8 +45,6 @@ export function RegisterForm() {
           email: validatedData.email,
           username: validatedData.username,
           password: validatedData.password,
-          first_name: validatedData.firstName,
-          last_name: validatedData.lastName,
         }),
       });
 
@@ -103,39 +99,6 @@ export function RegisterForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-amber-900">
-                First Name
-              </Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                required
-                disabled={isLoading}
-                className="text-amber-900"
-                aria-invalid={!!errors.firstName}
-              />
-              {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-amber-900">
-                Last Name
-              </Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                required
-                disabled={isLoading}
-                className="text-amber-900"
-                aria-invalid={!!errors.lastName}
-              />
-              {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="email" className="text-amber-900">
               Email

@@ -87,7 +87,7 @@ router.post(
               description: z.string().nullable(),
               content: z.any().nullable(),
               created_at: z.string(),
-            })
+            }),
           )`
             INSERT INTO collections (account_id, collection_type_id, title, description, content)
             VALUES (
@@ -98,7 +98,7 @@ router.post(
               ${content !== null && content !== undefined ? sql.jsonb(content) : null}
             )
             RETURNING collection_id, account_id, collection_type_id, title, description, content, created_at::text
-          `
+          `,
         );
 
         // Add primary author
@@ -106,7 +106,7 @@ router.post(
           sql.type(z.object({}))`
             INSERT INTO collection_authors (collection_id, profile_id, is_primary)
             VALUES (${collection.collection_id}, ${primary_author_profile_id}, true)
-          `
+          `,
         );
 
         return collection;
@@ -129,7 +129,7 @@ router.post(
       console.error('Collection creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 // GET /api/collections - List authenticated user's collections
@@ -140,9 +140,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const db = await getPool();
 
-    const typeFilterFragment = typeFilter
-      ? sql.fragment`AND c.collection_type_id = ${typeFilter}`
-      : sql.fragment``;
+    const typeFilterFragment = typeFilter ? sql.fragment`AND c.collection_type_id = ${typeFilter}` : sql.fragment``;
 
     const collections = await db.any(
       sql.type(
@@ -155,7 +153,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           updated_at: z.string().nullable(),
           type_name: z.string(),
           post_count: z.string(),
-        })
+        }),
       )`
         SELECT 
           c.collection_id,
@@ -176,7 +174,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           AND c.deleted = false
           ${typeFilterFragment}
         ORDER BY c.created_at DESC
-      `
+      `,
     );
 
     res.json(collections);
@@ -242,7 +240,7 @@ router.get('/public', async (req: Request, res: Response) => {
       collectionTypeIds.length > 0
         ? sql.fragment`AND c.collection_type_id IN (${sql.join(
             collectionTypeIds.map((id) => sql.fragment`${id}`),
-            sql.fragment`, `
+            sql.fragment`, `,
           )})`
         : sql.fragment``;
 
@@ -264,7 +262,7 @@ router.get('/public', async (req: Request, res: Response) => {
           primary_author_id: z.number().nullable(),
           primary_author_name: z.string().nullable(),
           post_count: z.string(),
-        })
+        }),
       )`
         SELECT 
           c.collection_id,
@@ -292,7 +290,7 @@ router.get('/public', async (req: Request, res: Response) => {
         ${orderByFragment}
         LIMIT ${limit}
         OFFSET ${offset}
-      `
+      `,
     );
 
     const countResult = await db.one(
@@ -302,7 +300,7 @@ router.get('/public', async (req: Request, res: Response) => {
         WHERE c.deleted = false
         ${typeFilterFragment}
         ${searchFilterFragment}
-      `
+      `,
     );
 
     const total = parseInt(countResult.total);
@@ -345,7 +343,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           type_name: z.string(),
           allowed_post_types: z.array(z.number()).nullable(),
           username: z.string(),
-        })
+        }),
       )`
         SELECT 
           c.collection_id, c.account_id, c.collection_type_id, c.title, c.description, c.content,
@@ -355,7 +353,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
         JOIN accounts a ON c.account_id = a.account_id
         WHERE c.collection_id = ${collectionId} AND c.deleted = false
-      `
+      `,
     );
 
     if (!collection) {
@@ -373,7 +371,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           profile_type_id: z.number(),
           type_name: z.string(),
           is_primary: z.boolean(),
-        })
+        }),
       )`
         SELECT 
           ca.author_id,
@@ -387,7 +385,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN profile_types pt ON prof.profile_type_id = pt.type_id
         WHERE ca.collection_id = ${collectionId} AND ca.deleted = false
         ORDER BY ca.is_primary DESC, ca.created_at ASC
-      `
+      `,
     );
 
     // Get posts in this collection (with sort_order)
@@ -401,7 +399,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           post_type_name: z.string(),
           sort_order: z.number(),
           primary_author_name: z.string().nullable(),
-        })
+        }),
       )`
         SELECT 
           cp.collection_post_id,
@@ -420,7 +418,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           AND cp.deleted = false 
           AND p.deleted = false
         ORDER BY cp.sort_order ASC
-      `
+      `,
     );
 
     const canEdit = req.userId ? await canEditCollection(db, collectionId, req.userId) : false;
@@ -491,7 +489,7 @@ router.put(
         sql.type(z.object({ collection_id: z.number() }))`
           SELECT collection_id FROM collections
           WHERE collection_id = ${collectionId} AND deleted = false
-        `
+        `,
       );
 
       if (!existingCollection) {
@@ -532,13 +530,13 @@ router.put(
             content: z.any().nullable(),
             created_at: z.string(),
             updated_at: z.string(),
-          })
+          }),
         )`
           UPDATE collections
           SET ${updateFragment}
           WHERE collection_id = ${collectionId}
           RETURNING collection_id, account_id, collection_type_id, title, description, content, created_at::text, updated_at::text
-        `
+        `,
       );
 
       res.json(updatedCollection);
@@ -546,7 +544,7 @@ router.put(
       console.error('Collection update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 // DELETE /api/collections/:id - Soft delete a collection (owner only)
@@ -571,7 +569,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
           AND account_id = ${userId}
           AND deleted = false
         RETURNING collection_id
-      `
+      `,
     );
 
     if (!result) {

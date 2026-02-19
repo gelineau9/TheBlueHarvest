@@ -5,7 +5,13 @@ import profilesRoutes from './routes/profiles.js';
 import postsRoutes from './routes/posts.js';
 import collectionsRoutes from './routes/collections.js';
 import collectionPostsRoutes from './routes/collectionPosts.js';
-import { profileEditorRoutes, postEditorRoutes, collectionEditorRoutes, postAuthorRoutes, collectionAuthorRoutes } from './routes/editors.js';
+import {
+  profileEditorRoutes,
+  postEditorRoutes,
+  collectionEditorRoutes,
+  postAuthorRoutes,
+  collectionAuthorRoutes,
+} from './routes/editors.js';
 
 const app = express();
 const PORT = Number(process.env.BACKEND_PORT ?? 4000);

@@ -18,11 +18,7 @@ import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditCollection } from './editors.js';
-import {
-  canAddPostToCollection,
-  isPostInCollection,
-  getNextSortOrder,
-} from '../utils/postValidation.js';
+import { canAddPostToCollection, isPostInCollection, getNextSortOrder } from '../utils/postValidation.js';
 
 const router = Router();
 
@@ -42,7 +38,9 @@ router.post(
       return;
     }
 
-    const collectionId = parseInt(Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId);
+    const collectionId = parseInt(
+      Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId,
+    );
     const userId = req.userId!;
     const { post_id } = req.body;
 
@@ -80,7 +78,7 @@ router.post(
         sql.type(z.object({ collection_post_id: z.number(), deleted: z.boolean() }))`
           SELECT collection_post_id, deleted FROM collection_posts
           WHERE collection_id = ${collectionId} AND post_id = ${post_id}
-        `
+        `,
       );
 
       if (existingEntry && existingEntry.deleted) {
@@ -92,13 +90,13 @@ router.post(
               collection_post_id: z.number(),
               post_id: z.number(),
               sort_order: z.number(),
-            })
+            }),
           )`
             UPDATE collection_posts
             SET deleted = false, sort_order = ${newSortOrder}, created_at = NOW()
             WHERE collection_post_id = ${existingEntry.collection_post_id}
             RETURNING collection_post_id, post_id, sort_order
-          `
+          `,
         );
 
         res.status(201).json({
@@ -117,12 +115,12 @@ router.post(
             collection_post_id: z.number(),
             post_id: z.number(),
             sort_order: z.number(),
-          })
+          }),
         )`
           INSERT INTO collection_posts (collection_id, post_id, sort_order)
           VALUES (${collectionId}, ${post_id}, ${sortOrder})
           RETURNING collection_post_id, post_id, sort_order
-        `
+        `,
       );
 
       res.status(201).json({
@@ -134,12 +132,14 @@ router.post(
       console.error('Error adding post to collection:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 // DELETE /api/collections/:collectionId/posts/:postId - Remove a post from a collection
 router.delete('/:collectionId/posts/:postId', authenticateToken, async (req: AuthRequest, res: Response) => {
-  const collectionId = parseInt(Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId);
+  const collectionId = parseInt(
+    Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId,
+  );
   const postId = parseInt(Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId);
   const userId = req.userId!;
 
@@ -163,7 +163,7 @@ router.delete('/:collectionId/posts/:postId', authenticateToken, async (req: Aut
       sql.type(z.object({ collection_post_id: z.number() }))`
         SELECT collection_post_id FROM collection_posts
         WHERE collection_id = ${collectionId} AND post_id = ${postId} AND deleted = false
-      `
+      `,
     );
 
     if (!entry) {
@@ -177,7 +177,7 @@ router.delete('/:collectionId/posts/:postId', authenticateToken, async (req: Aut
         UPDATE collection_posts
         SET deleted = true
         WHERE collection_post_id = ${entry.collection_post_id}
-      `
+      `,
     );
 
     res.status(200).json({ message: 'Post removed from collection successfully' });
@@ -192,9 +192,7 @@ router.put(
   '/:collectionId/posts/reorder',
   authenticateToken,
   [
-    body('post_ids')
-      .isArray({ min: 1 })
-      .withMessage('post_ids must be an array of post IDs in the desired order'),
+    body('post_ids').isArray({ min: 1 }).withMessage('post_ids must be an array of post IDs in the desired order'),
     body('post_ids.*').isInt().withMessage('Each post_id must be an integer'),
   ],
   async (req: AuthRequest, res: Response) => {
@@ -204,7 +202,9 @@ router.put(
       return;
     }
 
-    const collectionId = parseInt(Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId);
+    const collectionId = parseInt(
+      Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId,
+    );
     const userId = req.userId!;
     const { post_ids } = req.body as { post_ids: number[] };
 
@@ -233,7 +233,7 @@ router.put(
               WHERE collection_id = ${collectionId} 
                 AND post_id = ${post_ids[i]} 
                 AND deleted = false
-            `
+            `,
           );
         }
       });
@@ -243,7 +243,7 @@ router.put(
       console.error('Error reordering posts:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 export default router;

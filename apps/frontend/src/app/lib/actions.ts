@@ -7,6 +7,8 @@ import {
   accountUpdateSchema,
   createProfileSchema,
   CreateProfileInput,
+  createPostSchema,
+  CreatePostInput,
 } from './validations';
 import { API_CONFIG } from '@/config/api';
 
@@ -82,8 +84,6 @@ export async function register(formData: FormData) {
     const email = formData.get('email');
     const username = formData.get('username');
     const password = formData.get('password');
-    const firstName = formData.get('first_name');
-    const lastName = formData.get('last_name');
 
     // Validate input
     const result = registerSchema.safeParse({
@@ -91,8 +91,6 @@ export async function register(formData: FormData) {
       username,
       password,
       confirmPassword: password, // For validation, we'll use the same password
-      firstName,
-      lastName,
     });
 
     if (!result.success) {
@@ -115,8 +113,6 @@ export async function register(formData: FormData) {
         email,
         username,
         password,
-        first_name: firstName,
-        last_name: lastName,
       }),
     });
 
@@ -152,14 +148,10 @@ export async function register(formData: FormData) {
 export async function updateAccount(formData: FormData) {
   try {
     const username = formData.get('username');
-    const firstName = formData.get('firstName');
-    const lastName = formData.get('lastName');
 
     // Validate input
     const result = accountUpdateSchema.safeParse({
       username: username || undefined,
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
     });
 
     if (!result.success) {
@@ -188,8 +180,6 @@ export async function updateAccount(formData: FormData) {
       },
       body: JSON.stringify({
         username: result.data.username,
-        firstName: result.data.firstName,
-        lastName: result.data.lastName,
       }),
     });
 
@@ -315,12 +305,73 @@ export async function getSession() {
     return {
       isLoggedIn: true,
       username: data.username,
-      firstName: data.firstName,
-      lastName: data.lastName,
       email: data.email,
     };
   } catch (error) {
     console.error('Get session error:', error);
     return { isLoggedIn: false };
+  }
+}
+
+export async function createPost(formData: CreatePostInput) {
+  try {
+    // Validate input
+    const result = createPostSchema.safeParse(formData);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error.issues[0]?.message || 'Invalid input',
+      };
+    }
+
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
+
+    if (!authToken) {
+      return { success: false, error: 'Not authenticated. Please log in.' };
+    }
+
+    // Call backend API
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken.value}`,
+      },
+      body: JSON.stringify({
+        post_type_id: result.data.post_type_id,
+        title: result.data.title.trim(),
+        content: result.data.content,
+        primary_author_profile_id: result.data.primary_author_profile_id,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await cookieStore.set('auth_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 0,
+        });
+        return { success: false, error: 'Session expired. Please log in again.' };
+      }
+
+      const errorData = await response.json();
+      return {
+        success: false,
+        error: errorData.error || 'Failed to create post',
+      };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      post: data,
+    };
+  } catch (error) {
+    console.error('Post creation error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }

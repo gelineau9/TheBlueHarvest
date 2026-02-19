@@ -43,6 +43,7 @@ CREATE TABLE posts (
     post_id SERIAL PRIMARY KEY,
     account_id INT REFERENCES accounts(account_id) NOT NULL,
     post_type_id INT REFERENCES post_types(type_id) NOT NULL DEFAULT 1,
+    title VARCHAR(200) NOT NULL,
     content JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -50,7 +51,8 @@ CREATE TABLE posts (
 );
 
 COMMENT ON TABLE posts IS 'User-created posts. Owner determined by account_id. Visual authorship via authors table.';
-COMMENT ON COLUMN posts.content IS 'JSONB containing title, body, tags, and other type-specific fields.';
+COMMENT ON COLUMN posts.title IS 'Post title, max 200 characters.';
+COMMENT ON COLUMN posts.content IS 'JSONB containing body, tags, and other type-specific fields.';
 
 ----------------------------------
 -- COLLECTIONS
@@ -60,7 +62,9 @@ CREATE TABLE collections (
     collection_id SERIAL PRIMARY KEY,
     account_id INT REFERENCES accounts(account_id) NOT NULL,
     collection_type_id INT REFERENCES collection_types(type_id),
-    content JSONB NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    content JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted BOOLEAN DEFAULT FALSE
@@ -68,7 +72,9 @@ CREATE TABLE collections (
 
 COMMENT ON TABLE collections IS 'Groups of posts. Can be typed (chronicle, gallery, etc.) or generic. Owner determined by account_id.';
 COMMENT ON COLUMN collections.collection_type_id IS 'Optional type that constrains which post types can be added. NULL = generic collection.';
-COMMENT ON COLUMN collections.content IS 'JSONB containing title, description, and other metadata.';
+COMMENT ON COLUMN collections.title IS 'Collection title, max 200 characters.';
+COMMENT ON COLUMN collections.description IS 'Optional longer description of the collection.';
+COMMENT ON COLUMN collections.content IS 'JSONB for additional metadata if needed.';
 
 ----------------------------------
 -- MEDIA (Inheritance)

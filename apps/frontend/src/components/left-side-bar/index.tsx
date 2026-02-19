@@ -23,6 +23,14 @@ export function LeftSidebar() {
     }
   };
 
+  const handleCreatePostClick = () => {
+    if (isLoggedIn) {
+      router.push('/posts/create/writing');
+    } else {
+      setShowLoginDialog(true);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
@@ -47,10 +55,18 @@ export function LeftSidebar() {
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-2">
         <Button onClick={handleCreateProfileClick} className="w-full bg-amber-800 text-amber-50 hover:bg-amber-700">
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Profile
+        </Button>
+        <Button
+          onClick={handleCreatePostClick}
+          variant="outline"
+          className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create Post
         </Button>
       </div>
 

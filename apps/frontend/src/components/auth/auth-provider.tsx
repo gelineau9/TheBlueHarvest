@@ -9,8 +9,6 @@ interface AuthContextType {
   username?: string;
   avatarUrl?: string;
   email?: string;
-  firstName?: string;
-  lastName?: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -36,8 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username: data.username,
           avatarUrl: data.avatarUrl,
           email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
         });
       } else {
         setAuthState({ isLoggedIn: false, isLoading: false });

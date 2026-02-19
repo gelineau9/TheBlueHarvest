@@ -7,8 +7,6 @@ export async function POST(request: Request) {
     const formData = new FormData();
 
     if (data.username) formData.append('username', data.username);
-    if (data.firstName) formData.append('firstName', data.firstName);
-    if (data.lastName) formData.append('lastName', data.lastName);
 
     const result = await updateAccount(formData);
 

@@ -77,7 +77,7 @@ router.post(
               title: z.string(),
               content: z.any().nullable(),
               created_at: z.string(),
-            })
+            }),
           )`
             INSERT INTO posts (account_id, post_type_id, title, content)
             VALUES (
@@ -87,7 +87,7 @@ router.post(
               ${content !== null && content !== undefined ? sql.jsonb(content) : null}
             )
             RETURNING post_id, account_id, post_type_id, title, content, created_at::text
-          `
+          `,
         );
 
         // Add primary author
@@ -95,7 +95,7 @@ router.post(
           sql.type(z.object({}))`
             INSERT INTO authors (post_id, profile_id, is_primary)
             VALUES (${post.post_id}, ${primary_author_profile_id}, true)
-          `
+          `,
         );
 
         return post;
@@ -117,7 +117,7 @@ router.post(
       console.error('Post creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 // GET /api/posts - List authenticated user's posts
@@ -128,9 +128,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const db = await getPool();
 
-    const typeFilterFragment = typeFilter
-      ? sql.fragment`AND p.post_type_id = ${typeFilter}`
-      : sql.fragment``;
+    const typeFilterFragment = typeFilter ? sql.fragment`AND p.post_type_id = ${typeFilter}` : sql.fragment``;
 
     const posts = await db.any(
       sql.type(
@@ -141,7 +139,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
-        })
+        }),
       )`
         SELECT 
           p.post_id,
@@ -156,7 +154,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           AND p.deleted = false
           ${typeFilterFragment}
         ORDER BY p.created_at DESC
-      `
+      `,
     );
 
     res.json(posts);
@@ -222,7 +220,7 @@ router.get('/public', async (req: Request, res: Response) => {
       postTypeIds.length > 0
         ? sql.fragment`AND p.post_type_id IN (${sql.join(
             postTypeIds.map((id) => sql.fragment`${id}`),
-            sql.fragment`, `
+            sql.fragment`, `,
           )})`
         : sql.fragment``;
 
@@ -242,7 +240,7 @@ router.get('/public', async (req: Request, res: Response) => {
           username: z.string(),
           primary_author_id: z.number().nullable(),
           primary_author_name: z.string().nullable(),
-        })
+        }),
       )`
         SELECT 
           p.post_id,
@@ -264,7 +262,7 @@ router.get('/public', async (req: Request, res: Response) => {
         ${orderByFragment}
         LIMIT ${limit}
         OFFSET ${offset}
-      `
+      `,
     );
 
     const countResult = await db.one(
@@ -274,7 +272,7 @@ router.get('/public', async (req: Request, res: Response) => {
         WHERE p.deleted = false
         ${typeFilterFragment}
         ${searchFilterFragment}
-      `
+      `,
     );
 
     const total = parseInt(countResult.total);
@@ -315,7 +313,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           updated_at: z.string().nullable(),
           type_name: z.string(),
           username: z.string(),
-        })
+        }),
       )`
         SELECT 
           p.post_id, p.account_id, p.post_type_id, p.title, p.content,
@@ -325,7 +323,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN post_types pt ON p.post_type_id = pt.type_id
         JOIN accounts a ON p.account_id = a.account_id
         WHERE p.post_id = ${postId} AND p.deleted = false
-      `
+      `,
     );
 
     if (!post) {
@@ -343,7 +341,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           profile_type_id: z.number(),
           type_name: z.string(),
           is_primary: z.boolean(),
-        })
+        }),
       )`
         SELECT 
           auth.author_id,
@@ -357,7 +355,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN profile_types pt ON prof.profile_type_id = pt.type_id
         WHERE auth.post_id = ${postId} AND auth.deleted = false
         ORDER BY auth.is_primary DESC, auth.created_at ASC
-      `
+      `,
     );
 
     const canEdit = req.userId ? await canEditPost(db, postId, req.userId) : false;
@@ -424,7 +422,7 @@ router.put(
         sql.type(z.object({ post_id: z.number() }))`
           SELECT post_id FROM posts
           WHERE post_id = ${postId} AND deleted = false
-        `
+        `,
       );
 
       if (!existingPost) {
@@ -461,13 +459,13 @@ router.put(
             content: z.any().nullable(),
             created_at: z.string(),
             updated_at: z.string(),
-          })
+          }),
         )`
           UPDATE posts
           SET ${updateFragment}
           WHERE post_id = ${postId}
           RETURNING post_id, account_id, post_type_id, title, content, created_at::text, updated_at::text
-        `
+        `,
       );
 
       res.json(updatedPost);
@@ -475,7 +473,7 @@ router.put(
       console.error('Post update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
+  },
 );
 
 // DELETE /api/posts/:id - Soft delete a post (owner only)
@@ -500,7 +498,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
           AND account_id = ${userId}
           AND deleted = false
         RETURNING post_id
-      `
+      `,
     );
 
     if (!result) {
