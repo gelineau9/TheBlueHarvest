@@ -1,72 +1,88 @@
 -- 002_create_tables.sql
+-- Core entity tables (accounts, profiles, posts, collections, media, comments, relationships)
 
 ----------------------------------
--- Data tables
+-- ACCOUNTS
 ----------------------------------
 
--- accounts Table
 CREATE TABLE accounts (
     account_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
-    first_name VARCHAR(50),
-    last_name VARCHAR(50),
-    user_role_id INT REFERENCES user_roles(role_id) NOT NULL DEFAULT 1, -- changed subquery to hardcoded value
-    -- (SELECT role_id FROM user_roles 
-    -- WHERE role_name = 'user'), 
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),  
-    deleted BOOLEAN DEFAULT FALSE
-);
-
--- profiles Table
-CREATE TABLE profiles (
-    profile_id SERIAL PRIMARY KEY,
-    account_id INT REFERENCES accounts(account_id) NOT NULL,
-    profile_type_id INT REFERENCES profile_types(type_id) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    details JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),  
-    deleted BOOLEAN DEFAULT FALSE 
-);
-
--- posts Table
-CREATE TABLE posts (
-    post_id SERIAL PRIMARY KEY,
-    account_id INT REFERENCES accounts(account_id) NOT NULL,
-    post_type_id INT REFERENCES post_types(type_id) NOT NULL DEFAULT 1, -- changed subquery to hardcoded value
-    -- (SELECT type_id FROM post_types 
-    -- WHERE type_name = 'story'), 
-    content JSONB NOT NULL, 
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),  
-    deleted BOOLEAN DEFAULT FALSE    
-);
-
--- authors Table
-CREATE TABLE authors (
-    author_id SERIAL PRIMARY KEY,
-    post_id INT REFERENCES posts(post_id) ON DELETE CASCADE,
-    profile_id INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
-    is_primary BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE
-);
-
--- Parent media Table
-CREATE TABLE media (
-    media_id SERIAL PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    url VARCHAR(255) NOT NULL,
-    file_size INT,
-    file_type VARCHAR(50),  
+    user_role_id INT REFERENCES user_roles(role_id) NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted BOOLEAN DEFAULT FALSE
 );
 
--- Child Tables for Specific Owners
+----------------------------------
+-- PROFILES
+----------------------------------
+
+CREATE TABLE profiles (
+    profile_id SERIAL PRIMARY KEY,
+    account_id INT REFERENCES accounts(account_id) NOT NULL,
+    profile_type_id INT REFERENCES profile_types(type_id) NOT NULL DEFAULT 1,
+    name VARCHAR(100) NOT NULL,
+    details JSONB,
+    parent_profile_id INT REFERENCES profiles(profile_id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+COMMENT ON TABLE profiles IS 'User-created profiles. Characters and locations are top-level; items, kinships, and organizations must have a character parent.';
+COMMENT ON COLUMN profiles.parent_profile_id IS 'For items, kinships, and organizations, this must reference a character profile owned by the same account.';
+
+----------------------------------
+-- POSTS
+----------------------------------
+
+CREATE TABLE posts (
+    post_id SERIAL PRIMARY KEY,
+    account_id INT REFERENCES accounts(account_id) NOT NULL,
+    post_type_id INT REFERENCES post_types(type_id) NOT NULL DEFAULT 1,
+    content JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+COMMENT ON TABLE posts IS 'User-created posts. Owner determined by account_id. Visual authorship via authors table.';
+COMMENT ON COLUMN posts.content IS 'JSONB containing title, body, tags, and other type-specific fields.';
+
+----------------------------------
+-- COLLECTIONS
+----------------------------------
+
+CREATE TABLE collections (
+    collection_id SERIAL PRIMARY KEY,
+    account_id INT REFERENCES accounts(account_id) NOT NULL,
+    collection_type_id INT REFERENCES collection_types(type_id),
+    content JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted BOOLEAN DEFAULT FALSE
+);
+
+COMMENT ON TABLE collections IS 'Groups of posts. Can be typed (chronicle, gallery, etc.) or generic. Owner determined by account_id.';
+COMMENT ON COLUMN collections.collection_type_id IS 'Optional type that constrains which post types can be added. NULL = generic collection.';
+COMMENT ON COLUMN collections.content IS 'JSONB containing title, description, and other metadata.';
+
+----------------------------------
+-- MEDIA (Inheritance)
+----------------------------------
+
+CREATE TABLE media (
+    media_id SERIAL PRIMARY KEY,
+    url VARCHAR(2083) NOT NULL,
+    media_type VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted BOOLEAN DEFAULT FALSE
+);
+
 CREATE TABLE post_media (
     post_id INT REFERENCES posts(post_id) ON DELETE CASCADE
 ) INHERITS (media);
@@ -79,48 +95,38 @@ CREATE TABLE account_media (
     account_id INT REFERENCES accounts(account_id) ON DELETE CASCADE
 ) INHERITS (media);
 
--- comments Table
+----------------------------------
+-- COMMENTS
+----------------------------------
+
 CREATE TABLE comments (
     comment_id SERIAL PRIMARY KEY,
     post_id INT REFERENCES posts(post_id) ON DELETE CASCADE,
     profile_id INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),  
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted BOOLEAN DEFAULT FALSE
 );
 
--- Parent relationships Table (no type_id here, as it’s moved to children)
+----------------------------------
+-- RELATIONSHIPS (Inheritance)
+----------------------------------
+
 CREATE TABLE relationships (
     relationship_id SERIAL PRIMARY KEY,
     profile_id_1 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
     profile_id_2 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
-    direction relationship_direction NOT NULL
+    direction relationship_direction NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted BOOLEAN DEFAULT FALSE
 );
 
--- Child table: bidirectional
 CREATE TABLE bidirectional_relationships (
-    type_id INT REFERENCES bidirectional_relationship_types(type_id) ON DELETE CASCADE
+    type_id INT REFERENCES bidirectional_relationship_types(type_id)
 ) INHERITS (relationships);
 
--- Child Table: unidirectional
 CREATE TABLE unidirectional_relationships (
-    type_id INT REFERENCES unidirectional_relationship_types(type_id) ON DELETE CASCADE
+    type_id INT REFERENCES unidirectional_relationship_types(type_id)
 ) INHERITS (relationships);
-
--- -- Parent relationships Table
--- CREATE TABLE relationships (
---     relationship_id SERIAL PRIMARY KEY,
---     profile_id_1 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
---     profile_id_2 INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
---     type_id INT REFERENCES relationship_types(type_id) ON DELETE CASCADE,
---     direction relationship_direction NOT NULL
--- );
-
--- -- Child table: bidirectional
--- CREATE TABLE bidirectional_relationships (
--- ) INHERITS (relationships);
-
--- -- Child Table: Unidirectional Relationships
--- CREATE TABLE unidirectional_relationships (
--- ) INHERITS (relationships);
