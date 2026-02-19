@@ -41,7 +41,7 @@ router.post(
       .isLength({ min: 1, max: 200 })
       .withMessage('Title is required and must not exceed 200 characters'),
     body('content').optional(),
-    body('primary_author_profile_id').isInt().withMessage('Primary author profile ID is required'),
+    body('primary_author_profile_id').optional().isInt().withMessage('Primary author profile ID must be an integer'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -53,16 +53,30 @@ router.post(
     const { post_type_id, title, content, primary_author_profile_id } = req.body;
     const userId = req.userId!;
 
+    // Post types that require an author (writing = 1)
+    // Art (2), Media (3), Event (4) are account-level posts
+    const AUTHOR_REQUIRED_POST_TYPES = [1];
+    const requiresAuthor = AUTHOR_REQUIRED_POST_TYPES.includes(post_type_id);
+
+    if (requiresAuthor && !primary_author_profile_id) {
+      res.status(400).json({
+        error: 'Primary author is required for this post type',
+      });
+      return;
+    }
+
     try {
       const db = await getPool();
 
-      // Verify the primary author profile exists, is owned by user, and can author
-      const authorProfile = await getAuthorableProfile(db, primary_author_profile_id, userId);
-      if (!authorProfile) {
-        res.status(400).json({
-          error: 'Primary author must be a character, kinship, or organization that you own',
-        });
-        return;
+      // Only verify author profile if one is provided
+      if (primary_author_profile_id) {
+        const authorProfile = await getAuthorableProfile(db, primary_author_profile_id, userId);
+        if (!authorProfile) {
+          res.status(400).json({
+            error: 'Primary author must be a character, kinship, or organization that you own',
+          });
+          return;
+        }
       }
 
       // Create post and primary author in a transaction
@@ -90,29 +104,46 @@ router.post(
           `,
         );
 
-        // Add primary author
-        await tx.query(
-          sql.type(z.object({}))`
-            INSERT INTO authors (post_id, profile_id, is_primary)
-            VALUES (${post.post_id}, ${primary_author_profile_id}, true)
-          `,
-        );
+        // Add primary author only if provided
+        if (primary_author_profile_id) {
+          await tx.query(
+            sql.type(z.object({}))`
+              INSERT INTO authors (post_id, profile_id, is_primary)
+              VALUES (${post.post_id}, ${primary_author_profile_id}, true)
+            `,
+          );
+        }
 
         return post;
       });
 
-      res.status(201).json({
+      // Build response - include author info only if one was assigned
+      const response: any = {
         post_id: result.post_id,
         account_id: result.account_id,
         post_type_id: result.post_type_id,
         title: result.title,
         content: result.content,
         created_at: result.created_at,
-        primary_author: {
-          profile_id: authorProfile.profile_id,
-          name: authorProfile.name,
-        },
-      });
+      };
+
+      // Only include primary_author if we have one (writing posts have authors, art posts don't)
+      if (primary_author_profile_id) {
+        // Fetch the author info for the response (reuse existing db connection)
+        const authorInfo = await db.maybeOne(
+          sql.type(z.object({ profile_id: z.number(), name: z.string() }))`
+            SELECT profile_id, name FROM profiles WHERE profile_id = ${primary_author_profile_id}
+          `
+        );
+        if (authorInfo) {
+          response.primary_author = {
+            profile_id: authorInfo.profile_id,
+            name: authorInfo.name,
+          };
+        }
+      }
+
+      res.status(201).json(response);
     } catch (err: any) {
       console.error('Post creation error:', err);
       res.status(500).json({ error: 'Internal server error' });

@@ -29,14 +29,13 @@ export const createProfileSchema = z.object({
 });
 
 // Post types: 1=writing, 2=art, 3=media, 4=event
+// Writing posts require author and body
+// Art posts are account-level with images
 export const createPostSchema = z.object({
   post_type_id: z.number().int().min(1).max(4),
   title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
-  content: z.object({
-    body: z.string().min(1, 'Content is required'),
-    tags: z.array(z.string()).optional(),
-  }),
-  primary_author_profile_id: z.number().int({ message: 'Please select an author' }),
+  content: z.object({}).passthrough(), // Flexible content structure - accepts any object
+  primary_author_profile_id: z.number().int().optional(), // Optional for account-level posts (art, media, event)
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

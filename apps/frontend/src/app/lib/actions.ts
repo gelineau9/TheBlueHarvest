@@ -372,6 +372,6 @@ export async function createPost(formData: CreatePostInput) {
     };
   } catch (error) {
     console.error('Post creation error:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
   }
 }

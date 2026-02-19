@@ -1,9 +1,42 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/auth-provider';
+import { ArtForm } from '@/components/posts/art-form';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CreateArtPostPage() {
+  const router = useRouter();
+  const { isLoggedIn, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isLoggedIn) {
+      router.push('/');
+    }
+  }, [isLoggedIn, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+        <div className="text-amber-900">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
+  const handleSuccess = (postId: number) => {
+    router.push(`/posts/${postId}`);
+  };
+
+  const handleCancel = () => {
+    router.push('/posts/create');
+  };
+
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -19,8 +52,8 @@ export default function CreateArtPostPage() {
           </p>
         </div>
 
-        <div className="bg-amber-100 border border-amber-300 rounded-lg p-8 text-center">
-          <p className="text-amber-800">Art post creation coming soon...</p>
+        <div className="bg-white rounded-lg border border-amber-300 p-6 shadow-sm">
+          <ArtForm onSuccess={handleSuccess} onCancel={handleCancel} />
         </div>
       </div>
     </div>

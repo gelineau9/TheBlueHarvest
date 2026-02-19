@@ -1,10 +1,12 @@
 // /apps/backend/src/index.ts
 import express, { Request, Response } from 'express';
+import path from 'path';
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
 import postsRoutes from './routes/posts.js';
 import collectionsRoutes from './routes/collections.js';
 import collectionPostsRoutes from './routes/collectionPosts.js';
+import uploadsRoutes from './routes/uploads.js';
 import {
   profileEditorRoutes,
   postEditorRoutes,
@@ -20,6 +22,9 @@ const PORT = Number(process.env.BACKEND_PORT ?? 4000);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profilesRoutes);
@@ -31,6 +36,7 @@ app.use('/api/collections', collectionsRoutes);
 app.use('/api/collections', collectionPostsRoutes);
 app.use('/api/collections', collectionEditorRoutes);
 app.use('/api/collections', collectionAuthorRoutes);
+app.use('/api/uploads', uploadsRoutes);
 
 //Basic route
 app.get('/', (req: Request, res: Response) => {

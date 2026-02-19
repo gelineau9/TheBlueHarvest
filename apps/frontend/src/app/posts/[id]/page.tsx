@@ -28,6 +28,12 @@ interface Post {
   content: {
     body?: string;
     tags?: string[];
+    images?: Array<{
+      filename: string;
+      url: string;
+      originalName: string;
+    }>;
+    description?: string;
   };
   post_type_id: number;
   type_name: string;
@@ -227,9 +233,40 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
         {/* Post Content */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
-          <div className="prose prose-amber max-w-none">
-            <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body || ''}</p>
-          </div>
+          {/* Art Post - Show Images */}
+          {post.post_type_id === 2 && post.content.images && post.content.images.length > 0 && (
+            <div className="mb-6">
+              <div className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
+                {post.content.images.map((image, index) => (
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                    <img
+                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
+                      alt={image.originalName || `Image ${index + 1}`}
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    />
+                  </div>
+                ))}
+              </div>
+              {/* Art Description */}
+              {post.content.description && (
+                <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+              )}
+            </div>
+          )}
+
+          {/* Writing Post - Show Body */}
+          {post.post_type_id === 1 && (
+            <div className="prose prose-amber max-w-none">
+              <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body || ''}</p>
+            </div>
+          )}
+
+          {/* Fallback for other post types */}
+          {post.post_type_id !== 1 && post.post_type_id !== 2 && post.content.body && (
+            <div className="prose prose-amber max-w-none">
+              <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
+            </div>
+          )}
         </Card>
 
         {/* Tags */}
