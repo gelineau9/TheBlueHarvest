@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ImageLightbox } from '@/components/ui/image-lightbox';
 
 interface Author {
   profile_id: number;
@@ -52,6 +53,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const { id } = use(params);
 
   useEffect(() => {
@@ -243,6 +246,10 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                       src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
                       alt={image.originalName || `Image ${index + 1}`}
                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => {
+                        setLightboxIndex(index);
+                        setLightboxOpen(true);
+                      }}
                     />
                   </div>
                 ))}
@@ -311,6 +318,18 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Lightbox for Art Posts */}
+      {post.post_type_id === 2 && post.content.images && post.content.images.length > 0 && (
+        <ImageLightbox
+          images={post.content.images}
+          currentIndex={lightboxIndex}
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          onNavigate={setLightboxIndex}
+          baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
+        />
+      )}
     </div>
   );
 }
