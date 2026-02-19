@@ -25,7 +25,7 @@ interface UploadedImage {
 
 interface Profile {
   profile_id: number;
-  profile_name: string;
+  name: string;
   profile_type_id: number;
 }
 
@@ -76,15 +76,16 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   const titleValue = watch('title') || '';
   const titleLength = titleValue.length;
 
-  // Fetch user's profiles for contact selection
+  // Fetch user's character profiles for contact selection
   useEffect(() => {
     const fetchProfiles = async () => {
       try {
-        const response = await fetch('/api/profiles/me');
+        // Fetch only character profiles (type 1) for the current user
+        const response = await fetch('/api/profiles?type=1');
         if (response.ok) {
           const data = await response.json();
-          // Filter to only character profiles (type 1)
-          const characterProfiles = data.profiles?.filter((p: Profile) => p.profile_type_id === 1) || [];
+          // Response is an array of profiles directly
+          const characterProfiles = Array.isArray(data) ? data : (data.profiles || []);
           setProfiles(characterProfiles);
         }
       } catch (err) {
@@ -372,7 +373,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             <option value="">No contact selected</option>
             {profiles.map((profile) => (
               <option key={profile.profile_id} value={profile.profile_id}>
-                {profile.profile_name}
+                {profile.name}
               </option>
             ))}
           </select>

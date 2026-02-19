@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText, Clock, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -35,6 +35,17 @@ interface Post {
       originalName: string;
     }>;
     description?: string;
+    // Event-specific fields
+    eventDate?: string;
+    eventTime?: string;
+    location?: string;
+    maxAttendees?: number;
+    contactProfileId?: number;
+    headerImage?: {
+      filename: string;
+      url: string;
+      originalName: string;
+    };
   };
   post_type_id: number;
   type_name: string;
@@ -236,8 +247,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
         {/* Post Content */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
-          {/* Art Post - Show Images */}
-          {post.post_type_id === 2 && post.content.images && post.content.images.length > 0 && (
+          {/* Art/Media Post - Show Images */}
+          {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
             <div className="mb-6">
               <div className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
                 {post.content.images.map((image, index) => (
@@ -268,8 +279,92 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             </div>
           )}
 
+          {/* Event Post - Show Event Details */}
+          {post.post_type_id === 4 && (
+            <div className="space-y-6">
+              {/* Header Image */}
+              {post.content.headerImage && (
+                <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${post.content.headerImage.url}`}
+                    alt={post.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Event Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Date */}
+                {post.content.eventDate && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Date</p>
+                      <p className="text-amber-900">{new Date(post.content.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Time */}
+                {post.content.eventTime && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Time</p>
+                      <p className="text-amber-900">{post.content.eventTime}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Location */}
+                {post.content.location && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <MapPin className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Location</p>
+                      <p className="text-amber-900">{post.content.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Max Attendees */}
+                {post.content.maxAttendees && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <Users className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Max Attendees</p>
+                      <p className="text-amber-900">{post.content.maxAttendees}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Character Contact */}
+              {post.content.contactProfileId && (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-sm text-amber-600 font-medium mb-1">Contact</p>
+                  <Link 
+                    href={`/profiles/${post.content.contactProfileId}`}
+                    className="text-amber-900 hover:text-amber-700 underline"
+                  >
+                    View Contact Character
+                  </Link>
+                </div>
+              )}
+
+              {/* Description */}
+              {post.content.description && (
+                <div className="prose prose-amber max-w-none">
+                  <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
+                  <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Fallback for other post types */}
-          {post.post_type_id !== 1 && post.post_type_id !== 2 && post.content.body && (
+          {post.post_type_id !== 1 && post.post_type_id !== 2 && post.post_type_id !== 3 && post.post_type_id !== 4 && post.content.body && (
             <div className="prose prose-amber max-w-none">
               <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
             </div>
@@ -319,8 +414,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         </DialogContent>
       </Dialog>
 
-      {/* Image Lightbox for Art Posts */}
-      {post.post_type_id === 2 && post.content.images && post.content.images.length > 0 && (
+      {/* Image Lightbox for Art/Media Posts */}
+      {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
         <ImageLightbox
           images={post.content.images}
           currentIndex={lightboxIndex}
