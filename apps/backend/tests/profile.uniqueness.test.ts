@@ -186,7 +186,7 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       createdProfileIds.push(response2.body.profile_id);
     });
 
-    it('should treat character names as case-sensitive', async () => {
+    it('should treat character names as case-insensitive', async () => {
       // Create "Legolas"
       const response1 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
@@ -196,24 +196,29 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       expect(response1.status).toBe(201);
       createdProfileIds.push(response1.body.profile_id);
 
-      // Try to create "legolas" (different case)
+      // Try to create "legolas" (different case) - should fail due to case-insensitive uniqueness
       const response2 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken2}`).send({
         profile_type_id: 1,
         name: 'legolas',
       });
 
-      // Should succeed (case-sensitive)
-      expect(response2.status).toBe(201);
-      createdProfileIds.push(response2.body.profile_id);
+      // Should fail (case-insensitive uniqueness)
+      expect(response2.status).toBe(409);
+      expect(response2.body.message).toBe(
+        'This character name is already taken. Character names must be unique across all users.',
+      );
     });
   });
 
   describe('Other Profile Types - Per-Account Uniqueness', () => {
+    let testCharacterName: string;
+
     beforeEach(async () => {
-      // Create a character for testing child profiles
+      // Create a character with unique name for testing child profiles
+      testCharacterName = `TestCharacter_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
-        name: 'TestCharacter',
+        name: testCharacterName,
       });
       testCharacterId = response.body.profile_id;
       createdProfileIds.push(testCharacterId);
@@ -231,10 +236,13 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       createdProfileIds.push(response1.body.profile_id);
 
       // Create another character for account 2
-      const charResponse = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken2}`).send({
-        profile_type_id: 1,
-        name: 'TestCharacter2',
-      });
+      const charResponse = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken2}`)
+        .send({
+          profile_type_id: 1,
+          name: `TestCharacter2_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        });
       createdProfileIds.push(charResponse.body.profile_id);
 
       // Account 2 creates item with same name (should succeed)
@@ -283,10 +291,13 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       createdProfileIds.push(response1.body.profile_id);
 
       // Create character for account 2
-      const charResponse = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken2}`).send({
-        profile_type_id: 1,
-        name: 'TestCharacter3',
-      });
+      const charResponse = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken2}`)
+        .send({
+          profile_type_id: 1,
+          name: `TestCharacter3_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        });
       createdProfileIds.push(charResponse.body.profile_id);
 
       // Account 2 creates kinship with same name (should succeed)

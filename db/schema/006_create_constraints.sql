@@ -75,12 +75,27 @@ ALTER TABLE relationships
     ADD CONSTRAINT no_self_relationship 
     CHECK (profile_id_1 <> profile_id_2);
 
+-- Ensure consistent ordering (profile_id_1 < profile_id_2) to prevent duplicate relationships in reverse order
+ALTER TABLE relationships 
+    ADD CONSTRAINT profile_id_order 
+    CHECK (profile_id_1 < profile_id_2);
+
 -- Ensure bidirectional relationships use the correct direction
 ALTER TABLE bidirectional_relationships 
     ADD CONSTRAINT bidirectional_direction 
     CHECK (direction = 'bidirectional');
 
+-- Prevent duplicate bidirectional relationships
+ALTER TABLE bidirectional_relationships 
+    ADD CONSTRAINT unique_bidirectional 
+    UNIQUE (profile_id_1, profile_id_2, type_id);
+
 -- Ensure unidirectional relationships use the correct direction
 ALTER TABLE unidirectional_relationships 
     ADD CONSTRAINT unidirectional_direction 
     CHECK (direction = 'unidirectional');
+
+-- Prevent duplicate unidirectional relationships
+ALTER TABLE unidirectional_relationships 
+    ADD CONSTRAINT unique_unidirectional 
+    UNIQUE (profile_id_1, profile_id_2, type_id, direction);

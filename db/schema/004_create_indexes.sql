@@ -25,17 +25,25 @@ CREATE INDEX idx_profiles_details ON profiles USING GIN (details);
 CREATE INDEX idx_profiles_parent ON profiles (parent_profile_id) WHERE deleted = false AND parent_profile_id IS NOT NULL;
 
 -- Profile name uniqueness scopes
--- Characters: unique name per account
-CREATE UNIQUE INDEX character_names ON profiles (account_id, LOWER(name)) 
+-- Characters: globally unique among characters only (allows cross-type duplicates)
+CREATE UNIQUE INDEX character_names ON profiles (LOWER(name)) 
     WHERE profile_type_id = 1 AND deleted = false;
 
--- Locations: globally unique names
-CREATE UNIQUE INDEX location_names ON profiles (LOWER(name)) 
+-- Locations: unique per account (multiple users can have same location name)
+CREATE UNIQUE INDEX location_names ON profiles (account_id, LOWER(name)) 
     WHERE profile_type_id = 5 AND deleted = false;
 
--- Items, Kinships, Organizations: unique name per parent profile
-CREATE UNIQUE INDEX profile_names ON profiles (parent_profile_id, LOWER(name)) 
-    WHERE profile_type_id IN (2, 3, 4) AND deleted = false AND parent_profile_id IS NOT NULL;
+-- Items: unique name per account per type (allows cross-type duplicates)
+CREATE UNIQUE INDEX item_names ON profiles (account_id, LOWER(name)) 
+    WHERE profile_type_id = 2 AND deleted = false;
+
+-- Kinships: unique name per account per type (allows cross-type duplicates)
+CREATE UNIQUE INDEX kinship_names ON profiles (account_id, LOWER(name)) 
+    WHERE profile_type_id = 3 AND deleted = false;
+
+-- Organizations: unique name per account per type (allows cross-type duplicates)
+CREATE UNIQUE INDEX organization_names ON profiles (account_id, LOWER(name)) 
+    WHERE profile_type_id = 4 AND deleted = false;
 
 ----------------------------------
 -- POSTS INDEXES
