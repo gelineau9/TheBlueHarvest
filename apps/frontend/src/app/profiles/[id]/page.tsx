@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Calendar } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -20,6 +20,7 @@ interface Profile {
   parent_profile_id?: number | null;
   parent_name?: string | null;
   parent_id?: number | null;
+  can_edit?: boolean; // 2.3.1 - true if current user can edit this profile
 }
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -111,6 +112,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </div>
               <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
             </div>
+            {/* Edit Button - only visible to profile owner (2.3.1) */}
+            {profile.can_edit && (
+              <Button
+                onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
+                className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-6 text-sm text-amber-700">

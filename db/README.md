@@ -76,7 +76,7 @@ assuming you're on Linux or WSL.
 1. Apply seeds
 
    ```bash
-   for file in db/seeds/*.sql; do psql -h localhost -U merry -d bha_db -f "$file"; done
+   for file in db/seeds/*.sql; do psql -p 5433 -h localhost -U merry -d bha_db -f "$file"; done
    ```
 
    - Password: `secondbreakfast`

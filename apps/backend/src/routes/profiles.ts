@@ -3,7 +3,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -346,8 +346,8 @@ router.get('/public', async (req: Request, res: Response) => {
   }
 });
 
-// Get profile by ID endpoint
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+// Get profile by ID endpoint (2.3.1 - adds is_owner for edit button visibility)
+router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   const profileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   if (isNaN(profileId)) {
@@ -394,6 +394,10 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Determine if current user can edit this profile (2.3.1)
+    // Future: will also check collaborators table
+    const canEdit = req.userId ? profile.account_id === req.userId : false;
+
     res.json({
       profile_id: profile.profile_id,
       account_id: profile.account_id,
@@ -408,11 +412,142 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       updated_at: profile.updated_at,
       deleted: profile.deleted,
       username: profile.username,
+      can_edit: canEdit,
     });
   } catch (err) {
     console.error('Profile fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Update profile endpoint (2.3.2)
+router.put(
+  '/:id',
+  authenticateToken,
+  [
+    body('name')
+      .optional()
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Profile name must be between 1 and 100 characters'),
+    body('details').optional(),
+  ],
+  async (req: AuthRequest, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const profileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const userId = req.userId!;
+    const { name, details } = req.body;
+
+    if (isNaN(profileId)) {
+      res.status(400).json({ error: 'Invalid profile ID' });
+      return;
+    }
+
+    // Check if at least one field is being updated
+    if (name === undefined && details === undefined) {
+      res.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+
+    try {
+      const db = await getPool();
+
+      // Verify the profile exists and is owned by the user
+      const existingProfile = await db.maybeOne(
+        sql.type(
+          z.object({
+            profile_id: z.number(),
+            account_id: z.number(),
+            profile_type_id: z.number(),
+          }),
+        )`
+        SELECT profile_id, account_id, profile_type_id
+        FROM profiles
+        WHERE profile_id = ${profileId}
+          AND deleted = false
+      `,
+      );
+
+      if (!existingProfile) {
+        res.status(404).json({ error: 'Profile not found' });
+        return;
+      }
+
+      // Check ownership (future: will also check collaborators)
+      if (existingProfile.account_id !== userId) {
+        res.status(403).json({ error: 'You do not have permission to edit this profile' });
+        return;
+      }
+
+      // Build update query dynamically based on provided fields
+      const updateFragments = [];
+
+      if (name !== undefined) {
+        updateFragments.push(sql.fragment`name = ${name}`);
+      }
+      if (details !== undefined) {
+        updateFragments.push(sql.fragment`details = ${details !== null ? sql.jsonb(details) : null}`);
+      }
+
+      // Always update updated_at timestamp
+      updateFragments.push(sql.fragment`updated_at = NOW()`);
+
+      const updateFragment = sql.join(updateFragments, sql.fragment`, `);
+
+      const updatedProfile = await db.one(
+        sql.type(
+          z.object({
+            profile_id: z.number(),
+            account_id: z.number(),
+            profile_type_id: z.number(),
+            name: z.string(),
+            details: z.any().nullable(),
+            created_at: z.string(),
+            updated_at: z.string(),
+          }),
+        )`
+        UPDATE profiles
+        SET ${updateFragment}
+        WHERE profile_id = ${profileId}
+        RETURNING 
+          profile_id, 
+          account_id, 
+          profile_type_id, 
+          name, 
+          details, 
+          created_at::text, 
+          updated_at::text
+      `,
+      );
+
+      res.json({
+        profile_id: updatedProfile.profile_id,
+        account_id: updatedProfile.account_id,
+        profile_type_id: updatedProfile.profile_type_id,
+        name: updatedProfile.name,
+        details: updatedProfile.details,
+        created_at: updatedProfile.created_at,
+        updated_at: updatedProfile.updated_at,
+      });
+    } catch (err: any) {
+      console.error('Profile update error:', err);
+
+      // Handle unique constraint violation (duplicate name)
+      if (err.code === '23505' || err.cause?.code === '23505') {
+        res.status(409).json({
+          error: 'A profile with this name already exists',
+        });
+        return;
+      }
+
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 export default router;
