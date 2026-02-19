@@ -68,3 +68,33 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ message: 'An error occurred while updating the profile' }, { status: 500 });
   }
 }
+
+// DELETE /api/profiles/:id - Soft delete a profile (2.4.2)
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const authToken = request.cookies.get('auth_token')?.value;
+
+    if (!authToken) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
+    }
+
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/profiles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json({ message: data.error || 'Failed to delete profile' }, { status: response.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Profile deletion error:', error);
+    return NextResponse.json({ message: 'An error occurred while deleting the profile' }, { status: 500 });
+  }
+}

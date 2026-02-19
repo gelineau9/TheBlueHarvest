@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'express';
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
+import profileEditorsRoutes from './routes/profileEditors.js';
 
 const app = express();
 const PORT = Number(process.env.BACKEND_PORT ?? 4000);
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profilesRoutes);
+app.use('/api/profiles', profileEditorsRoutes); // Editor management routes (/:profileId/editors)
 
 //Basic route
 app.get('/', (req: Request, res: Response) => {

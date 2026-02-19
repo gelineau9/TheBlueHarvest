@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
+import { canEditProfile } from './profileEditors.js';
 
 const router = Router();
 
@@ -394,9 +395,10 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       return;
     }
 
-    // Determine if current user can edit this profile (2.3.1)
-    // Future: will also check collaborators table
-    const canEdit = req.userId ? profile.account_id === req.userId : false;
+    // Determine if current user can edit this profile (owner OR editor)
+    const canEdit = req.userId ? await canEditProfile(db, profileId, req.userId) : false;
+    // Determine if current user is the owner (for managing editors, deleting)
+    const isOwner = req.userId ? profile.account_id === req.userId : false;
 
     res.json({
       profile_id: profile.profile_id,
@@ -413,6 +415,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       deleted: profile.deleted,
       username: profile.username,
       can_edit: canEdit,
+      is_owner: isOwner,
     });
   } catch (err) {
     console.error('Profile fetch error:', err);
@@ -478,8 +481,9 @@ router.put(
         return;
       }
 
-      // Check ownership (future: will also check collaborators)
-      if (existingProfile.account_id !== userId) {
+      // Check if user can edit (owner OR editor)
+      const hasEditPermission = await canEditProfile(db, profileId, userId);
+      if (!hasEditPermission) {
         res.status(403).json({ error: 'You do not have permission to edit this profile' });
         return;
       }
@@ -549,5 +553,46 @@ router.put(
     }
   },
 );
+
+// DELETE /api/profiles/:id - Soft delete a profile (2.4.2)
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  const profileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+
+  if (isNaN(profileId)) {
+    res.status(400).json({ error: 'Invalid profile ID' });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+
+    // Verify ownership and soft-delete in one query
+    const result = await db.maybeOne(
+      sql.type(
+        z.object({
+          profile_id: z.number(),
+        }),
+      )`
+        UPDATE profiles
+        SET deleted = true
+        WHERE profile_id = ${profileId}
+          AND account_id = ${userId}
+          AND deleted = false
+        RETURNING profile_id
+      `,
+    );
+
+    if (!result) {
+      res.status(404).json({ error: 'Profile not found or not authorized' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Profile deleted successfully' });
+  } catch (err) {
+    console.error('Profile deletion error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 export default router;

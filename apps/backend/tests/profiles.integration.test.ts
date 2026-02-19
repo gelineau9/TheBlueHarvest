@@ -41,6 +41,7 @@ beforeAll(async () => {
   // Now import routes AFTER mocking the database
   const { default: authRoutes } = await import('../src/routes/auth.js');
   const { default: profilesRoutes } = await import('../src/routes/profiles.js');
+  const { default: profileEditorsRoutes } = await import('../src/routes/profileEditors.js');
 
   // Setup Express app
   app = express();
@@ -48,6 +49,7 @@ beforeAll(async () => {
   app.use(express.urlencoded({ extended: true }));
   app.use('/api/auth', authRoutes);
   app.use('/api/profiles', profilesRoutes);
+  app.use('/api/profiles', profileEditorsRoutes);
 
   // Clean up any existing test account from previous failed runs
   await pool.query(sql.unsafe`
@@ -1256,6 +1258,457 @@ describe('PUT /api/profiles/:id', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.name).toBe('Trimmed Name');
+    });
+  });
+});
+
+// 2.4.2 - DELETE /api/profiles/:id tests
+describe('DELETE /api/profiles/:id', () => {
+  let deletableProfileId: number;
+
+  beforeEach(async () => {
+    // Create a fresh profile for each test
+    const response = await request(app)
+      .post('/api/profiles')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({
+        profile_type_id: 1,
+        name: `Delete Test Profile ${Date.now()}`,
+        details: { description: 'Profile to be deleted' },
+      });
+
+    deletableProfileId = response.body.profile_id;
+  });
+
+  afterEach(async () => {
+    // Clean up test profile (hard delete for test cleanup)
+    if (deletableProfileId) {
+      await pool.query(sql.unsafe`
+        DELETE FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+    }
+  });
+
+  describe('Successful Deletion', () => {
+    it('should soft-delete a profile owned by the user', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Profile deleted successfully');
+
+      // Verify profile is soft-deleted in database
+      const dbProfile = await pool.maybeOne(sql.unsafe`
+        SELECT deleted FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+      expect(dbProfile?.deleted).toBe(true);
+    });
+
+    it('should make profile inaccessible via GET after deletion', async () => {
+      // Delete the profile
+      await request(app).delete(`/api/profiles/${deletableProfileId}`).set('Authorization', `Bearer ${validToken}`);
+
+      // Try to fetch the deleted profile
+      const getResponse = await request(app).get(`/api/profiles/${deletableProfileId}`);
+
+      expect(getResponse.status).toBe(404);
+      expect(getResponse.body.error).toBe('Profile not found');
+    });
+
+    it('should exclude deleted profile from public listings', async () => {
+      // Get profile name before deletion
+      const profileName = `Delete Test Profile`;
+
+      // Delete the profile
+      await request(app).delete(`/api/profiles/${deletableProfileId}`).set('Authorization', `Bearer ${validToken}`);
+
+      // Check public listings
+      const publicResponse = await request(app).get('/api/profiles/public?limit=100');
+
+      expect(publicResponse.status).toBe(200);
+      const profileIds = publicResponse.body.profiles.map((p: any) => p.profile_id);
+      expect(profileIds).not.toContain(deletableProfileId);
+    });
+  });
+
+  describe('Authentication & Authorization', () => {
+    it('should return 401 without auth token', async () => {
+      const response = await request(app).delete(`/api/profiles/${deletableProfileId}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Authentication required');
+    });
+
+    it('should return 401 with invalid token', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Invalid token');
+    });
+
+    it("should return 404 when trying to delete another user's profile", async () => {
+      // Create a different user's token
+      const otherUserId = testAccountId + 1000;
+      const otherToken = generateToken(otherUserId);
+
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found or not authorized');
+
+      // Verify profile was NOT deleted
+      const dbProfile = await pool.maybeOne(sql.unsafe`
+        SELECT deleted FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+      expect(dbProfile?.deleted).toBe(false);
+    });
+  });
+
+  describe('Error Cases', () => {
+    it('should return 400 for invalid profile ID', async () => {
+      const response = await request(app)
+        .delete('/api/profiles/not-a-number')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid profile ID');
+    });
+
+    it('should return 404 for non-existent profile', async () => {
+      const response = await request(app).delete('/api/profiles/999999').set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found or not authorized');
+    });
+
+    it('should return 404 when trying to delete already-deleted profile', async () => {
+      // First deletion should succeed
+      const firstResponse = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(firstResponse.status).toBe(200);
+
+      // Second deletion should fail with 404
+      const secondResponse = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(secondResponse.status).toBe(404);
+      expect(secondResponse.body.error).toBe('Profile not found or not authorized');
+    });
+  });
+});
+
+// Profile Editors Tests
+describe('Profile Editors API', () => {
+  let ownerAccountId: number;
+  let ownerToken: string;
+  let editorAccountId: number;
+  let editorToken: string;
+  let otherAccountId: number;
+  let otherToken: string;
+  let testProfileForEditors: number;
+
+  beforeAll(async () => {
+    // Create owner account (reuse testAccountId)
+    ownerAccountId = testAccountId;
+    ownerToken = validToken;
+
+    // Create editor account
+    const editorResult = await pool.one(sql.unsafe`
+      INSERT INTO accounts (username, email, hashed_password)
+      VALUES ('editoruser', 'editor@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+      RETURNING account_id
+    `);
+    editorAccountId = editorResult.account_id as number;
+    editorToken = generateToken(editorAccountId);
+
+    // Create another account (not an editor)
+    const otherResult = await pool.one(sql.unsafe`
+      INSERT INTO accounts (username, email, hashed_password)
+      VALUES ('otheruser', 'other@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+      RETURNING account_id
+    `);
+    otherAccountId = otherResult.account_id as number;
+    otherToken = generateToken(otherAccountId);
+  });
+
+  afterAll(async () => {
+    // Clean up test accounts
+    await pool.query(
+      sql.unsafe`DELETE FROM profile_editors WHERE account_id IN (${editorAccountId}, ${otherAccountId})`,
+    );
+    await pool.query(sql.unsafe`DELETE FROM profiles WHERE account_id IN (${editorAccountId}, ${otherAccountId})`);
+    await pool.query(sql.unsafe`DELETE FROM accounts WHERE account_id IN (${editorAccountId}, ${otherAccountId})`);
+  });
+
+  beforeEach(async () => {
+    // Create a fresh profile for each test
+    const profileResult = await pool.one(sql.unsafe`
+      INSERT INTO profiles (account_id, profile_type_id, name, details)
+      VALUES (${ownerAccountId}, 1, 'Editor Test Profile', '{"description": "Test"}')
+      RETURNING profile_id
+    `);
+    testProfileForEditors = profileResult.profile_id as number;
+  });
+
+  afterEach(async () => {
+    // Clean up profile and its editors
+    if (testProfileForEditors) {
+      await pool.query(sql.unsafe`DELETE FROM profile_editors WHERE profile_id = ${testProfileForEditors}`);
+      await pool.query(sql.unsafe`DELETE FROM profiles WHERE profile_id = ${testProfileForEditors}`);
+    }
+  });
+
+  describe('GET /api/profiles/:profileId/editors', () => {
+    it('should return empty array when profile has no editors', async () => {
+      const response = await request(app).get(`/api/profiles/${testProfileForEditors}/editors`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.editors).toEqual([]);
+    });
+
+    it('should return editors with username info', async () => {
+      // Add an editor directly
+      await pool.query(sql.unsafe`
+        INSERT INTO profile_editors (profile_id, account_id, invited_by_account_id)
+        VALUES (${testProfileForEditors}, ${editorAccountId}, ${ownerAccountId})
+      `);
+
+      const response = await request(app).get(`/api/profiles/${testProfileForEditors}/editors`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.editors).toHaveLength(1);
+      expect(response.body.editors[0].username).toBe('editoruser');
+      expect(response.body.editors[0].invited_by_username).toBe('testuser');
+    });
+
+    it('should return 404 for non-existent profile', async () => {
+      const response = await request(app).get('/api/profiles/999999/editors');
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found');
+    });
+
+    it('should return 400 for invalid profile ID', async () => {
+      const response = await request(app).get('/api/profiles/invalid/editors');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid profile ID');
+    });
+  });
+
+  describe('POST /api/profiles/:profileId/editors', () => {
+    it('should allow owner to add an editor by username', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'editoruser' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.username).toBe('editoruser');
+      expect(response.body.editor_id).toBeDefined();
+    });
+
+    it('should be case-insensitive for username', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'EDITORUSER' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.username).toBe('editoruser');
+    });
+
+    it('should return 403 when non-owner tries to add editor', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({ username: 'editoruser' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Only the profile owner can add editors');
+    });
+
+    it('should return 404 for non-existent username', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'nonexistentuser' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('User not found');
+    });
+
+    it('should return 400 when owner tries to add themselves', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'testuser' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('You cannot add yourself as an editor - you are the owner');
+    });
+
+    it('should return 409 when adding duplicate editor', async () => {
+      // Add editor first time
+      await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'editoruser' });
+
+      // Try to add again
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ username: 'editoruser' });
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe('This user is already an editor');
+    });
+
+    it('should return 401 without auth token', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .send({ username: 'editoruser' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 400 when username is missing', async () => {
+      const response = await request(app)
+        .post(`/api/profiles/${testProfileForEditors}/editors`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({});
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('DELETE /api/profiles/:profileId/editors/:editorId', () => {
+    let testEditorId: number;
+
+    beforeEach(async () => {
+      // Add an editor for delete tests
+      const result = await pool.one(sql.unsafe`
+        INSERT INTO profile_editors (profile_id, account_id, invited_by_account_id)
+        VALUES (${testProfileForEditors}, ${editorAccountId}, ${ownerAccountId})
+        RETURNING editor_id
+      `);
+      testEditorId = result.editor_id as number;
+    });
+
+    it('should allow owner to remove an editor', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Editor removed successfully');
+
+      // Verify editor is soft-deleted
+      const editor = await pool.maybeOne(sql.unsafe`
+        SELECT deleted FROM profile_editors WHERE editor_id = ${testEditorId}
+      `);
+      expect(editor?.deleted).toBe(true);
+    });
+
+    it('should allow editor to remove themselves', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`)
+        .set('Authorization', `Bearer ${editorToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Editor removed successfully');
+    });
+
+    it('should return 403 when non-owner/non-self tries to remove editor', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('You do not have permission to remove this editor');
+    });
+
+    it('should return 404 for non-existent editor', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${testProfileForEditors}/editors/999999`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Editor not found');
+    });
+
+    it('should return 401 without auth token', async () => {
+      const response = await request(app).delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`);
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('Editor Edit Permissions', () => {
+    beforeEach(async () => {
+      // Add editor to the profile
+      await pool.query(sql.unsafe`
+        INSERT INTO profile_editors (profile_id, account_id, invited_by_account_id)
+        VALUES (${testProfileForEditors}, ${editorAccountId}, ${ownerAccountId})
+      `);
+    });
+
+    it('should allow editor to edit profile', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${testProfileForEditors}`)
+        .set('Authorization', `Bearer ${editorToken}`)
+        .send({ name: 'Updated by Editor' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe('Updated by Editor');
+    });
+
+    it('should show can_edit=true for editor', async () => {
+      const response = await request(app)
+        .get(`/api/profiles/${testProfileForEditors}`)
+        .set('Authorization', `Bearer ${editorToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(true);
+      expect(response.body.is_owner).toBe(false);
+    });
+
+    it('should show is_owner=true only for owner', async () => {
+      const response = await request(app)
+        .get(`/api/profiles/${testProfileForEditors}`)
+        .set('Authorization', `Bearer ${ownerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.can_edit).toBe(true);
+      expect(response.body.is_owner).toBe(true);
+    });
+
+    it('should not allow editor to delete profile', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${testProfileForEditors}`)
+        .set('Authorization', `Bearer ${editorToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found or not authorized');
+    });
+
+    it('should not allow non-editor to edit profile', async () => {
+      const response = await request(app)
+        .put(`/api/profiles/${testProfileForEditors}`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({ name: 'Unauthorized Update' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('You do not have permission to edit this profile');
     });
   });
 });
