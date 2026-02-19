@@ -1259,3 +1259,146 @@ describe('PUT /api/profiles/:id', () => {
     });
   });
 });
+
+// 2.4.2 - DELETE /api/profiles/:id tests
+describe('DELETE /api/profiles/:id', () => {
+  let deletableProfileId: number;
+
+  beforeEach(async () => {
+    // Create a fresh profile for each test
+    const response = await request(app)
+      .post('/api/profiles')
+      .set('Authorization', `Bearer ${validToken}`)
+      .send({
+        profile_type_id: 1,
+        name: `Delete Test Profile ${Date.now()}`,
+        details: { description: 'Profile to be deleted' },
+      });
+
+    deletableProfileId = response.body.profile_id;
+  });
+
+  afterEach(async () => {
+    // Clean up test profile (hard delete for test cleanup)
+    if (deletableProfileId) {
+      await pool.query(sql.unsafe`
+        DELETE FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+    }
+  });
+
+  describe('Successful Deletion', () => {
+    it('should soft-delete a profile owned by the user', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Profile deleted successfully');
+
+      // Verify profile is soft-deleted in database
+      const dbProfile = await pool.maybeOne(sql.unsafe`
+        SELECT deleted FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+      expect(dbProfile?.deleted).toBe(true);
+    });
+
+    it('should make profile inaccessible via GET after deletion', async () => {
+      // Delete the profile
+      await request(app).delete(`/api/profiles/${deletableProfileId}`).set('Authorization', `Bearer ${validToken}`);
+
+      // Try to fetch the deleted profile
+      const getResponse = await request(app).get(`/api/profiles/${deletableProfileId}`);
+
+      expect(getResponse.status).toBe(404);
+      expect(getResponse.body.error).toBe('Profile not found');
+    });
+
+    it('should exclude deleted profile from public listings', async () => {
+      // Get profile name before deletion
+      const profileName = `Delete Test Profile`;
+
+      // Delete the profile
+      await request(app).delete(`/api/profiles/${deletableProfileId}`).set('Authorization', `Bearer ${validToken}`);
+
+      // Check public listings
+      const publicResponse = await request(app).get('/api/profiles/public?limit=100');
+
+      expect(publicResponse.status).toBe(200);
+      const profileIds = publicResponse.body.profiles.map((p: any) => p.profile_id);
+      expect(profileIds).not.toContain(deletableProfileId);
+    });
+  });
+
+  describe('Authentication & Authorization', () => {
+    it('should return 401 without auth token', async () => {
+      const response = await request(app).delete(`/api/profiles/${deletableProfileId}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Authentication required');
+    });
+
+    it('should return 401 with invalid token', async () => {
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Invalid token');
+    });
+
+    it("should return 404 when trying to delete another user's profile", async () => {
+      // Create a different user's token
+      const otherUserId = testAccountId + 1000;
+      const otherToken = generateToken(otherUserId);
+
+      const response = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found or not authorized');
+
+      // Verify profile was NOT deleted
+      const dbProfile = await pool.maybeOne(sql.unsafe`
+        SELECT deleted FROM profiles WHERE profile_id = ${deletableProfileId}
+      `);
+      expect(dbProfile?.deleted).toBe(false);
+    });
+  });
+
+  describe('Error Cases', () => {
+    it('should return 400 for invalid profile ID', async () => {
+      const response = await request(app)
+        .delete('/api/profiles/not-a-number')
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid profile ID');
+    });
+
+    it('should return 404 for non-existent profile', async () => {
+      const response = await request(app).delete('/api/profiles/999999').set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Profile not found or not authorized');
+    });
+
+    it('should return 404 when trying to delete already-deleted profile', async () => {
+      // First deletion should succeed
+      const firstResponse = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(firstResponse.status).toBe(200);
+
+      // Second deletion should fail with 404
+      const secondResponse = await request(app)
+        .delete(`/api/profiles/${deletableProfileId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(secondResponse.status).toBe(404);
+      expect(secondResponse.body.error).toBe('Profile not found or not authorized');
+    });
+  });
+});

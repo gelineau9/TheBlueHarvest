@@ -3,9 +3,17 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Calendar, Pencil } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Profile {
   profile_id: number;
@@ -28,6 +36,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { id } = use(params);
 
   useEffect(() => {
@@ -55,6 +65,29 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
     fetchProfile();
   }, [id]);
+
+  // Handle profile deletion (2.4.1/2.4.2)
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/profiles/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to delete profile');
+      }
+
+      // Redirect to profiles catalog after successful deletion
+      router.push('/profiles');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete profile');
+      setShowDeleteDialog(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -114,13 +147,24 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </div>
             {/* Edit Button - only visible to profile owner (2.3.1) */}
             {profile.can_edit && (
-              <Button
-                onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
-                className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-              >
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
+                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                {/* Delete Button - only visible to profile owner (2.4.1) */}
+                <Button
+                  onClick={() => setShowDeleteDialog(true)}
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
 
@@ -170,6 +214,31 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog (2.4.1) */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-white border-amber-300">
+          <DialogHeader>
+            <DialogTitle className="text-amber-900">Delete Profile</DialogTitle>
+            <DialogDescription className="text-amber-700">
+              Are you sure you want to delete this profile? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+              className="border-amber-600 text-amber-800 hover:bg-amber-50"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleDelete} disabled={isDeleting} className="bg-red-600 text-white hover:bg-red-700">
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
