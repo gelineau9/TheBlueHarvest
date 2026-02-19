@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
+import { canEditProfile } from './profileEditors.js';
 
 const router = Router();
 
@@ -394,9 +395,10 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       return;
     }
 
-    // Determine if current user can edit this profile (2.3.1)
-    // Future: will also check collaborators table
-    const canEdit = req.userId ? profile.account_id === req.userId : false;
+    // Determine if current user can edit this profile (owner OR editor)
+    const canEdit = req.userId ? await canEditProfile(db, profileId, req.userId) : false;
+    // Determine if current user is the owner (for managing editors, deleting)
+    const isOwner = req.userId ? profile.account_id === req.userId : false;
 
     res.json({
       profile_id: profile.profile_id,
@@ -413,6 +415,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       deleted: profile.deleted,
       username: profile.username,
       can_edit: canEdit,
+      is_owner: isOwner,
     });
   } catch (err) {
     console.error('Profile fetch error:', err);
@@ -478,8 +481,9 @@ router.put(
         return;
       }
 
-      // Check ownership (future: will also check collaborators)
-      if (existingProfile.account_id !== userId) {
+      // Check if user can edit (owner OR editor)
+      const hasEditPermission = await canEditProfile(db, profileId, userId);
+      if (!hasEditPermission) {
         res.status(403).json({ error: 'You do not have permission to edit this profile' });
         return;
       }
