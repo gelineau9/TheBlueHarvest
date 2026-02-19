@@ -14,11 +14,13 @@ export function LeftSidebar() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [loginDialogType, setLoginDialogType] = useState<'profile' | 'post'>('profile');
 
   const handleCreateProfileClick = () => {
     if (isLoggedIn) {
       router.push('/profiles/create');
     } else {
+      setLoginDialogType('profile');
       setShowLoginDialog(true);
     }
   };
@@ -27,6 +29,7 @@ export function LeftSidebar() {
     if (isLoggedIn) {
       router.push('/posts/create/writing');
     } else {
+      setLoginDialogType('post');
       setShowLoginDialog(true);
     }
   };
@@ -75,7 +78,7 @@ export function LeftSidebar() {
           <DialogHeader>
             <DialogTitle className="text-amber-900">Login Required</DialogTitle>
             <DialogDescription className="text-amber-800">
-              You need to be logged in to create a profile. Please log in or create an account to continue.
+              You need to be logged in to create a {loginDialogType}. Please log in or create an account to continue.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

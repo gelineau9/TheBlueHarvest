@@ -354,7 +354,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN profiles prof ON auth.profile_id = prof.profile_id
         JOIN profile_types pt ON prof.profile_type_id = pt.type_id
         WHERE auth.post_id = ${postId} AND auth.deleted = false
-        ORDER BY auth.is_primary DESC, auth.created_at ASC
+        ORDER BY auth.is_primary DESC, auth.author_id ASC
       `,
     );
 
