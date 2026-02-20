@@ -137,7 +137,7 @@ export default function CatalogPage() {
           params.set(key, value);
         }
       });
-      router.push(`/profiles?${params.toString()}`);
+      router.push(`/catalog?${params.toString()}`);
     },
     [searchParams, router],
   );
@@ -206,7 +206,7 @@ export default function CatalogPage() {
   // Clear all filters
   const handleClearAll = useCallback(() => {
     setSearchInput('');
-    router.push('/profiles');
+    router.push('/catalog');
   }, [router]);
 
   // Check if any filters are active
@@ -539,7 +539,7 @@ export default function CatalogPage() {
             ) : (
               <div className="flex gap-4 justify-center">
                 <Link
-                  href="/profiles/create"
+                  href="/catalog/create"
                   className="inline-block px-6 py-3 bg-amber-800 text-amber-50 rounded-md hover:bg-amber-700 transition-colors font-semibold"
                 >
                   Create Profile

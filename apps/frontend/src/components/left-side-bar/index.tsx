@@ -18,7 +18,7 @@ export function LeftSidebar() {
 
   const handleCreateProfileClick = () => {
     if (isLoggedIn) {
-      router.push('/profiles/create');
+      router.push('/catalog/create');
     } else {
       setLoginDialogType('profile');
       setShowLoginDialog(true);
@@ -89,7 +89,7 @@ export function LeftSidebar() {
         <NavItem href="#" label="News" />
         <NavItem href="#" label="Writing" />
         <NavItem href="#" label="Art" />
-        <NavItem href="/profiles" label="Catalog" />
+        <NavItem href="/catalog" label="Catalog" />
         <NavItem href="#" label="About" />
         <NavItem href="#" label="Rules" />
         <Separator className="my-4 bg-amber-800/20" />

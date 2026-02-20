@@ -125,7 +125,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => (window.location.href = '/profiles/create/character')}
+                onClick={() => (window.location.href = '/catalog/create/character')}
                 className="border-amber-800/30 text-amber-900 hover:bg-amber-100"
               >
                 Create a Character

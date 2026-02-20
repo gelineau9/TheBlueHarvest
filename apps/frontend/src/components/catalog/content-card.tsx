@@ -63,7 +63,7 @@ export function ContentCard({
     : postTypeIcons[typeId as keyof typeof postTypeIcons] || FileText;
 
   const colors = categoryColors[contentCategory];
-  const href = contentCategory === 'profile' ? `/profiles/${id}` : `/posts/${id}`;
+  const href = contentCategory === 'profile' ? `/catalog/${id}` : `/posts/${id}`;
 
   const formattedDate = new Date(createdAt).toLocaleDateString('en-US', {
     year: 'numeric',

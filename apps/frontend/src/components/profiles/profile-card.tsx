@@ -31,7 +31,7 @@ export function ProfileCard({ profile_id, name, profile_type_id, type_name, crea
   });
 
   return (
-    <Link href={`/profiles/${profile_id}`}>
+    <Link href={`/catalog/${profile_id}`}>
       <Card className="p-6 bg-white border-amber-300 hover:border-amber-500 hover:shadow-lg transition-all cursor-pointer h-full">
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-lg bg-amber-100 text-amber-700 flex-shrink-0">
