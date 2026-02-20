@@ -147,11 +147,16 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
+const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  // Check if post has been edited (updated_at is significantly after created_at)
+  const createdTime = new Date(post.created_at).getTime();
+  const updatedTime = new Date(post.updated_at).getTime();
+  const isEdited = updatedTime - createdTime > 60000; // More than 1 minute difference
 
   const primaryAuthor = post.authors.find((a) => a.is_primary);
   const coAuthors = post.authors.filter((a) => !a.is_primary);
@@ -207,7 +212,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 <span>
                   By{' '}
                   <Link
-                    href={`/profiles/${primaryAuthor.profile_id}`}
+                    href={`/catalog/${primaryAuthor.profile_id}`}
                     className="text-amber-900 hover:underline font-semibold"
                   >
                     {primaryAuthor.profile_name}
@@ -222,7 +227,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                   {coAuthors.map((author, index) => (
                     <span key={author.profile_id}>
                       <Link
-                        href={`/profiles/${author.profile_id}`}
+                        href={`/catalog/${author.profile_id}`}
                         className="text-amber-900 hover:underline font-semibold"
                       >
                         {author.profile_name}
@@ -233,9 +238,12 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 </span>
               </div>
             )}
-            <div className="flex items-center gap-2">
+<div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>{formattedDate}</span>
+              {isEdited && (
+                <span className="text-amber-600 text-xs">(edited)</span>
+              )}
             </div>
           </div>
 
