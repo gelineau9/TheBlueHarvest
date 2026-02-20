@@ -85,7 +85,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         if (response.ok) {
           const data = await response.json();
           // Response is an array of profiles directly
-          const characterProfiles = Array.isArray(data) ? data : (data.profiles || []);
+          const characterProfiles = Array.isArray(data) ? data : data.profiles || [];
           setProfiles(characterProfiles);
         }
       } catch (err) {
@@ -209,7 +209,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       {/* Header Image Upload */}
       <div className="space-y-2">
         <Label className="text-amber-900 font-semibold">Header Image *</Label>
-        
+
         {headerImage ? (
           <div className="relative">
             <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
@@ -231,9 +231,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         ) : (
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isUploading
-                ? 'border-amber-400 bg-amber-50'
-                : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+              isUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
             }`}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -245,7 +243,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
               className="hidden"
               disabled={isUploading || isSubmitting}
             />
-            
+
             {isUploading ? (
               <div className="flex flex-col items-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
@@ -255,9 +253,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
               <div className="flex flex-col items-center">
                 <Upload className="w-10 h-10 text-amber-600 mb-2" />
                 <p className="text-amber-800 font-medium">Click to upload header image</p>
-                <p className="text-sm text-amber-600 mt-1">
-                  JPEG, PNG, GIF, or WebP • Max 10MB • Recommended 1200x400
-                </p>
+                <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP • Max 10MB • Recommended 1200x400</p>
               </div>
             )}
           </div>

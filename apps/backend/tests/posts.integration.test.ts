@@ -240,26 +240,20 @@ describe('POST /api/posts - Create Post', () => {
     });
 
     it('should return 400 for invalid post_type_id', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send({
-          post_type_id: 99,
-          title: 'Invalid Type',
-          content: {},
-        });
+      const response = await request(app).post('/api/posts').set('Authorization', `Bearer ${validToken}`).send({
+        post_type_id: 99,
+        title: 'Invalid Type',
+        content: {},
+      });
 
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for missing post_type_id', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send({
-          title: 'No Type',
-          content: {},
-        });
+      const response = await request(app).post('/api/posts').set('Authorization', `Bearer ${validToken}`).send({
+        title: 'No Type',
+        content: {},
+      });
 
       expect(response.status).toBe(400);
     });
@@ -267,27 +261,22 @@ describe('POST /api/posts - Create Post', () => {
 
   describe('Authentication', () => {
     it('should return 401 without auth token', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .send({
-          post_type_id: 2,
-          title: 'Unauthorized Post',
-          content: {},
-        });
+      const response = await request(app).post('/api/posts').send({
+        post_type_id: 2,
+        title: 'Unauthorized Post',
+        content: {},
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('Authentication required');
     });
 
     it('should return 401 with invalid token', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', 'Bearer invalid-token')
-        .send({
-          post_type_id: 2,
-          title: 'Invalid Token Post',
-          content: {},
-        });
+      const response = await request(app).post('/api/posts').set('Authorization', 'Bearer invalid-token').send({
+        post_type_id: 2,
+        title: 'Invalid Token Post',
+        content: {},
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('Invalid token');
@@ -481,9 +470,7 @@ describe('PUT /api/posts/:id - Update Post', () => {
 
   describe('Authentication & Authorization', () => {
     it('should return 401 without auth token', async () => {
-      const response = await request(app)
-        .put(`/api/posts/${editablePostId}`)
-        .send({ title: 'Unauthorized' });
+      const response = await request(app).put(`/api/posts/${editablePostId}`).send({ title: 'Unauthorized' });
 
       expect(response.status).toBe(401);
     });
@@ -580,9 +567,7 @@ describe('DELETE /api/posts/:id - Delete Post', () => {
     });
 
     it('should make post inaccessible via GET after deletion', async () => {
-      await request(app)
-        .delete(`/api/posts/${deletablePostId}`)
-        .set('Authorization', `Bearer ${validToken}`);
+      await request(app).delete(`/api/posts/${deletablePostId}`).set('Authorization', `Bearer ${validToken}`);
 
       const getResponse = await request(app).get(`/api/posts/${deletablePostId}`);
 
@@ -611,18 +596,14 @@ describe('DELETE /api/posts/:id - Delete Post', () => {
 
   describe('Error Cases', () => {
     it('should return 404 for non-existent post', async () => {
-      const response = await request(app)
-        .delete('/api/posts/999999')
-        .set('Authorization', `Bearer ${validToken}`);
+      const response = await request(app).delete('/api/posts/999999').set('Authorization', `Bearer ${validToken}`);
 
       expect(response.status).toBe(404);
     });
 
     it('should return 404 when trying to delete already-deleted post', async () => {
       // First deletion
-      await request(app)
-        .delete(`/api/posts/${deletablePostId}`)
-        .set('Authorization', `Bearer ${validToken}`);
+      await request(app).delete(`/api/posts/${deletablePostId}`).set('Authorization', `Bearer ${validToken}`);
 
       // Second deletion should fail
       const response = await request(app)

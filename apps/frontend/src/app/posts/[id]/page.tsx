@@ -248,29 +248,36 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         {/* Post Content */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
           {/* Art/Media Post - Show Images */}
-          {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
-            <div className="mb-6">
-              <div className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
-                {post.content.images.map((image, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
-                      alt={image.originalName || `Image ${index + 1}`}
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => {
-                        setLightboxIndex(index);
-                        setLightboxOpen(true);
-                      }}
-                    />
-                  </div>
-                ))}
+          {(post.post_type_id === 2 || post.post_type_id === 3) &&
+            post.content.images &&
+            post.content.images.length > 0 && (
+              <div className="mb-6">
+                <div
+                  className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}
+                >
+                  {post.content.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300"
+                    >
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
+                        alt={image.originalName || `Image ${index + 1}`}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => {
+                          setLightboxIndex(index);
+                          setLightboxOpen(true);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {/* Art Description */}
+                {post.content.description && (
+                  <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+                )}
               </div>
-              {/* Art Description */}
-              {post.content.description && (
-                <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
-              )}
-            </div>
-          )}
+            )}
 
           {/* Writing Post - Show Body */}
           {post.post_type_id === 1 && (
@@ -301,7 +308,14 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                     <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-amber-600 font-medium">Date</p>
-                      <p className="text-amber-900">{new Date(post.content.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-amber-900">
+                        {new Date(post.content.eventDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -344,7 +358,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               {post.content.contactProfileId && (
                 <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <p className="text-sm text-amber-600 font-medium mb-1">Contact</p>
-                  <Link 
+                  <Link
                     href={`/profiles/${post.content.contactProfileId}`}
                     className="text-amber-900 hover:text-amber-700 underline"
                   >
@@ -364,11 +378,15 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {/* Fallback for other post types */}
-          {post.post_type_id !== 1 && post.post_type_id !== 2 && post.post_type_id !== 3 && post.post_type_id !== 4 && post.content.body && (
-            <div className="prose prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
-            </div>
-          )}
+          {post.post_type_id !== 1 &&
+            post.post_type_id !== 2 &&
+            post.post_type_id !== 3 &&
+            post.post_type_id !== 4 &&
+            post.content.body && (
+              <div className="prose prose-amber max-w-none">
+                <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
+              </div>
+            )}
         </Card>
 
         {/* Tags */}
@@ -415,16 +433,18 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
       </Dialog>
 
       {/* Image Lightbox for Art/Media Posts */}
-      {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
-        <ImageLightbox
-          images={post.content.images}
-          currentIndex={lightboxIndex}
-          isOpen={lightboxOpen}
-          onClose={() => setLightboxOpen(false)}
-          onNavigate={setLightboxIndex}
-          baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
-        />
-      )}
+      {(post.post_type_id === 2 || post.post_type_id === 3) &&
+        post.content.images &&
+        post.content.images.length > 0 && (
+          <ImageLightbox
+            images={post.content.images}
+            currentIndex={lightboxIndex}
+            isOpen={lightboxOpen}
+            onClose={() => setLightboxOpen(false)}
+            onNavigate={setLightboxIndex}
+            baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
+          />
+        )}
     </div>
   );
 }

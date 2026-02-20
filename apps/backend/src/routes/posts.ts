@@ -133,7 +133,7 @@ router.post(
         const authorInfo = await db.maybeOne(
           sql.type(z.object({ profile_id: z.number(), name: z.string() }))`
             SELECT profile_id, name FROM profiles WHERE profile_id = ${primary_author_profile_id}
-          `
+          `,
         );
         if (authorInfo) {
           response.primary_author = {

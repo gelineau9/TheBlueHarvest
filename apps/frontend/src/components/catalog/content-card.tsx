@@ -1,7 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, Sword, Package, Building2, MapPin, User, Calendar, FileText, Image, Film, CalendarDays } from 'lucide-react';
+import {
+  Users,
+  Sword,
+  Package,
+  Building2,
+  MapPin,
+  User,
+  Calendar,
+  FileText,
+  Image,
+  Film,
+  CalendarDays,
+} from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 interface ContentCardProps {
@@ -58,9 +70,10 @@ export function ContentCard({
   username,
   createdAt,
 }: ContentCardProps) {
-  const Icon = contentCategory === 'profile'
-    ? profileTypeIcons[typeId as keyof typeof profileTypeIcons] || Users
-    : postTypeIcons[typeId as keyof typeof postTypeIcons] || FileText;
+  const Icon =
+    contentCategory === 'profile'
+      ? profileTypeIcons[typeId as keyof typeof profileTypeIcons] || Users
+      : postTypeIcons[typeId as keyof typeof postTypeIcons] || FileText;
 
   const colors = categoryColors[contentCategory];
   const href = contentCategory === 'profile' ? `/catalog/${id}` : `/posts/${id}`;
@@ -71,7 +84,7 @@ export function ContentCard({
     day: 'numeric',
   });
 
-  const hasThumbnail = thumbnail && (contentCategory === 'post' && [2, 3, 4].includes(typeId));
+  const hasThumbnail = thumbnail && contentCategory === 'post' && [2, 3, 4].includes(typeId);
 
   return (
     <Link href={href}>
@@ -113,9 +126,7 @@ export function ContentCard({
               <h3 className="text-base font-bold text-amber-900 mb-1 line-clamp-2">{name}</h3>
 
               {/* Preview text */}
-              {preview && (
-                <p className="text-sm text-amber-700 mb-2 line-clamp-2">{preview}</p>
-              )}
+              {preview && <p className="text-sm text-amber-700 mb-2 line-clamp-2">{preview}</p>}
 
               {/* Meta info */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-600">
@@ -126,7 +137,7 @@ export function ContentCard({
                     <span className="truncate max-w-[100px]">{authorName}</span>
                   </div>
                 )}
-                
+
                 {/* Account username */}
                 <div className="flex items-center gap-1">
                   <User className="w-3 h-3" />

@@ -81,7 +81,7 @@ router.post(
       console.error('Upload error:', err);
       res.status(500).json({ error: 'Failed to upload files' });
     }
-  }
+  },
 );
 
 // DELETE /api/uploads/images/:filename - Delete an uploaded image

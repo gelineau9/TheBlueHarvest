@@ -114,13 +114,19 @@ export default function CatalogPage() {
   // Profile type filters
   const profileTypesParam = searchParams.get('profileTypes') || '';
   const selectedProfileTypes = profileTypesParam
-    ? profileTypesParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id))
+    ? profileTypesParam
+        .split(',')
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id))
     : [];
 
   // Post type filters
   const postTypesParam = searchParams.get('postTypes') || '';
   const selectedPostTypes = postTypesParam
-    ? postTypesParam.split(',').map((id) => parseInt(id, 10)).filter((id) => !isNaN(id))
+    ? postTypesParam
+        .split(',')
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id))
     : [];
 
   // Get the label for the current sort option
@@ -210,7 +216,8 @@ export default function CatalogPage() {
   }, [router]);
 
   // Check if any filters are active
-  const hasActiveFilters = selectedProfileTypes.length > 0 || selectedPostTypes.length > 0 || searchQuery || contentType !== 'all';
+  const hasActiveFilters =
+    selectedProfileTypes.length > 0 || selectedPostTypes.length > 0 || searchQuery || contentType !== 'all';
 
   // Load more items
   const loadMoreItems = useCallback(async () => {
@@ -240,7 +247,17 @@ export default function CatalogPage() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore, offset, sortBy, order, contentType, selectedProfileTypes, selectedPostTypes, searchQuery]);
+  }, [
+    isLoadingMore,
+    hasMore,
+    offset,
+    sortBy,
+    order,
+    contentType,
+    selectedProfileTypes,
+    selectedPostTypes,
+    searchQuery,
+  ]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -307,7 +324,10 @@ export default function CatalogPage() {
     return (
       <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
         <div className="max-w-7xl mx-auto">
-          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
@@ -341,7 +361,10 @@ export default function CatalogPage() {
     return (
       <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
         <div className="max-w-7xl mx-auto">
-          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
@@ -360,7 +383,10 @@ export default function CatalogPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
@@ -389,7 +415,11 @@ export default function CatalogPage() {
               {isSearching ? (
                 <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
               ) : (
-                <button onClick={handleClearSearch} className="text-amber-500 hover:text-amber-700 transition-colors" aria-label="Clear search">
+                <button
+                  onClick={handleClearSearch}
+                  className="text-amber-500 hover:text-amber-700 transition-colors"
+                  aria-label="Clear search"
+                >
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -453,9 +483,7 @@ export default function CatalogPage() {
             )}
 
             {/* Separator if showing both */}
-            {showProfileFilters && showPostFilters && (
-              <div className="w-px h-6 bg-amber-300 mx-1" />
-            )}
+            {showProfileFilters && showPostFilters && <div className="w-px h-6 bg-amber-300 mx-1" />}
 
             {/* Post Type Filters */}
             {showPostFilters && (
@@ -510,7 +538,11 @@ export default function CatalogPage() {
             <DropdownMenuContent align="end" className="bg-white border-amber-300">
               <DropdownMenuRadioGroup value={currentSort} onValueChange={handleSortChange}>
                 {SORT_OPTIONS.map((option) => (
-                  <DropdownMenuRadioItem key={option.value} value={option.value} className="text-amber-900 focus:bg-amber-50 focus:text-amber-900">
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className="text-amber-900 focus:bg-amber-50 focus:text-amber-900"
+                  >
                     {option.label}
                   </DropdownMenuRadioItem>
                 ))}

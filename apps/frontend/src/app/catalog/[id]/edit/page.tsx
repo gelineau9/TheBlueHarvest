@@ -247,7 +247,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               <Button
                 type="button"
                 variant="outline"
-onClick={() => navigateWithWarning(`/catalog/${id}`)}
+                onClick={() => navigateWithWarning(`/catalog/${id}`)}
                 className="border-amber-300 text-amber-800 hover:bg-amber-50"
               >
                 Cancel
