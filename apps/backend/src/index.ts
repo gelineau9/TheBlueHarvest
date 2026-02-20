@@ -1,8 +1,19 @@
 // /apps/backend/src/index.ts
 import express, { Request, Response } from 'express';
+import path from 'path';
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
-import profileEditorsRoutes from './routes/profileEditors.js';
+import postsRoutes from './routes/posts.js';
+import collectionsRoutes from './routes/collections.js';
+import collectionPostsRoutes from './routes/collectionPosts.js';
+import uploadsRoutes from './routes/uploads.js';
+import {
+  profileEditorRoutes,
+  postEditorRoutes,
+  collectionEditorRoutes,
+  postAuthorRoutes,
+  collectionAuthorRoutes,
+} from './routes/editors.js';
 
 const app = express();
 const PORT = Number(process.env.BACKEND_PORT ?? 4000);
@@ -11,10 +22,21 @@ const PORT = Number(process.env.BACKEND_PORT ?? 4000);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profilesRoutes);
-app.use('/api/profiles', profileEditorsRoutes); // Editor management routes (/:profileId/editors)
+app.use('/api/profiles', profileEditorRoutes);
+app.use('/api/posts', postsRoutes);
+app.use('/api/posts', postEditorRoutes);
+app.use('/api/posts', postAuthorRoutes);
+app.use('/api/collections', collectionsRoutes);
+app.use('/api/collections', collectionPostsRoutes);
+app.use('/api/collections', collectionEditorRoutes);
+app.use('/api/collections', collectionAuthorRoutes);
+app.use('/api/uploads', uploadsRoutes);
 
 //Basic route
 app.get('/', (req: Request, res: Response) => {

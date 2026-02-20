@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
-import { canEditProfile } from './profileEditors.js';
+import { canEditProfile } from './editors.js';
 
 const router = Router();
 

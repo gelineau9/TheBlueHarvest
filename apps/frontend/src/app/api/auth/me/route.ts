@@ -12,8 +12,6 @@ export async function GET() {
     return NextResponse.json({
       isLoggedIn: true,
       username: session.username,
-      firstName: session.firstName,
-      lastName: session.lastName,
       email: session.email,
       avatarUrl: '',
     });

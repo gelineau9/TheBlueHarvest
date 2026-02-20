@@ -8,8 +8,6 @@ export async function POST(request: Request) {
     formData.append('email', data.email);
     formData.append('username', data.username);
     formData.append('password', data.password);
-    formData.append('first_name', data.first_name);
-    formData.append('last_name', data.last_name);
 
     const result = await register(formData);
 

@@ -14,11 +14,22 @@ export function LeftSidebar() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [loginDialogType, setLoginDialogType] = useState<'profile' | 'post'>('profile');
 
   const handleCreateProfileClick = () => {
     if (isLoggedIn) {
       router.push('/profiles/create');
     } else {
+      setLoginDialogType('profile');
+      setShowLoginDialog(true);
+    }
+  };
+
+  const handleCreatePostClick = () => {
+    if (isLoggedIn) {
+      router.push('/posts/create');
+    } else {
+      setLoginDialogType('post');
       setShowLoginDialog(true);
     }
   };
@@ -47,10 +58,18 @@ export function LeftSidebar() {
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-2">
         <Button onClick={handleCreateProfileClick} className="w-full bg-amber-800 text-amber-50 hover:bg-amber-700">
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Profile
+        </Button>
+        <Button
+          onClick={handleCreatePostClick}
+          variant="outline"
+          className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create Post
         </Button>
       </div>
 
@@ -59,7 +78,7 @@ export function LeftSidebar() {
           <DialogHeader>
             <DialogTitle className="text-amber-900">Login Required</DialogTitle>
             <DialogDescription className="text-amber-800">
-              You need to be logged in to create a profile. Please log in or create an account to continue.
+              You need to be logged in to create a {loginDialogType}. Please log in or create an account to continue.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>

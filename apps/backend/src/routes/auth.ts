@@ -29,7 +29,7 @@ router.post(
       return;
     }
 
-    const { email, username, password, first_name, last_name } = req.body;
+    const { email, username, password } = req.body;
 
     if (!email || !username || !password) {
       res.status(400).json({ message: 'Email, username, and password are required' });
@@ -55,11 +55,11 @@ router.post(
       // Hash password
       const hashedPassword = await argon2.hash(password);
 
-      // Create user (convert undefined to null for optional fields)
+      // Create user
       const result = await pool.one(
         sql.type(z.object({ account_id: z.number() }))`
-          INSERT INTO accounts (email, username, hashed_password, first_name, last_name, user_role_id)
-          VALUES (${email}, ${username}, ${hashedPassword}, ${first_name ?? null}, ${last_name ?? null}, 1)
+          INSERT INTO accounts (email, username, hashed_password, user_role_id)
+          VALUES (${email}, ${username}, ${hashedPassword}, 1)
           RETURNING account_id
         `,
       );
@@ -108,11 +108,9 @@ router.post(
             account_id: z.number(),
             hashed_password: z.string(),
             username: z.string(),
-            first_name: z.string().nullable(),
-            last_name: z.string().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, first_name, last_name
+          SELECT account_id, hashed_password, username
           FROM accounts
           WHERE email = ${email}
         `,
@@ -140,8 +138,6 @@ router.post(
         user: {
           id: user.account_id,
           username: user.username,
-          firstName: user.first_name,
-          lastName: user.last_name,
         },
       });
     } catch (err) {
@@ -170,12 +166,10 @@ router.get('/me', async (req: Request, res: Response) => {
         z.object({
           account_id: z.number(),
           username: z.string(),
-          first_name: z.string().nullable(),
-          last_name: z.string().nullable(),
           email: z.string(),
         }),
       )`
-        SELECT account_id, username, first_name, last_name, email
+        SELECT account_id, username, email
         FROM accounts
         WHERE account_id = ${decoded.userId}
       `,
@@ -189,8 +183,6 @@ router.get('/me', async (req: Request, res: Response) => {
     res.json({
       id: user.account_id,
       username: user.username,
-      firstName: user.first_name,
-      lastName: user.last_name,
       email: user.email,
     });
   } catch (err) {
@@ -211,11 +203,7 @@ router.get('/me', async (req: Request, res: Response) => {
 // Update user account
 router.put(
   '/account',
-  [
-    body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.'),
-    body('firstName').optional().trim().isLength({ min: 1 }).withMessage('First name is required.'),
-    body('lastName').optional().trim().isLength({ min: 1 }).withMessage('Last name is required.'),
-  ],
+  [body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.')],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -234,7 +222,7 @@ router.put(
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
       const pool = await getPool();
 
-      const { username, firstName, lastName } = req.body;
+      const { username } = req.body;
 
       // Check if username is already taken by another user
       if (username) {
@@ -257,12 +245,6 @@ router.put(
       if (username) {
         updateFragments.push(sql.fragment`username = ${username}`);
       }
-      if (firstName) {
-        updateFragments.push(sql.fragment`first_name = ${firstName}`);
-      }
-      if (lastName) {
-        updateFragments.push(sql.fragment`last_name = ${lastName}`);
-      }
 
       if (updateFragments.length === 0) {
         res.status(400).json({ message: 'No fields to update' });
@@ -275,23 +257,19 @@ router.put(
           z.object({
             account_id: z.number(),
             username: z.string(),
-            first_name: z.string().nullable(),
-            last_name: z.string().nullable(),
             email: z.string(),
           }),
         )`
           UPDATE accounts
           SET ${sql.join(updateFragments, sql.fragment`, `)}
           WHERE account_id = ${decoded.userId}
-          RETURNING account_id, username, first_name, last_name, email
+          RETURNING account_id, username, email
         `,
       );
 
       res.json({
         id: result.account_id,
         username: result.username,
-        firstName: result.first_name,
-        lastName: result.last_name,
         email: result.email,
       });
     } catch (err) {

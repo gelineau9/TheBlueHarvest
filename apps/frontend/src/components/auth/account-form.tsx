@@ -10,11 +10,9 @@ import { useAuth } from './auth-provider';
 import Link from 'next/link';
 
 export function AccountForm() {
-  const { username, firstName, lastName, email } = useAuth();
+  const { username, email } = useAuth();
   const [formData, setFormData] = useState<AccountUpdateInput>({
     username: '',
-    firstName: '',
-    lastName: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof AccountUpdateInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -22,14 +20,12 @@ export function AccountForm() {
 
   // Initialize form with current user data
   useEffect(() => {
-    if (username && firstName && lastName) {
+    if (username) {
       setFormData({
         username,
-        firstName,
-        lastName,
       });
     }
-  }, [username, firstName, lastName]);
+  }, [username]);
 
   const handleInputChange = (field: keyof AccountUpdateInput, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -115,37 +111,6 @@ export function AccountForm() {
               aria-invalid={!!errors.username}
             />
             {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-amber-900">
-                First Name
-              </Label>
-              <Input
-                id="firstName"
-                value={formData.firstName || ''}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                disabled={isLoading}
-                className="text-amber-900"
-                aria-invalid={!!errors.firstName}
-              />
-              {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-amber-900">
-                Last Name
-              </Label>
-              <Input
-                id="lastName"
-                value={formData.lastName || ''}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                disabled={isLoading}
-                className="text-amber-900"
-                aria-invalid={!!errors.lastName}
-              />
-              {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
-            </div>
           </div>
 
           {errors.general && <div className="text-sm text-red-500 text-center">{errors.general}</div>}
