@@ -2,8 +2,20 @@
 
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MediaForm } from '@/components/posts/media-form';
 
 export default function CreateMediaPostPage() {
+  const router = useRouter();
+
+  const handleSuccess = (postId: number) => {
+    router.push(`/posts/${postId}`);
+  };
+
+  const handleCancel = () => {
+    router.push('/posts/create');
+  };
+
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -15,12 +27,12 @@ export default function CreateMediaPostPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-amber-900 mb-2">Create Media Post</h1>
           <p className="text-lg text-amber-700">
-            Share screenshots, videos, and links
+            Share screenshots, references, and other media
           </p>
         </div>
 
-        <div className="bg-amber-100 border border-amber-300 rounded-lg p-8 text-center">
-          <p className="text-amber-800">Media post creation coming soon...</p>
+        <div className="bg-white/80 border border-amber-300 rounded-lg p-6 md:p-8">
+          <MediaForm onSuccess={handleSuccess} onCancel={handleCancel} />
         </div>
       </div>
     </div>
