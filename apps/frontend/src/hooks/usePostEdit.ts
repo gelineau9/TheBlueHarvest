@@ -28,6 +28,11 @@ export interface Post {
     headerImage?: UploadedImage;
     tags?: string[];
   };
+  authors?: Array<{
+    profile_id: number;
+    name: string;
+    is_primary: boolean;
+  }>;
   created_at: string;
   updated_at: string;
   can_edit?: boolean;
@@ -83,9 +88,10 @@ interface UsePostEditReturn {
 
   // Characters (for event contact dropdown)
   characters: CharacterProfile[];
+  charactersLoaded: boolean;
 
   // Actions
-  savePost: (title: string, content: Post['content']) => Promise<boolean>;
+  savePost: (title: string, content: Post['content'], primaryAuthorProfileId?: number | null) => Promise<boolean>;
   navigateBack: () => void;
 
   // Helpers
@@ -107,6 +113,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
   const [isUploading, setIsUploading] = useState(false);
 
   const [characters, setCharacters] = useState<CharacterProfile[]>([]);
+  const [charactersLoaded, setCharactersLoaded] = useState(false);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
@@ -117,10 +124,13 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         const response = await fetch('/api/profiles?type=1');
         if (response.ok) {
           const data = await response.json();
-          setCharacters(data.profiles || []);
+          // Backend returns flat array, not { profiles: [] }
+          setCharacters(Array.isArray(data) ? data : (data.profiles || []));
         }
       } catch (err) {
         console.error('Failed to fetch characters:', err);
+      } finally {
+        setCharactersLoaded(true);
       }
     };
 
@@ -215,20 +225,27 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
 
   // Save post
   const savePost = useCallback(
-    async (title: string, content: Post['content']): Promise<boolean> => {
+    async (title: string, content: Post['content'], primaryAuthorProfileId?: number | null): Promise<boolean> => {
       setSaveError(null);
       setIsSaving(true);
 
       try {
+        const body: Record<string, unknown> = {
+          title: title.trim(),
+          content,
+        };
+
+        // Include primary_author_profile_id if provided (even if null to clear it)
+        if (primaryAuthorProfileId !== undefined) {
+          body.primary_author_profile_id = primaryAuthorProfileId;
+        }
+
         const response = await fetch(`/api/posts/${postId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            title: title.trim(),
-            content,
-          }),
+          body: JSON.stringify(body),
         });
 
         if (!response.ok) {
@@ -264,6 +281,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
     uploadImages,
     fileInputRef,
     characters,
+    charactersLoaded,
     savePost,
     navigateBack,
     backendUrl,

@@ -11,6 +11,18 @@ import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, UploadedImage } from '@/hooks/usePostEdit';
 
+// Helper functions for date validation
+const getMinDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+const getMaxDate = () => {
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  return oneYearFromNow.toISOString().split('T')[0];
+};
+
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const headerImageInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +41,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     backendUrl,
     router,
     characters,
+    charactersLoaded,
   } = usePostEdit({ postId: id, expectedType: POST_TYPES.EVENT });
 
   // Form state
@@ -55,9 +68,9 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     contactProfileId: '',
   });
 
-  // Initialize form when post loads
+  // Initialize form when post and characters load
   useEffect(() => {
-    if (post) {
+    if (post && charactersLoaded) {
       const initialTitle = post.title || '';
       const initialDescription = post.content?.description || '';
       const initialTags = post.content?.tags?.join(', ') || '';
@@ -90,7 +103,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         contactProfileId: initialContactProfileId,
       });
     }
-  }, [post]);
+  }, [post, charactersLoaded]);
 
   const isDirty =
     title !== originalValues.title ||
@@ -123,6 +136,26 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate event date
+    if (eventDate) {
+      const selectedDate = new Date(eventDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        setSaveError('Event date cannot be in the past');
+        return;
+      }
+      
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      
+      if (selectedDate > oneYearFromNow) {
+        setSaveError('Event date cannot be more than 1 year away');
+        return;
+      }
+    }
 
     const tags = tagsInput
       .split(',')
@@ -234,7 +267,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
             {/* Header Image */}
             <div className="space-y-2">
-              <Label className="text-amber-900 font-semibold">Header Image</Label>
+              <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
 
               {headerImage ? (
                 <div className="relative">
@@ -299,6 +332,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   type="date"
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
+                  min={getMinDate()}
+                  max={getMaxDate()}
                   className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                 />
               </div>
@@ -360,7 +395,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               >
                 <option value="">Select a character...</option>
                 {characters.map((char) => (
-                  <option key={char.profile_id} value={char.profile_id}>
+                  <option key={char.profile_id} value={String(char.profile_id)}>
                     {char.name}
                   </option>
                 ))}

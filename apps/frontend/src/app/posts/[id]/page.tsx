@@ -66,6 +66,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [isDeleting, setIsDeleting] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [contactName, setContactName] = useState<string | null>(null);
   const { id } = use(params);
 
   useEffect(() => {
@@ -84,6 +85,19 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
         const data = await response.json();
         setPost(data);
+
+        // Fetch contact profile name for events
+        if (data.content?.contactProfileId) {
+          try {
+            const profileResponse = await fetch(`/api/profiles/${data.content.contactProfileId}`);
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              setContactName(profileData.name);
+            }
+          } catch {
+            // Silently fail - will just show fallback text
+          }
+        }
       } catch (err) {
         setError('An error occurred while loading the post');
       } finally {
@@ -364,14 +378,17 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
 
               {/* Character Contact */}
               {post.content.contactProfileId && (
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-sm text-amber-600 font-medium mb-1">Contact</p>
-                  <Link
-                    href={`/profiles/${post.content.contactProfileId}`}
-                    className="text-amber-900 hover:text-amber-700 underline"
-                  >
-                    View Contact Character
-                  </Link>
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <User className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-amber-600 font-medium">Contact</p>
+                    <Link
+                      href={`/catalog/${post.content.contactProfileId}`}
+                      className="text-amber-900 hover:text-amber-700 underline"
+                    >
+                      {contactName || 'View Contact Character'}
+                    </Link>
+                  </div>
                 </div>
               )}
 

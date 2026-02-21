@@ -23,34 +23,41 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
     savePost,
     navigateBack,
     router,
+    characters,
+    charactersLoaded,
   } = usePostEdit({ postId: id, expectedType: POST_TYPES.WRITING });
 
   // Form state
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [authorId, setAuthorId] = useState<string>('');
 
   // Original values for dirty checking
-  const [originalValues, setOriginalValues] = useState({ title: '', body: '', tagsInput: '' });
+  const [originalValues, setOriginalValues] = useState({ title: '', body: '', tagsInput: '', authorId: '' });
 
-  // Initialize form when post loads
+  // Initialize form when post and characters load
   useEffect(() => {
-    if (post) {
+    if (post && charactersLoaded) {
       const initialTitle = post.title || '';
       const initialBody = post.content?.body || '';
       const initialTags = post.content?.tags?.join(', ') || '';
+      const primaryAuthor = post.authors?.find((a) => a.is_primary);
+      const initialAuthorId = primaryAuthor?.profile_id?.toString() || '';
 
       setTitle(initialTitle);
       setBody(initialBody);
       setTagsInput(initialTags);
-      setOriginalValues({ title: initialTitle, body: initialBody, tagsInput: initialTags });
+      setAuthorId(initialAuthorId);
+      setOriginalValues({ title: initialTitle, body: initialBody, tagsInput: initialTags, authorId: initialAuthorId });
     }
-  }, [post]);
+  }, [post, charactersLoaded]);
 
   const isDirty =
     title !== originalValues.title ||
     body !== originalValues.body ||
-    tagsInput !== originalValues.tagsInput;
+    tagsInput !== originalValues.tagsInput ||
+    authorId !== originalValues.authorId;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -62,10 +69,12 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
-    const success = await savePost(title, { body, tags });
+    // Pass author ID (null to clear, number to set, undefined to leave unchanged)
+    const authorProfileId = authorId ? parseInt(authorId, 10) : null;
+    const success = await savePost(title, { body, tags }, authorProfileId);
 
     if (success) {
-      setOriginalValues({ title: title.trim(), body, tagsInput });
+      setOriginalValues({ title: title.trim(), body, tagsInput, authorId });
       navigateBack();
     }
   };
@@ -142,6 +151,29 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
               />
               <p className="text-sm text-amber-600">{title.length}/200 characters</p>
+            </div>
+
+            {/* Author Character (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="authorId" className="text-amber-900 font-semibold">
+                Author Character (Optional)
+              </Label>
+              <select
+                id="authorId"
+                value={authorId}
+                onChange={(e) => setAuthorId(e.target.value)}
+                className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
+              >
+                <option value="">No character author</option>
+                {characters.map((char) => (
+                  <option key={char.profile_id} value={String(char.profile_id)}>
+                    {char.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-amber-600">
+                Optionally attribute this writing to one of your characters.
+              </p>
             </div>
 
             <div className="space-y-2">

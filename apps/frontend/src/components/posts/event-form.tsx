@@ -29,11 +29,33 @@ interface Profile {
   profile_type_id: number;
 }
 
+// Helper functions for date validation
+const getMinDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+const getMaxDate = () => {
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  return oneYearFromNow.toISOString().split('T')[0];
+};
+
 // Validation schema for event posts
 const eventPostSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
   description: z.string().min(1, 'Description is required'),
-  eventDate: z.string().min(1, 'Event date is required'),
+  eventDate: z.string().min(1, 'Event date is required').refine((date) => {
+    const selected = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selected >= today;
+  }, 'Event date cannot be in the past').refine((date) => {
+    const selected = new Date(date);
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    return selected <= oneYearFromNow;
+  }, 'Event date cannot be more than 1 year away'),
   eventTime: z.string().min(1, 'Event time is required'),
   location: z.string().min(1, 'Location is required'),
   maxAttendees: z.string().optional(),
@@ -153,11 +175,6 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   };
 
   const onSubmit = async (data: EventPostInput) => {
-    if (!headerImage) {
-      setError('Please upload a header image for the event');
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -172,11 +189,11 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
           location: data.location,
           maxAttendees: data.maxAttendees ? parseInt(data.maxAttendees, 10) : null,
           contactProfileId: data.contactProfileId ? parseInt(data.contactProfileId, 10) : null,
-          headerImage: {
+          headerImage: headerImage ? {
             filename: headerImage.filename,
             url: headerImage.url,
             originalName: headerImage.originalName,
-          },
+          } : null,
           tags: data.tags || [],
         },
       };
@@ -208,7 +225,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Header Image Upload */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Header Image *</Label>
+        <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
 
         {headerImage ? (
           <div className="relative">
@@ -292,6 +309,8 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             id="eventDate"
             type="date"
             {...register('eventDate')}
+            min={getMinDate()}
+            max={getMaxDate()}
             className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
             disabled={isSubmitting}
           />
@@ -422,7 +441,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || isUploading || !headerImage}
+          disabled={isSubmitting || isUploading}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
           {isSubmitting ? 'Publishing...' : 'Publish Event'}

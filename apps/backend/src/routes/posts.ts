@@ -53,9 +53,10 @@ router.post(
     const { post_type_id, title, content, primary_author_profile_id } = req.body;
     const userId = req.userId!;
 
-    // Post types that require an author (writing = 1)
+    // Post types that require an author - currently none (authors are optional)
     // Art (2), Media (3), Event (4) are account-level posts
-    const AUTHOR_REQUIRED_POST_TYPES = [1];
+    // Writing (1) can optionally have a character author
+    const AUTHOR_REQUIRED_POST_TYPES: number[] = [];
     const requiresAuthor = AUTHOR_REQUIRED_POST_TYPES.includes(post_type_id);
 
     if (requiresAuthor && !primary_author_profile_id) {
@@ -423,6 +424,7 @@ router.put(
       .isLength({ min: 1, max: 200 })
       .withMessage('Title must be between 1 and 200 characters'),
     body('content').optional(),
+    body('primary_author_profile_id').optional().isInt().withMessage('Invalid author profile ID'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -433,14 +435,14 @@ router.put(
 
     const postId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
     const userId = req.userId!;
-    const { title, content } = req.body;
+    const { title, content, primary_author_profile_id } = req.body;
 
     if (isNaN(postId)) {
       res.status(400).json({ error: 'Invalid post ID' });
       return;
     }
 
-    if (title === undefined && content === undefined) {
+    if (title === undefined && content === undefined && primary_author_profile_id === undefined) {
       res.status(400).json({ error: 'No fields to update' });
       return;
     }
@@ -498,6 +500,35 @@ router.put(
           RETURNING post_id, account_id, post_type_id, title, content, created_at::text, updated_at::text
         `,
       );
+
+      // Handle primary author update
+      if (primary_author_profile_id !== undefined) {
+        // First, remove existing primary author
+        await db.query(sql.unsafe`
+          DELETE FROM authors
+          WHERE post_id = ${postId} AND is_primary = true
+        `);
+
+        // If a new author is specified (not null/empty), add them
+        if (primary_author_profile_id) {
+          // Verify the profile exists and belongs to the user
+          const profile = await db.maybeOne(
+            sql.type(z.object({ profile_id: z.number() }))`
+              SELECT profile_id FROM profiles
+              WHERE profile_id = ${primary_author_profile_id}
+                AND account_id = ${userId}
+                AND deleted = false
+            `,
+          );
+
+          if (profile) {
+            await db.query(sql.unsafe`
+              INSERT INTO authors (post_id, profile_id, is_primary)
+              VALUES (${postId}, ${primary_author_profile_id}, true)
+            `);
+          }
+        }
+      }
 
       res.json(updatedPost);
     } catch (err) {
