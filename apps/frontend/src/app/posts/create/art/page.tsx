@@ -1,21 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { ArtForm } from '@/components/posts/art-form';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CreateArtPostPage() {
   const router = useRouter();
-  const { isLoggedIn, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/');
-    }
-  }, [isLoggedIn, isLoading, router]);
+  const { isAuthorized, isLoading } = useRequireAuth();
 
   if (isLoading) {
     return (
@@ -25,7 +18,7 @@ export default function CreateArtPostPage() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthorized) {
     return null;
   }
 

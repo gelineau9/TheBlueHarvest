@@ -1,22 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { use } from 'react';
+import { notFound, useRouter } from 'next/navigation';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { ProfileForm } from '@/components/profiles/profile-form';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getProfileTypeBySlug } from '@/config/profile-types';
 
-export default function CreateCharacterPage() {
+interface CreateProfileTypePageProps {
+  params: Promise<{ type: string }>;
+}
+
+export default function CreateProfileTypePage({ params }: CreateProfileTypePageProps) {
   const router = useRouter();
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isAuthorized, isLoading } = useRequireAuth();
 
-  // Authentication guard
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/');
-    }
-  }, [isLoggedIn, isLoading, router]);
+  // Unwrap params (Next.js 15 async params)
+  const resolvedParams = use(params);
+  const typeConfig = getProfileTypeBySlug(resolvedParams.type);
+
+  if (!typeConfig) {
+    notFound();
+  }
+
+  const Icon = typeConfig.icon;
 
   if (isLoading) {
     return (
@@ -26,7 +34,7 @@ export default function CreateCharacterPage() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthorized) {
     return null;
   }
 
@@ -52,15 +60,15 @@ export default function CreateCharacterPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 rounded-lg bg-amber-600 text-white">
-              <Users className="w-6 h-6" />
+              <Icon className="w-6 h-6" />
             </div>
-            <h1 className="text-4xl font-bold text-amber-900">Create Character Profile</h1>
+            <h1 className="text-4xl font-bold text-amber-900">Create {typeConfig.label} Profile</h1>
           </div>
-          <p className="text-lg text-amber-700">Create a roleplay character with their own story and background</p>
+          <p className="text-lg text-amber-700">{typeConfig.description}</p>
         </div>
 
         <div className="bg-white rounded-lg border border-amber-300 p-8 shadow-sm">
-          <ProfileForm profileTypeId={1} onSuccess={handleSuccess} onCancel={handleCancel} />
+          <ProfileForm profileTypeId={typeConfig.id} onSuccess={handleSuccess} onCancel={handleCancel} />
         </div>
       </div>
     </div>

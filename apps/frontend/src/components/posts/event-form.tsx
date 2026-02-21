@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,23 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
 interface EventFormProps {
   onSuccess: (postId: number) => void;
   onCancel: () => void;
-}
-
-interface UploadedImage {
-  filename: string;
-  originalName: string;
-  url: string;
-  size: number;
-}
-
-interface Profile {
-  profile_id: number;
-  name: string;
-  profile_type_id: number;
 }
 
 // Helper functions for date validation
@@ -71,13 +60,16 @@ type EventPostInput = z.infer<typeof eventPostSchema>;
 
 export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [headerImage, setHeaderImage] = useState<UploadedImage | null>(null);
   const [tagsInput, setTagsInput] = useState('');
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loadingProfiles, setLoadingProfiles] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { characters: profiles, isLoading: loadingProfiles } = useCharacterProfiles();
+
+  const { uploadedImages, isUploading, uploadError, fileInputRef, handleFileSelect, handleRemoveImage } =
+    useImageUpload({ maxImages: 1 });
+
+  // Convenience: header image is the first (and only) uploaded image
+  const headerImage = uploadedImages[0] || null;
 
   const {
     register,
@@ -101,70 +93,6 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
   const titleValue = watch('title') || '';
   const titleLength = titleValue.length;
-
-  // Fetch user's character profiles for contact selection
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        // Fetch only character profiles (type 1) for the current user
-        const response = await fetch('/api/profiles?type=1');
-        if (response.ok) {
-          const data = await response.json();
-          // Response is an array of profiles directly
-          const characterProfiles = Array.isArray(data) ? data : data.profiles || [];
-          setProfiles(characterProfiles);
-        }
-      } catch (err) {
-        console.error('Failed to fetch profiles:', err);
-      } finally {
-        setLoadingProfiles(false);
-      }
-    };
-
-    fetchProfiles();
-  }, []);
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('images', file);
-
-      const response = await fetch('/api/uploads/images', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to upload image');
-        return;
-      }
-
-      if (data.files && data.files.length > 0) {
-        setHeaderImage(data.files[0]);
-      }
-    } catch {
-      setError('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setHeaderImage(null);
-  };
 
   const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -221,11 +149,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
     }
   };
 
+  const displayError = error || uploadError;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
+      {displayError && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{displayError}</p>
         </div>
       )}
 
@@ -244,7 +174,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             </div>
             <button
               type="button"
-              onClick={handleRemoveImage}
+              onClick={() => handleRemoveImage(headerImage.filename)}
               className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
               disabled={isSubmitting}
             >

@@ -141,7 +141,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     const fetchEditors = async () => {
       if (!collection?.is_owner) return;
-      
+
       try {
         const response = await fetch(`/api/collections/${id}/editors`);
         if (response.ok) {
@@ -197,10 +197,10 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
   const handleAddEditor = async () => {
     if (!editorUsername.trim()) return;
-    
+
     setAddingEditor(true);
     setEditorError(null);
-    
+
     try {
       const response = await fetch(`/api/collections/${id}/editors`, {
         method: 'POST',
@@ -550,9 +550,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                       </div>
                       <div>
                         <span className="font-medium text-amber-900">{editor.username}</span>
-                        <p className="text-xs text-amber-600">
-                          Added {new Date(editor.added_at).toLocaleDateString()}
-                        </p>
+                        <p className="text-xs text-amber-600">Added {new Date(editor.added_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <Button
@@ -600,18 +598,22 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
       </Dialog>
 
       {/* Add Editor Dialog */}
-      <Dialog open={showAddEditorDialog} onOpenChange={(open) => {
-        setShowAddEditorDialog(open);
-        if (!open) {
-          setEditorUsername('');
-          setEditorError(null);
-        }
-      }}>
+      <Dialog
+        open={showAddEditorDialog}
+        onOpenChange={(open) => {
+          setShowAddEditorDialog(open);
+          if (!open) {
+            setEditorUsername('');
+            setEditorError(null);
+          }
+        }}
+      >
         <DialogContent className="bg-white border-amber-300">
           <DialogHeader>
             <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
             <DialogDescription className="text-amber-700">
-              Enter the username of the person you want to add as an editor. Editors can manage posts in this collection.
+              Enter the username of the person you want to add as an editor. Editors can manage posts in this
+              collection.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -631,9 +633,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                 }
               }}
             />
-            {editorError && (
-              <p className="mt-2 text-sm text-red-600">{editorError}</p>
-            )}
+            {editorError && <p className="mt-2 text-sm text-red-600">{editorError}</p>}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button

@@ -15,16 +15,13 @@ import { Router, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditCollection } from './editors.js';
 import { canAddPostToCollection, isPostInCollection, getNextSortOrder } from '../utils/postValidation.js';
+import { parseParam } from '../utils/params.js';
 
 const router = Router();
-
-async function getPool() {
-  return await pool;
-}
 
 // POST /api/collections/:collectionId/posts - Add a post to a collection
 router.post(
@@ -38,9 +35,7 @@ router.post(
       return;
     }
 
-    const collectionId = parseInt(
-      Array.isArray(req.params.collectionId) ? req.params.collectionId[0] : req.params.collectionId,
-    );
+    const collectionId = parseParam(req.params.collectionId);
     const userId = req.userId!;
     const { post_id } = req.body;
 

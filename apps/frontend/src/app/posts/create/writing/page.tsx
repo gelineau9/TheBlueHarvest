@@ -1,19 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { WritingForm } from '@/components/posts/writing-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function CreateWritingPage() {
   const router = useRouter();
-  const { isLoggedIn, isLoading } = useAuth();
-
-  // Redirect to home if not logged in
-  if (!isLoading && !isLoggedIn) {
-    router.push('/');
-    return null;
-  }
+  const { isAuthorized, isLoading } = useRequireAuth();
 
   if (isLoading) {
     return (
@@ -21,6 +15,10 @@ export default function CreateWritingPage() {
         <div className="text-center text-amber-700">Loading...</div>
       </div>
     );
+  }
+
+  if (!isAuthorized) {
+    return null;
   }
 
   const handleSuccess = (postId: number) => {

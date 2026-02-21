@@ -3,10 +3,24 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { MediaForm } from '@/components/posts/media-form';
 
 export default function CreateMediaPostPage() {
   const router = useRouter();
+  const { isAuthorized, isLoading } = useRequireAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+        <div className="text-amber-900">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return null;
+  }
 
   const handleSuccess = (postId: number) => {
     router.push(`/posts/${postId}`);

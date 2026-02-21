@@ -18,8 +18,9 @@ import { Router, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { parseParam } from '../utils/params.js';
 
 // Reusable Zod schemas
 const EditorSchema = z.object({
@@ -46,14 +47,6 @@ const EditorDeleteSchema = z.object({
   editor_id: z.number(),
   account_id: z.number(),
 });
-
-async function getPool() {
-  return await pool;
-}
-
-function parseParam(param: string | string[]): number {
-  return parseInt(Array.isArray(param) ? param[0] : param);
-}
 
 export interface EditorRoutesConfig {
   entityName: string; // 'profile', 'post', 'collection'

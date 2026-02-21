@@ -7,11 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/components/auth/auth-provider';
 import { CommentItem, Comment } from './comment-item';
-
-interface Character {
-  profile_id: number;
-  name: string;
-}
+import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
 interface CommentListProps {
   postId: number;
@@ -29,8 +25,8 @@ export function CommentList({ postId }: CommentListProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // User's characters for attribution
-  const [characters, setCharacters] = useState<Character[]>([]);
+  // User's characters for attribution (only fetch when logged in)
+  const { characters } = useCharacterProfiles({ enabled: isLoggedIn });
 
   // Fetch comments
   const fetchComments = async () => {
@@ -48,29 +44,9 @@ export function CommentList({ postId }: CommentListProps) {
     }
   };
 
-  // Fetch user's characters for attribution dropdown
-  const fetchCharacters = async () => {
-    try {
-      const response = await fetch('/api/profiles?type=1'); // type 1 = characters
-      if (response.ok) {
-        const data = await response.json();
-        // API returns array directly, not wrapped in { profiles: [...] }
-        setCharacters(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch characters:', err);
-    }
-  };
-
   useEffect(() => {
     fetchComments();
   }, [postId]);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchCharacters();
-    }
-  }, [isLoggedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

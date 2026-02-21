@@ -19,16 +19,12 @@ import { Router, Response, Request } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditPost } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
 
 const router = Router();
-
-async function getPool() {
-  return await pool;
-}
 
 // POST /api/posts - Create a new post with primary author
 router.post(

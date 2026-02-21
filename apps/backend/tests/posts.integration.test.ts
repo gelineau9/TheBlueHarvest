@@ -30,6 +30,7 @@ beforeAll(async () => {
   // Mock the database module
   vi.doMock('../src/config/database.js', () => ({
     default: Promise.resolve(pool),
+    getPool: async () => pool,
   }));
 
   // Import routes after mocking
