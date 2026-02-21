@@ -3,9 +3,11 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText, Clock, MapPin, Users } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText, Clock, MapPin, Users, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/components/auth/auth-provider';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,13 @@ interface Author {
   profile_id: number;
   profile_name: string;
   is_primary: boolean;
+}
+
+interface Editor {
+  editor_id: number;
+  account_id: number;
+  username: string;
+  is_owner: boolean;
 }
 
 interface Post {
@@ -59,6 +68,7 @@ interface Post {
 
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { username: currentUsername } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +76,16 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [isDeleting, setIsDeleting] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [contactName, setContactName] = useState<string | null>(null);
+
+  // Editor management state
+  const [editors, setEditors] = useState<Editor[]>([]);
+  const [newEditorUsername, setNewEditorUsername] = useState('');
+  const [showAddEditorDialog, setShowAddEditorDialog] = useState(false);
+  const [isAddingEditor, setIsAddingEditor] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
+
   const { id } = use(params);
 
   useEffect(() => {
@@ -84,7 +104,20 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
         const data = await response.json();
         setPost(data);
-      } catch (err) {
+
+        // Fetch contact profile name for events
+        if (data.content?.contactProfileId) {
+          try {
+            const profileResponse = await fetch(`/api/profiles/${data.content.contactProfileId}`);
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              setContactName(profileData.name);
+            }
+          } catch {
+            // Silently fail - will just show fallback text
+          }
+        }
+      } catch {
         setError('An error occurred while loading the post');
       } finally {
         setIsLoading(false);
@@ -93,6 +126,74 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
     fetchPost();
   }, [id]);
+
+  // Fetch editors for this post
+  const fetchEditors = async () => {
+    try {
+      const response = await fetch(`/api/posts/${id}/editors`);
+      if (response.ok) {
+        const data = await response.json();
+        setEditors(data.editors || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch editors:', err);
+    }
+  };
+
+  // Fetch editors when post loads (visible to all viewers)
+  useEffect(() => {
+    if (post) {
+      fetchEditors();
+    }
+  }, [post, id]);
+
+  const handleAddEditor = async () => {
+    if (!newEditorUsername.trim()) return;
+
+    setIsAddingEditor(true);
+    setEditorError(null);
+
+    try {
+      const response = await fetch(`/api/posts/${id}/editors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: newEditorUsername.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setEditorError(data.message || 'Failed to add editor');
+        return;
+      }
+
+      setNewEditorUsername('');
+      setShowAddEditorDialog(false);
+      fetchEditors();
+    } catch {
+      setEditorError('An error occurred while adding editor');
+    } finally {
+      setIsAddingEditor(false);
+    }
+  };
+
+  const handleRemoveEditor = async (editorId: number) => {
+    setRemovingEditorId(editorId);
+
+    try {
+      const response = await fetch(`/api/posts/${id}/editors/${editorId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchEditors();
+      }
+    } catch (err) {
+      console.error('Failed to remove editor:', err);
+    } finally {
+      setRemovingEditorId(null);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -152,6 +253,11 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
     month: 'long',
     day: 'numeric',
   });
+
+  // Check if post has been edited (updated_at is significantly after created_at)
+  const createdTime = new Date(post.created_at).getTime();
+  const updatedTime = new Date(post.updated_at).getTime();
+  const isEdited = updatedTime - createdTime > 60000; // More than 1 minute difference
 
   const primaryAuthor = post.authors.find((a) => a.is_primary);
   const coAuthors = post.authors.filter((a) => !a.is_primary);
@@ -236,6 +342,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>{formattedDate}</span>
+              {isEdited && <span className="text-amber-600 text-xs">(edited)</span>}
             </div>
           </div>
 
@@ -248,29 +355,36 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         {/* Post Content */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
           {/* Art/Media Post - Show Images */}
-          {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
-            <div className="mb-6">
-              <div className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
-                {post.content.images.map((image, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
-                      alt={image.originalName || `Image ${index + 1}`}
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => {
-                        setLightboxIndex(index);
-                        setLightboxOpen(true);
-                      }}
-                    />
-                  </div>
-                ))}
+          {(post.post_type_id === 2 || post.post_type_id === 3) &&
+            post.content.images &&
+            post.content.images.length > 0 && (
+              <div className="mb-6">
+                <div
+                  className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}
+                >
+                  {post.content.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300"
+                    >
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
+                        alt={image.originalName || `Image ${index + 1}`}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => {
+                          setLightboxIndex(index);
+                          setLightboxOpen(true);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {/* Art Description */}
+                {post.content.description && (
+                  <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+                )}
               </div>
-              {/* Art Description */}
-              {post.content.description && (
-                <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
-              )}
-            </div>
-          )}
+            )}
 
           {/* Writing Post - Show Body */}
           {post.post_type_id === 1 && (
@@ -301,7 +415,14 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                     <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-amber-600 font-medium">Date</p>
-                      <p className="text-amber-900">{new Date(post.content.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-amber-900">
+                        {new Date(post.content.eventDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -342,14 +463,17 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
               {/* Character Contact */}
               {post.content.contactProfileId && (
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-sm text-amber-600 font-medium mb-1">Contact</p>
-                  <Link 
-                    href={`/profiles/${post.content.contactProfileId}`}
-                    className="text-amber-900 hover:text-amber-700 underline"
-                  >
-                    View Contact Character
-                  </Link>
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <User className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-amber-600 font-medium">Contact</p>
+                    <Link
+                      href={`/profiles/${post.content.contactProfileId}`}
+                      className="text-amber-900 hover:text-amber-700 underline"
+                    >
+                      {contactName || 'View Contact Character'}
+                    </Link>
+                  </div>
                 </div>
               )}
 
@@ -364,11 +488,15 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {/* Fallback for other post types */}
-          {post.post_type_id !== 1 && post.post_type_id !== 2 && post.post_type_id !== 3 && post.post_type_id !== 4 && post.content.body && (
-            <div className="prose prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
-            </div>
-          )}
+          {post.post_type_id !== 1 &&
+            post.post_type_id !== 2 &&
+            post.post_type_id !== 3 &&
+            post.post_type_id !== 4 &&
+            post.content.body && (
+              <div className="prose prose-amber max-w-none">
+                <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
+              </div>
+            )}
         </Card>
 
         {/* Tags */}
@@ -385,6 +513,60 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 </span>
               ))}
             </div>
+          </Card>
+        )}
+
+        {/* Editors Section - Visible to all when editors exist, management controls for owner only */}
+        {(editors.length > 0 || post.is_owner) && (
+          <Card className="p-6 bg-white border-amber-300 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-amber-900">Editors</h2>
+              {post.is_owner && (
+                <Button
+                  onClick={() => setShowAddEditorDialog(true)}
+                  size="sm"
+                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Editor
+                </Button>
+              )}
+            </div>
+
+            {editors.length === 0 ? (
+              <p className="text-amber-600 text-sm">No editors yet. Add editors to allow others to edit this post.</p>
+            ) : (
+              <ul className="space-y-2">
+                {editors.map((editor) => (
+                  <li
+                    key={editor.editor_id}
+                    className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-amber-700" />
+                      <span className="text-amber-900 font-medium">{editor.username}</span>
+                      {editor.is_owner && (
+                        <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">
+                          Creator
+                        </span>
+                      )}
+                    </div>
+                    {/* Show remove button: owner can remove any non-owner, editors can remove themselves */}
+                    {!editor.is_owner && (post.is_owner || editor.username === currentUsername) && (
+                      <Button
+                        onClick={() => handleRemoveEditor(editor.editor_id)}
+                        disabled={removingEditorId === editor.editor_id}
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         )}
       </div>
@@ -414,17 +596,71 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         </DialogContent>
       </Dialog>
 
+      {/* Add Editor Dialog */}
+      <Dialog
+        open={showAddEditorDialog}
+        onOpenChange={(open) => {
+          setShowAddEditorDialog(open);
+          if (!open) {
+            setNewEditorUsername('');
+            setEditorError(null);
+          }
+        }}
+      >
+        <DialogContent className="bg-white border-amber-300">
+          <DialogHeader>
+            <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
+            <DialogDescription className="text-amber-700">
+              Enter the username of the person you want to add as an editor. They will be able to edit this post.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Username"
+              value={newEditorUsername}
+              onChange={(e) => setNewEditorUsername(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddEditor();
+                }
+              }}
+              className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+            />
+            {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddEditorDialog(false)}
+              disabled={isAddingEditor}
+              className="border-amber-600 text-amber-800 hover:bg-amber-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddEditor}
+              disabled={isAddingEditor || !newEditorUsername.trim()}
+              className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+            >
+              {isAddingEditor ? 'Adding...' : 'Add Editor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Image Lightbox for Art/Media Posts */}
-      {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.images && post.content.images.length > 0 && (
-        <ImageLightbox
-          images={post.content.images}
-          currentIndex={lightboxIndex}
-          isOpen={lightboxOpen}
-          onClose={() => setLightboxOpen(false)}
-          onNavigate={setLightboxIndex}
-          baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
-        />
-      )}
+      {(post.post_type_id === 2 || post.post_type_id === 3) &&
+        post.content.images &&
+        post.content.images.length > 0 && (
+          <ImageLightbox
+            images={post.content.images}
+            currentIndex={lightboxIndex}
+            isOpen={lightboxOpen}
+            onClose={() => setLightboxOpen(false)}
+            onNavigate={setLightboxIndex}
+            baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
+          />
+        )}
     </div>
   );
 }

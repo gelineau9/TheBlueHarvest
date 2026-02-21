@@ -29,11 +29,37 @@ interface Profile {
   profile_type_id: number;
 }
 
+// Helper functions for date validation
+const getMinDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+const getMaxDate = () => {
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  return oneYearFromNow.toISOString().split('T')[0];
+};
+
 // Validation schema for event posts
 const eventPostSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
   description: z.string().min(1, 'Description is required'),
-  eventDate: z.string().min(1, 'Event date is required'),
+  eventDate: z
+    .string()
+    .min(1, 'Event date is required')
+    .refine((date) => {
+      const selected = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selected >= today;
+    }, 'Event date cannot be in the past')
+    .refine((date) => {
+      const selected = new Date(date);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      return selected <= oneYearFromNow;
+    }, 'Event date cannot be more than 1 year away'),
   eventTime: z.string().min(1, 'Event time is required'),
   location: z.string().min(1, 'Location is required'),
   maxAttendees: z.string().optional(),
@@ -85,7 +111,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         if (response.ok) {
           const data = await response.json();
           // Response is an array of profiles directly
-          const characterProfiles = Array.isArray(data) ? data : (data.profiles || []);
+          const characterProfiles = Array.isArray(data) ? data : data.profiles || [];
           setProfiles(characterProfiles);
         }
       } catch (err) {
@@ -126,7 +152,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       if (data.files && data.files.length > 0) {
         setHeaderImage(data.files[0]);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
@@ -153,11 +179,6 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   };
 
   const onSubmit = async (data: EventPostInput) => {
-    if (!headerImage) {
-      setError('Please upload a header image for the event');
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -172,11 +193,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
           location: data.location,
           maxAttendees: data.maxAttendees ? parseInt(data.maxAttendees, 10) : null,
           contactProfileId: data.contactProfileId ? parseInt(data.contactProfileId, 10) : null,
-          headerImage: {
-            filename: headerImage.filename,
-            url: headerImage.url,
-            originalName: headerImage.originalName,
-          },
+          headerImage: headerImage
+            ? {
+                filename: headerImage.filename,
+                url: headerImage.url,
+                originalName: headerImage.originalName,
+              }
+            : null,
           tags: data.tags || [],
         },
       };
@@ -208,8 +231,8 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Header Image Upload */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Header Image *</Label>
-        
+        <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
+
         {headerImage ? (
           <div className="relative">
             <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
@@ -231,9 +254,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         ) : (
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isUploading
-                ? 'border-amber-400 bg-amber-50'
-                : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+              isUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
             }`}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -245,7 +266,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
               className="hidden"
               disabled={isUploading || isSubmitting}
             />
-            
+
             {isUploading ? (
               <div className="flex flex-col items-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
@@ -255,9 +276,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
               <div className="flex flex-col items-center">
                 <Upload className="w-10 h-10 text-amber-600 mb-2" />
                 <p className="text-amber-800 font-medium">Click to upload header image</p>
-                <p className="text-sm text-amber-600 mt-1">
-                  JPEG, PNG, GIF, or WebP • Max 10MB • Recommended 1200x400
-                </p>
+                <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP • Max 10MB • Recommended 1200x400</p>
               </div>
             )}
           </div>
@@ -296,6 +315,8 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             id="eventDate"
             type="date"
             {...register('eventDate')}
+            min={getMinDate()}
+            max={getMaxDate()}
             className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
             disabled={isSubmitting}
           />
@@ -426,7 +447,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || isUploading || !headerImage}
+          disabled={isSubmitting || isUploading}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
           {isSubmitting ? 'Publishing...' : 'Publish Event'}

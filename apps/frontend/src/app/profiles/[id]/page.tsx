@@ -74,7 +74,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
         const data = await response.json();
         setProfile(data);
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the profile');
       } finally {
         setIsLoading(false);
@@ -174,8 +174,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         throw new Error(data.message || 'Failed to delete profile');
       }
 
-      // Redirect to profiles catalog after successful deletion
-      router.push('/profiles');
+      // Redirect to catalog after successful deletion
+      router.push('/catalog');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete profile');
       setShowDeleteDialog(false);

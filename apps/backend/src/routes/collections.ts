@@ -29,7 +29,7 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
-import { canEditCollection, isCollectionOwner } from './editors.js';
+import { canEditCollection } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
 
 const router = Router();

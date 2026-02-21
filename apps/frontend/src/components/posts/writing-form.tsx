@@ -60,7 +60,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       } else {
         setError('Failed to load your characters. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load your characters. Please try again.');
     } finally {
       setIsLoadingCharacters(false);
@@ -110,7 +110,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       {/* Author Selection */}
       <div className="space-y-2">
         <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-semibold">
-          Author *
+          Author (Optional)
         </Label>
         {isLoadingCharacters ? (
           <div className="text-sm text-amber-700">Loading your characters...</div>
@@ -136,12 +136,14 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
                 const value = e.target.value;
                 if (value) {
                   setValue('primary_author_profile_id', parseInt(value), { shouldValidate: true });
+                } else {
+                  setValue('primary_author_profile_id', undefined, { shouldValidate: true });
                 }
               }}
               disabled={isSubmitting}
               className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
             >
-              <option value="">Select an author</option>
+              <option value="">No character author</option>
               {characters.map((character) => (
                 <option key={character.profile_id} value={character.profile_id}>
                   {character.name}
@@ -222,7 +224,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || characters.length === 0 || !selectedAuthorId}
+          disabled={isSubmitting || characters.length === 0}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
           {isSubmitting ? 'Publishing...' : 'Publish Writing'}

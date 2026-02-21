@@ -19,14 +19,7 @@ interface ImageLightboxProps {
   baseUrl?: string;
 }
 
-export function ImageLightbox({
-  images,
-  currentIndex,
-  isOpen,
-  onClose,
-  onNavigate,
-  baseUrl = '',
-}: ImageLightboxProps) {
+export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigate, baseUrl = '' }: ImageLightboxProps) {
   const currentImage = images[currentIndex];
   const hasMultipleImages = images.length > 1;
 
@@ -42,7 +35,7 @@ export function ImageLightbox({
 
   // Keyboard navigation
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
@@ -67,7 +60,9 @@ export function ImageLightbox({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-black/95 border-none overflow-hidden">
         <VisuallyHidden>
-          <DialogTitle>Image {currentIndex + 1} of {images.length}</DialogTitle>
+          <DialogTitle>
+            Image {currentIndex + 1} of {images.length}
+          </DialogTitle>
         </VisuallyHidden>
 
         {/* Close button */}
@@ -116,11 +111,7 @@ export function ImageLightbox({
 
         {/* Main image container */}
         <div className="flex items-center justify-center w-full h-full min-h-[50vh] p-4">
-          <img
-            src={imageUrl}
-            alt={imageAlt}
-            className="max-w-full max-h-[85vh] object-contain"
-          />
+          <img src={imageUrl} alt={imageAlt} className="max-w-full max-h-[85vh] object-contain" />
         </div>
 
         {/* Image caption */}

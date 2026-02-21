@@ -15,7 +15,7 @@
  */
 
 import { Router, Response } from 'express';
-import { sql, SqlToken } from 'slonik';
+import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
@@ -60,18 +60,20 @@ export interface EditorRoutesConfig {
   entityTable: string; // 'profiles', 'posts', 'collections'
   entityIdColumn: string; // 'profile_id', 'post_id', 'collection_id'
   editorTable: string; // 'profile_editors', 'post_editors', 'collection_editors'
+  editorIdColumn: string; // 'editor_id', 'post_editor_id', 'collection_editor_id'
   paramName: string; // 'profileId', 'postId', 'collectionId'
   isOwner: (db: any, entityId: number, userId: number) => Promise<boolean>;
 }
 
 export function createEditorRoutes(config: EditorRoutesConfig): Router {
   const router = Router();
-  const { entityName, entityTable, entityIdColumn, editorTable, paramName, isOwner } = config;
+  const { entityName, entityTable, entityIdColumn, editorTable, editorIdColumn, paramName, isOwner } = config;
 
   // Helper to build identifier safely (table/column names can't be parameterized)
   const entityIdent = sql.identifier([entityIdColumn]);
   const editorTableIdent = sql.identifier([editorTable]);
   const entityTableIdent = sql.identifier([entityTable]);
+  const editorIdIdent = sql.identifier([editorIdColumn]);
 
   // GET /:entityId/editors - List all editors
   router.get(`/:${paramName}/editors`, async (req: AuthRequest, res: Response) => {
@@ -102,7 +104,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
       const editors = await db.any(
         sql.type(EditorSchema)`
           SELECT 
-            e.editor_id,
+            e.${editorIdIdent} as editor_id,
             e.account_id,
             a.username,
             e.invited_by_account_id,
@@ -175,7 +177,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         // Check if already an editor
         const existingEditor = await db.maybeOne(
           sql.type(EditorCheckSchema)`
-            SELECT editor_id, deleted FROM ${editorTableIdent}
+            SELECT ${editorIdIdent} as editor_id, deleted FROM ${editorTableIdent}
             WHERE ${entityIdent} = ${entityId} AND account_id = ${targetAccount.account_id}
           `,
         );
@@ -191,8 +193,8 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
             sql.type(EditorBasicSchema)`
               UPDATE ${editorTableIdent}
               SET deleted = false, invited_by_account_id = ${userId}, created_at = NOW()
-              WHERE editor_id = ${existingEditor.editor_id}
-              RETURNING editor_id, account_id, created_at::text
+              WHERE ${editorIdIdent} = ${existingEditor.editor_id}
+              RETURNING ${editorIdIdent} as editor_id, account_id, created_at::text
             `,
           );
 
@@ -210,7 +212,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           sql.type(EditorBasicSchema)`
             INSERT INTO ${editorTableIdent} (${entityIdent}, account_id, invited_by_account_id)
             VALUES (${entityId}, ${targetAccount.account_id}, ${userId})
-            RETURNING editor_id, account_id, created_at::text
+            RETURNING ${editorIdIdent} as editor_id, account_id, created_at::text
           `,
         );
 
@@ -244,8 +246,8 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
       // Get editor record
       const editor = await db.maybeOne(
         sql.type(EditorDeleteSchema)`
-          SELECT editor_id, account_id FROM ${editorTableIdent}
-          WHERE editor_id = ${editorId} AND ${entityIdent} = ${entityId} AND deleted = false
+          SELECT ${editorIdIdent} as editor_id, account_id FROM ${editorTableIdent}
+          WHERE ${editorIdIdent} = ${editorId} AND ${entityIdent} = ${entityId} AND deleted = false
         `,
       );
 
@@ -268,7 +270,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         sql.type(z.object({}))`
           UPDATE ${editorTableIdent}
           SET deleted = true
-          WHERE editor_id = ${editorId}
+          WHERE ${editorIdIdent} = ${editorId}
         `,
       );
 
@@ -556,6 +558,7 @@ export const profileEditorRoutes = createEditorRoutes({
   entityTable: 'profiles',
   entityIdColumn: 'profile_id',
   editorTable: 'profile_editors',
+  editorIdColumn: 'editor_id',
   paramName: 'profileId',
   isOwner: isProfileOwner,
 });
@@ -565,6 +568,7 @@ export const postEditorRoutes = createEditorRoutes({
   entityTable: 'posts',
   entityIdColumn: 'post_id',
   editorTable: 'post_editors',
+  editorIdColumn: 'post_editor_id',
   paramName: 'postId',
   isOwner: isPostOwner,
 });
@@ -574,6 +578,7 @@ export const collectionEditorRoutes = createEditorRoutes({
   entityTable: 'collections',
   entityIdColumn: 'collection_id',
   editorTable: 'collection_editors',
+  editorIdColumn: 'collection_editor_id',
   paramName: 'collectionId',
   isOwner: isCollectionOwner,
 });

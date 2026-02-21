@@ -61,9 +61,7 @@ export default function CreatePostPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-amber-900 mb-2">Create New Post</h1>
-          <p className="text-lg text-amber-700">
-            Choose the type of post you'd like to create
-          </p>
+          <p className="text-lg text-amber-700">Choose the type of post you'd like to create</p>
         </div>
 
         {/* Post Type Selector */}

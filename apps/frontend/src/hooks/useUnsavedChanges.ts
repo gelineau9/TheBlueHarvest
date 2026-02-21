@@ -33,20 +33,18 @@ export function useUnsavedChanges(
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        // Modern browsers ignore custom messages but still show a warning
-        return message;
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty, message]);
+  }, [isDirty]);
 
   // Browser back button interception
   useEffect(() => {
     if (!isDirty) {
       hasBlockedRef.current = false;
-      return;
+      return undefined;
     }
 
     // Push a state to history so we can intercept back navigation

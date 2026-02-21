@@ -90,7 +90,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       }
 
       setUploadedImages((prev) => [...prev, ...data.files]);
-    } catch (err) {
+    } catch {
       setError('Failed to upload images. Please try again.');
     } finally {
       setIsUploading(false);
@@ -169,13 +169,11 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       {/* Image Upload */}
       <div className="space-y-2">
         <Label className="text-amber-900 font-semibold">Images *</Label>
-        
+
         {/* Upload Area */}
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-            isUploading
-              ? 'border-amber-400 bg-amber-50'
-              : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
+            isUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
           }`}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -188,7 +186,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
             className="hidden"
             disabled={isUploading || isSubmitting}
           />
-          
+
           {isUploading ? (
             <div className="flex flex-col items-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
@@ -198,9 +196,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
             <div className="flex flex-col items-center">
               <Upload className="w-10 h-10 text-amber-600 mb-2" />
               <p className="text-amber-800 font-medium">Click to upload images</p>
-              <p className="text-sm text-amber-600 mt-1">
-                JPEG, PNG, GIF, or WebP • Max 10MB each • Up to 10 images
-              </p>
+              <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP • Max 10MB each • Up to 10 images</p>
             </div>
           )}
         </div>
@@ -230,10 +226,8 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
             ))}
           </div>
         )}
-        
-        <p className="text-sm text-amber-700">
-          {uploadedImages.length}/10 images uploaded
-        </p>
+
+        <p className="text-sm text-amber-700">{uploadedImages.length}/10 images uploaded</p>
       </div>
 
       {/* Title */}
