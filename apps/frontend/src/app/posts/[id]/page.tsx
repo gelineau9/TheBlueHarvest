@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
+import { CommentList } from '@/components/comments/comment-list';
 
 interface Author {
   profile_id: number;
@@ -569,6 +570,9 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             )}
           </Card>
         )}
+
+        {/* Comments Section */}
+        <CommentList postId={post.post_id} />
       </div>
 
       {/* Delete Confirmation Dialog */}
