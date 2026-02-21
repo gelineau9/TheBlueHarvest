@@ -77,7 +77,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [contactName, setContactName] = useState<string | null>(null);
-  
+
   // Editor management state
   const [editors, setEditors] = useState<Editor[]>([]);
   const [newEditorUsername, setNewEditorUsername] = useState('');
@@ -85,7 +85,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const [isAddingEditor, setIsAddingEditor] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
-  
+
   const { id } = use(params);
 
   useEffect(() => {
@@ -248,7 +248,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
+  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -313,7 +313,7 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
                 <span>
                   By{' '}
                   <Link
-                    href={`/catalog/${primaryAuthor.profile_id}`}
+                    href={`/profiles/${primaryAuthor.profile_id}`}
                     className="text-amber-900 hover:underline font-semibold"
                   >
                     {primaryAuthor.profile_name}
@@ -328,7 +328,7 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
                   {coAuthors.map((author, index) => (
                     <span key={author.profile_id}>
                       <Link
-                        href={`/catalog/${author.profile_id}`}
+                        href={`/profiles/${author.profile_id}`}
                         className="text-amber-900 hover:underline font-semibold"
                       >
                         {author.profile_name}
@@ -339,12 +339,10 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
                 </span>
               </div>
             )}
-<div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>{formattedDate}</span>
-              {isEdited && (
-                <span className="text-amber-600 text-xs">(edited)</span>
-              )}
+              {isEdited && <span className="text-amber-600 text-xs">(edited)</span>}
             </div>
           </div>
 
@@ -470,7 +468,7 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
                   <div>
                     <p className="text-sm text-amber-600 font-medium">Contact</p>
                     <Link
-                      href={`/catalog/${post.content.contactProfileId}`}
+                      href={`/profiles/${post.content.contactProfileId}`}
                       className="text-amber-900 hover:text-amber-700 underline"
                     >
                       {contactName || 'View Contact Character'}
@@ -548,7 +546,9 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
                       <User className="w-4 h-4 text-amber-700" />
                       <span className="text-amber-900 font-medium">{editor.username}</span>
                       {editor.is_owner && (
-                        <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">Creator</span>
+                        <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">
+                          Creator
+                        </span>
                       )}
                     </div>
                     {/* Show remove button: owner can remove any non-owner, editors can remove themselves */}
@@ -597,13 +597,16 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
       </Dialog>
 
       {/* Add Editor Dialog */}
-      <Dialog open={showAddEditorDialog} onOpenChange={(open) => {
-        setShowAddEditorDialog(open);
-        if (!open) {
-          setNewEditorUsername('');
-          setEditorError(null);
-        }
-      }}>
+      <Dialog
+        open={showAddEditorDialog}
+        onOpenChange={(open) => {
+          setShowAddEditorDialog(open);
+          if (!open) {
+            setNewEditorUsername('');
+            setEditorError(null);
+          }
+        }}
+      >
         <DialogContent className="bg-white border-amber-300">
           <DialogHeader>
             <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
@@ -623,9 +626,7 @@ const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
               }}
               className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
             />
-            {editorError && (
-              <p className="text-red-600 text-sm mt-2">{editorError}</p>
-            )}
+            {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button

@@ -45,17 +45,21 @@ const getMaxDate = () => {
 const eventPostSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
   description: z.string().min(1, 'Description is required'),
-  eventDate: z.string().min(1, 'Event date is required').refine((date) => {
-    const selected = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return selected >= today;
-  }, 'Event date cannot be in the past').refine((date) => {
-    const selected = new Date(date);
-    const oneYearFromNow = new Date();
-    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-    return selected <= oneYearFromNow;
-  }, 'Event date cannot be more than 1 year away'),
+  eventDate: z
+    .string()
+    .min(1, 'Event date is required')
+    .refine((date) => {
+      const selected = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selected >= today;
+    }, 'Event date cannot be in the past')
+    .refine((date) => {
+      const selected = new Date(date);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      return selected <= oneYearFromNow;
+    }, 'Event date cannot be more than 1 year away'),
   eventTime: z.string().min(1, 'Event time is required'),
   location: z.string().min(1, 'Location is required'),
   maxAttendees: z.string().optional(),
@@ -189,11 +193,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
           location: data.location,
           maxAttendees: data.maxAttendees ? parseInt(data.maxAttendees, 10) : null,
           contactProfileId: data.contactProfileId ? parseInt(data.contactProfileId, 10) : null,
-          headerImage: headerImage ? {
-            filename: headerImage.filename,
-            url: headerImage.url,
-            originalName: headerImage.originalName,
-          } : null,
+          headerImage: headerImage
+            ? {
+                filename: headerImage.filename,
+                url: headerImage.url,
+                originalName: headerImage.originalName,
+              }
+            : null,
           tags: data.tags || [],
         },
       };

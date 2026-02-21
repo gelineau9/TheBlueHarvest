@@ -14,18 +14,8 @@ import { usePostEdit, POST_TYPES } from '@/hooks/usePostEdit';
 export default function EditWritingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
-  const {
-    post,
-    isLoading,
-    error,
-    isSaving,
-    saveError,
-    savePost,
-    navigateBack,
-    router,
-    characters,
-    charactersLoaded,
-  } = usePostEdit({ postId: id, expectedType: POST_TYPES.WRITING });
+  const { post, isLoading, error, isSaving, saveError, savePost, navigateBack, router, characters, charactersLoaded } =
+    usePostEdit({ postId: id, expectedType: POST_TYPES.WRITING });
 
   // Form state
   const [title, setTitle] = useState('');
@@ -171,9 +161,7 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
                   </option>
                 ))}
               </select>
-              <p className="text-sm text-amber-600">
-                Optionally attribute this writing to one of your characters.
-              </p>
+              <p className="text-sm text-amber-600">Optionally attribute this writing to one of your characters.</p>
             </div>
 
             <div className="space-y-2">

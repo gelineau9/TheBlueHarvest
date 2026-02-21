@@ -18,7 +18,7 @@ export function LeftSidebar() {
 
   const handleCreateProfileClick = () => {
     if (isLoggedIn) {
-      router.push('/catalog/create');
+      router.push('/profiles/create');
     } else {
       setLoginDialogType('profile');
       setShowLoginDialog(true);

@@ -125,7 +125,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         if (response.ok) {
           const data = await response.json();
           // Backend returns flat array, not { profiles: [] }
-          setCharacters(Array.isArray(data) ? data : (data.profiles || []));
+          setCharacters(Array.isArray(data) ? data : data.profiles || []);
         }
       } catch (err) {
         console.error('Failed to fetch characters:', err);
@@ -182,46 +182,43 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
   }, [postId, expectedType, router]);
 
   // Upload images
-  const uploadImages = useCallback(
-    async (files: FileList, maxImages = 10): Promise<UploadedImage[]> => {
-      if (!files || files.length === 0) return [];
+  const uploadImages = useCallback(async (files: FileList, maxImages = 10): Promise<UploadedImage[]> => {
+    if (!files || files.length === 0) return [];
 
-      setIsUploading(true);
-      setSaveError(null);
+    setIsUploading(true);
+    setSaveError(null);
 
-      try {
-        const formData = new FormData();
-        Array.from(files).forEach((file) => {
-          formData.append('images', file);
-        });
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => {
+        formData.append('images', file);
+      });
 
-        const response = await fetch('/api/uploads/images', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/uploads/images', {
+        method: 'POST',
+        body: formData,
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-          setSaveError(data.error || 'Failed to upload images');
-          return [];
-        }
-
-        // Clear the file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-
-        return data.files as UploadedImage[];
-      } catch (err) {
-        setSaveError('Failed to upload images. Please try again.');
+      if (!response.ok) {
+        setSaveError(data.error || 'Failed to upload images');
         return [];
-      } finally {
-        setIsUploading(false);
       }
-    },
-    []
-  );
+
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      return data.files as UploadedImage[];
+    } catch (err) {
+      setSaveError('Failed to upload images. Please try again.');
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
 
   // Save post
   const savePost = useCallback(
@@ -262,7 +259,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         setIsSaving(false);
       }
     },
-    [postId]
+    [postId],
   );
 
   // Navigate back to post

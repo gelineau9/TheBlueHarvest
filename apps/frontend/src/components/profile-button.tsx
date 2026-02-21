@@ -87,7 +87,7 @@ export function ProfileButton() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-              <Link href="/catalog/create">
+              <Link href="/profiles/create">
                 <PlusCircle className="mr-2 h-4 w-4 text-amber-700" />
                 <span>Create Profile</span>
               </Link>

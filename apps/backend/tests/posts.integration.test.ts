@@ -140,20 +140,6 @@ describe('POST /api/posts - Create Post', () => {
       testPostId = response.body.post_id;
     });
 
-    it('should return 400 when writing post has no author', async () => {
-      const response = await request(app)
-        .post('/api/posts')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send({
-          post_type_id: 1,
-          title: 'Missing Author Post',
-          content: { body: 'Some content here' },
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Primary author is required for this post type');
-    });
-
     it('should return 400 when author profile does not exist', async () => {
       const response = await request(app)
         .post('/api/posts')

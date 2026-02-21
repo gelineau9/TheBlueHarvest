@@ -571,7 +571,7 @@ export default function CatalogPage() {
             ) : (
               <div className="flex gap-4 justify-center">
                 <Link
-                  href="/catalog/create"
+                  href="/profiles/create"
                   className="inline-block px-6 py-3 bg-amber-800 text-amber-50 rounded-md hover:bg-amber-700 transition-colors font-semibold"
                 >
                   Create Profile

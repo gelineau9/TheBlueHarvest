@@ -142,15 +142,15 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const selectedDate = new Date(eventDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
         setSaveError('Event date cannot be in the past');
         return;
       }
-      
+
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-      
+
       if (selectedDate > oneYearFromNow) {
         setSaveError('Event date cannot be more than 1 year away');
         return;
