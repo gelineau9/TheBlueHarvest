@@ -304,6 +304,7 @@ export async function getSession() {
 
     return {
       isLoggedIn: true,
+      id: data.id,
       username: data.username,
       email: data.email,
     };

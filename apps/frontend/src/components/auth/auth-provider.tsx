@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
+  accountId?: number;
   username?: string;
   avatarUrl?: string;
   email?: string;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthState({
           isLoggedIn: true,
           isLoading: false,
+          accountId: data.id,
           username: data.username,
           avatarUrl: data.avatarUrl,
           email: data.email,
