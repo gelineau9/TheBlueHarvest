@@ -14,7 +14,7 @@ export function LeftSidebar() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [loginDialogType, setLoginDialogType] = useState<'profile' | 'post'>('profile');
+  const [loginDialogType, setLoginDialogType] = useState<'profile' | 'post' | 'collection'>('profile');
 
   const handleCreateProfileClick = () => {
     if (isLoggedIn) {
@@ -25,11 +25,20 @@ export function LeftSidebar() {
     }
   };
 
-  const handleCreatePostClick = () => {
+const handleCreatePostClick = () => {
     if (isLoggedIn) {
       router.push('/posts/create');
     } else {
       setLoginDialogType('post');
+      setShowLoginDialog(true);
+    }
+  };
+
+  const handleCreateCollectionClick = () => {
+    if (isLoggedIn) {
+      router.push('/collections/create');
+    } else {
+      setLoginDialogType('collection');
       setShowLoginDialog(true);
     }
   };
@@ -63,13 +72,21 @@ export function LeftSidebar() {
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Profile
         </Button>
-        <Button
+<Button
           onClick={handleCreatePostClick}
           variant="outline"
           className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
         >
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Post
+        </Button>
+        <Button
+          onClick={handleCreateCollectionClick}
+          variant="outline"
+          className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Create Collection
         </Button>
       </div>
 

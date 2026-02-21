@@ -38,8 +38,18 @@ export const createPostSchema = z.object({
   primary_author_profile_id: z.number().int().optional(), // Optional for account-level posts (art, media, event)
 });
 
+// Collection types: 1=collection, 2=chronicle, 3=album, 4=gallery, 5=event-series
+export const createCollectionSchema = z.object({
+  collection_type_id: z.number().int().min(1).max(5),
+  title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
+  description: z.string().max(1000, 'Description must not exceed 1000 characters').optional(),
+  content: z.object({}).passthrough().optional(), // Flexible content structure
+  primary_author_profile_id: z.number().int().optional(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type AccountUpdateInput = z.infer<typeof accountUpdateSchema>;
 export type CreateProfileInput = z.infer<typeof createProfileSchema>;
 export type CreatePostInput = z.infer<typeof createPostSchema>;
+export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;
