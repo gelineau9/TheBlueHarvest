@@ -174,8 +174,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         throw new Error(data.message || 'Failed to delete profile');
       }
 
-      // Redirect to catalog after successful deletion
-      router.push('/catalog');
+      // Redirect to archive after successful deletion
+      router.push('/archive');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete profile');
       setShowDeleteDialog(false);
