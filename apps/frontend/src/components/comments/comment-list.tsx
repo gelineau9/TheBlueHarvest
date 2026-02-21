@@ -18,7 +18,7 @@ interface CommentListProps {
 }
 
 export function CommentList({ postId }: CommentListProps) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, accountId } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +173,12 @@ export function CommentList({ postId }: CommentListProps) {
       ) : (
         <div className="space-y-3">
           {comments.map((comment) => (
-            <CommentItem key={comment.comment_id} comment={comment} />
+            <CommentItem
+              key={comment.comment_id}
+              comment={comment}
+              currentUserId={accountId ?? null}
+              onCommentUpdated={fetchComments}
+            />
           ))}
         </div>
       )}
