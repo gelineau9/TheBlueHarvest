@@ -62,6 +62,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState('');
+  const [isPublished, setIsPublished] = useState(true);
 
   const { characters: profiles, isLoading: loadingProfiles } = useCharacterProfiles();
 
@@ -130,6 +131,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             : null,
           tags: data.tags || [],
         },
+        is_published: isPublished,
       };
 
       const result = await createPost(postData);
@@ -364,6 +366,34 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         <p className="text-sm text-amber-700">Tags help others discover your event.</p>
       </div>
 
+      {/* Publish Status */}
+      <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+            {isPublished ? 'Publish immediately' : 'Save as draft'}
+          </Label>
+          <p className="text-sm text-amber-600">
+            {isPublished ? 'This event will be visible to everyone.' : 'Only you can see drafts.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPublished}
+          onClick={() => setIsPublished(!isPublished)}
+          disabled={isSubmitting}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+          } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              isPublished ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+
       {/* Actions */}
       <div className="flex gap-4 justify-end">
         <Button
@@ -380,7 +410,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
           disabled={isSubmitting || isUploading}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
-          {isSubmitting ? 'Publishing...' : 'Publish Event'}
+          {isSubmitting
+            ? isPublished
+              ? 'Publishing...'
+              : 'Saving...'
+            : isPublished
+              ? 'Publish Event'
+              : 'Save as Draft'}
         </Button>
       </div>
     </form>

@@ -20,31 +20,22 @@ export async function GET(request: NextRequest) {
   }).toString();
 
   try {
-    const response = await fetch(
-      `${API_CONFIG.BACKEND_URL}/api/users/me/collections?${queryString}`,
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/users/me/collections?${queryString}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
       },
-    );
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Backend error:', response.status, errorText);
-      return NextResponse.json(
-        { error: 'Backend error', details: errorText },
-        { status: response.status },
-      );
+      return NextResponse.json({ error: 'Backend error', details: errorText }, { status: response.status });
     }
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('Failed to fetch from backend:', error);
-    return NextResponse.json(
-      { error: 'Failed to connect to backend' },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: 'Failed to connect to backend' }, { status: 503 });
   }
 }

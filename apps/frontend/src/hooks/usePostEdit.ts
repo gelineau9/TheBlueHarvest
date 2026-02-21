@@ -33,6 +33,7 @@ export interface Post {
     name: string;
     is_primary: boolean;
   }>;
+  is_published?: boolean;
   created_at: string;
   updated_at: string;
   can_edit?: boolean;
@@ -91,7 +92,12 @@ interface UsePostEditReturn {
   charactersLoaded: boolean;
 
   // Actions
-  savePost: (title: string, content: Post['content'], primaryAuthorProfileId?: number | null) => Promise<boolean>;
+  savePost: (
+    title: string,
+    content: Post['content'],
+    primaryAuthorProfileId?: number | null,
+    isPublished?: boolean,
+  ) => Promise<boolean>;
   navigateBack: () => void;
 
   // Helpers
@@ -222,7 +228,12 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
 
   // Save post
   const savePost = useCallback(
-    async (title: string, content: Post['content'], primaryAuthorProfileId?: number | null): Promise<boolean> => {
+    async (
+      title: string,
+      content: Post['content'],
+      primaryAuthorProfileId?: number | null,
+      isPublished?: boolean,
+    ): Promise<boolean> => {
       setSaveError(null);
       setIsSaving(true);
 
@@ -235,6 +246,11 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         // Include primary_author_profile_id if provided (even if null to clear it)
         if (primaryAuthorProfileId !== undefined) {
           body.primary_author_profile_id = primaryAuthorProfileId;
+        }
+
+        // Include is_published if provided
+        if (isPublished !== undefined) {
+          body.is_published = isPublished;
         }
 
         const response = await fetch(`/api/posts/${postId}`, {

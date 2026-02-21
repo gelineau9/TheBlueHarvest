@@ -24,6 +24,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
   const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 100);
   const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : null;
   const filter = (req.query.filter as string) || 'all'; // all | owned | editor
+  const status = (req.query.status as string) || 'all'; // all | published | drafts
 
   try {
     const db = await getPool();
@@ -57,6 +58,16 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
       `;
     }
 
+    // Status filter for published/drafts
+    let statusFragment;
+    if (status === 'published') {
+      statusFragment = sql.fragment`AND p.is_published = true`;
+    } else if (status === 'drafts') {
+      statusFragment = sql.fragment`AND p.is_published = false`;
+    } else {
+      statusFragment = sql.fragment``;
+    }
+
     // Cursor condition for pagination
     const cursorFragment = cursor ? sql.fragment`AND p.post_id < ${cursor}` : sql.fragment``;
 
@@ -66,6 +77,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
           post_id: z.number(),
           post_type_id: z.number(),
           title: z.string(),
+          is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
@@ -76,6 +88,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
           p.post_id,
           p.post_type_id,
           p.title,
+          p.is_published,
           p.created_at::text,
           p.updated_at::text,
           pt.type_name,
@@ -84,6 +97,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
         JOIN post_types pt ON p.post_type_id = pt.type_id
         WHERE p.deleted = false
           AND ${filterFragment}
+          ${statusFragment}
           ${cursorFragment}
         ORDER BY p.post_id DESC
         LIMIT ${limit + 1}
@@ -206,6 +220,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
   const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 20, 1), 100);
   const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : null;
   const filter = (req.query.filter as string) || 'all'; // all | owned | editor
+  const status = (req.query.status as string) || 'all'; // all | published | drafts
 
   try {
     const db = await getPool();
@@ -239,6 +254,16 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
       `;
     }
 
+    // Status filter for published/drafts
+    let statusFragment;
+    if (status === 'published') {
+      statusFragment = sql.fragment`AND pr.is_published = true`;
+    } else if (status === 'drafts') {
+      statusFragment = sql.fragment`AND pr.is_published = false`;
+    } else {
+      statusFragment = sql.fragment``;
+    }
+
     // Cursor condition for pagination
     const cursorFragment = cursor ? sql.fragment`AND pr.profile_id < ${cursor}` : sql.fragment``;
 
@@ -248,6 +273,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
           profile_id: z.number(),
           profile_type_id: z.number(),
           name: z.string(),
+          is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
@@ -260,6 +286,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
           pr.profile_id,
           pr.profile_type_id,
           pr.name,
+          pr.is_published,
           pr.created_at::text,
           pr.updated_at::text,
           pt.type_name,
@@ -271,6 +298,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
         LEFT JOIN profiles parent ON pr.parent_profile_id = parent.profile_id
         WHERE pr.deleted = false
           AND ${filterFragment}
+          ${statusFragment}
           ${cursorFragment}
         ORDER BY pr.profile_id DESC
         LIMIT ${limit + 1}

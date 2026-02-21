@@ -238,6 +238,7 @@ export async function createProfile(formData: CreateProfileInput) {
         name: result.data.name.trim(),
         details: result.data.details ? { description: result.data.details } : null,
         parent_profile_id: result.data.parent_profile_id,
+        is_published: result.data.is_published,
       }),
     });
     if (!response.ok) {
@@ -347,6 +348,7 @@ export async function createPost(formData: CreatePostInput) {
         title: result.data.title.trim(),
         content: result.data.content,
         primary_author_profile_id: result.data.primary_author_profile_id,
+        is_published: result.data.is_published,
       }),
     });
 

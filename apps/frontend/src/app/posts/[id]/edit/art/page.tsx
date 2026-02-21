@@ -35,6 +35,7 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
   const [description, setDescription] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [isPublished, setIsPublished] = useState(true);
 
   // Original values for dirty checking
   const [originalValues, setOriginalValues] = useState({
@@ -42,6 +43,7 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
     description: '',
     tagsInput: '',
     images: [] as UploadedImage[],
+    isPublished: true,
   });
 
   // Initialize form when post loads
@@ -51,16 +53,19 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
       const initialDescription = post.content?.description || '';
       const initialTags = post.content?.tags?.join(', ') || '';
       const initialImages = post.content?.images || [];
+      const initialIsPublished = post.is_published !== false;
 
       setTitle(initialTitle);
       setDescription(initialDescription);
       setTagsInput(initialTags);
       setImages(initialImages);
+      setIsPublished(initialIsPublished);
       setOriginalValues({
         title: initialTitle,
         description: initialDescription,
         tagsInput: initialTags,
         images: initialImages,
+        isPublished: initialIsPublished,
       });
     }
   }, [post]);
@@ -69,7 +74,8 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
     title !== originalValues.title ||
     description !== originalValues.description ||
     tagsInput !== originalValues.tagsInput ||
-    JSON.stringify(images) !== JSON.stringify(originalValues.images);
+    JSON.stringify(images) !== JSON.stringify(originalValues.images) ||
+    isPublished !== originalValues.isPublished;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -107,10 +113,10 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
-    const success = await savePost(title, { description, images, tags });
+    const success = await savePost(title, { description, images, tags }, undefined, isPublished);
 
     if (success) {
-      setOriginalValues({ title: title.trim(), description, tagsInput, images });
+      setOriginalValues({ title: title.trim(), description, tagsInput, images, isPublished });
       navigateBack();
     }
   };
@@ -282,6 +288,33 @@ export default function EditArtPage({ params }: { params: Promise<{ id: string }
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
               />
               <p className="text-sm text-amber-600">Tags help others discover your content.</p>
+            </div>
+
+            {/* Publish Status */}
+            <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div>
+                <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+                  {isPublished ? 'Published' : 'Draft'}
+                </Label>
+                <p className="text-sm text-amber-600">
+                  {isPublished ? 'This post is visible to everyone.' : 'Only you can see this draft.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPublished}
+                onClick={() => setIsPublished(!isPublished)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isPublished ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             {saveError && (
