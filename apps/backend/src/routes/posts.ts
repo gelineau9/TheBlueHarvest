@@ -21,8 +21,8 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
-import { canEditPost, isPostOwner } from './editors.js';
-import { getAuthorableProfile, AUTHOR_PROFILE_TYPES } from '../utils/postValidation.js';
+import { canEditPost } from './editors.js';
+import { getAuthorableProfile } from '../utils/postValidation.js';
 
 const router = Router();
 

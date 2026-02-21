@@ -15,7 +15,7 @@
  */
 
 import { Router, Response } from 'express';
-import { sql, SqlToken } from 'slonik';
+import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import pool from '../config/database.js';

@@ -153,7 +153,7 @@ export default function CatalogPage() {
     const trimmedInput = searchInput.trim();
     const trimmedQuery = searchQuery.trim();
 
-    if (trimmedInput === trimmedQuery) return;
+    if (trimmedInput === trimmedQuery) return undefined;
 
     setIsSearching(true);
     const debounceTimer = setTimeout(() => {
@@ -242,7 +242,7 @@ export default function CatalogPage() {
       setItems((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore);
       setOffset((prev) => prev + LIMIT);
-    } catch (err) {
+    } catch {
       // Silently fail on load more errors
     } finally {
       setIsLoadingMore(false);
@@ -262,7 +262,7 @@ export default function CatalogPage() {
   // Intersection Observer for infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel) return undefined;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -305,7 +305,7 @@ export default function CatalogPage() {
         setItems(data.items);
         setTotal(data.total);
         setHasMore(data.hasMore);
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading catalog');
       } finally {
         setIsLoading(false);

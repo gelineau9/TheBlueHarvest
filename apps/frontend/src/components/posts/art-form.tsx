@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Upload, X, ImageIcon } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 
 interface ArtFormProps {
   onSuccess: (postId: number) => void;
@@ -90,7 +90,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       }
 
       setUploadedImages((prev) => [...prev, ...data.files]);
-    } catch (err) {
+    } catch {
       setError('Failed to upload images. Please try again.');
     } finally {
       setIsUploading(false);

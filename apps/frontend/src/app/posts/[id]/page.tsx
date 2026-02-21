@@ -117,7 +117,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             // Silently fail - will just show fallback text
           }
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the post');
       } finally {
         setIsLoading(false);
@@ -170,7 +170,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
       setNewEditorUsername('');
       setShowAddEditorDialog(false);
       fetchEditors();
-    } catch (err) {
+    } catch {
       setEditorError('An error occurred while adding editor');
     } finally {
       setIsAddingEditor(false);

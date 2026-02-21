@@ -90,7 +90,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       }
 
       setUploadedImages((prev) => [...prev, ...data.files]);
-    } catch (err) {
+    } catch {
       setError('Failed to upload images. Please try again.');
     } finally {
       setIsUploading(false);

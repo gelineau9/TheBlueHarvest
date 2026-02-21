@@ -74,7 +74,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
         const data = await response.json();
         setProfile(data);
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the profile');
       } finally {
         setIsLoading(false);

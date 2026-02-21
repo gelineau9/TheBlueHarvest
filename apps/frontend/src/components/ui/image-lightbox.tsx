@@ -35,7 +35,7 @@ export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigat
 
   // Keyboard navigation
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {

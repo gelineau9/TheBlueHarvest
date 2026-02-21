@@ -78,7 +78,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         setDescription(initialDescription);
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the profile');
       } finally {
         setIsLoading(false);
@@ -117,7 +117,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
       // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
-    } catch (err) {
+    } catch {
       setSaveError('An error occurred while saving changes');
     } finally {
       setIsSaving(false);

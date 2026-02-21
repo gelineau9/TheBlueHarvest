@@ -171,7 +171,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         }
 
         setPost(data);
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the post');
       } finally {
         setIsLoading(false);
@@ -182,7 +182,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
   }, [postId, expectedType, router]);
 
   // Upload images
-  const uploadImages = useCallback(async (files: FileList, maxImages = 10): Promise<UploadedImage[]> => {
+  const uploadImages = useCallback(async (files: FileList, _maxImages = 10): Promise<UploadedImage[]> => {
     if (!files || files.length === 0) return [];
 
     setIsUploading(true);
@@ -212,7 +212,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
       }
 
       return data.files as UploadedImage[];
-    } catch (err) {
+    } catch {
       setSaveError('Failed to upload images. Please try again.');
       return [];
     } finally {
@@ -252,7 +252,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
         }
 
         return true;
-      } catch (err) {
+      } catch {
         setSaveError('An error occurred while saving changes');
         return false;
       } finally {

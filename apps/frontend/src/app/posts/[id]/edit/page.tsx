@@ -47,7 +47,7 @@ export default function EditPostRouterPage({ params }: { params: Promise<{ id: s
         } else {
           setError('Unknown post type');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred while loading the post');
       }
     };

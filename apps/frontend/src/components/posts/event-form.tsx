@@ -152,7 +152,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       if (data.files && data.files.length > 0) {
         setHeaderImage(data.files[0]);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);

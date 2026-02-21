@@ -60,7 +60,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       } else {
         setError('Failed to load your characters. Please try again.');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load your characters. Please try again.');
     } finally {
       setIsLoadingCharacters(false);
