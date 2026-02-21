@@ -58,9 +58,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
     }
 
     // Cursor condition for pagination
-    const cursorFragment = cursor 
-      ? sql.fragment`AND p.post_id < ${cursor}` 
-      : sql.fragment``;
+    const cursorFragment = cursor ? sql.fragment`AND p.post_id < ${cursor}` : sql.fragment``;
 
     const posts = await db.any(
       sql.type(
@@ -147,9 +145,7 @@ router.get('/me/collections', authenticateToken, async (req: AuthRequest, res: R
     }
 
     // Cursor condition for pagination
-    const cursorFragment = cursor 
-      ? sql.fragment`AND c.collection_id < ${cursor}` 
-      : sql.fragment``;
+    const cursorFragment = cursor ? sql.fragment`AND c.collection_id < ${cursor}` : sql.fragment``;
 
     const collections = await db.any(
       sql.type(
@@ -177,7 +173,7 @@ router.get('/me/collections', authenticateToken, async (req: AuthRequest, res: R
           (
             SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            WHERE cp.collection_id = c.collection_id
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
@@ -244,9 +240,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
     }
 
     // Cursor condition for pagination
-    const cursorFragment = cursor 
-      ? sql.fragment`AND pr.profile_id < ${cursor}` 
-      : sql.fragment``;
+    const cursorFragment = cursor ? sql.fragment`AND pr.profile_id < ${cursor}` : sql.fragment``;
 
     const profiles = await db.any(
       sql.type(
