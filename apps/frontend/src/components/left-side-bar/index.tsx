@@ -25,7 +25,7 @@ export function LeftSidebar() {
     }
   };
 
-const handleCreatePostClick = () => {
+  const handleCreatePostClick = () => {
     if (isLoggedIn) {
       router.push('/posts/create');
     } else {
@@ -72,7 +72,7 @@ const handleCreatePostClick = () => {
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Profile
         </Button>
-<Button
+        <Button
           onClick={handleCreatePostClick}
           variant="outline"
           className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
@@ -106,7 +106,8 @@ const handleCreatePostClick = () => {
         <NavItem href="#" label="News" />
         <NavItem href="#" label="Writing" />
         <NavItem href="#" label="Art" />
-        <NavItem href="/catalog" label="Catalog" />
+        <NavItem href="/archive" label="Archive" />
+        <NavItem href="/collections" label="Collections" />
         <NavItem href="#" label="About" />
         <NavItem href="#" label="Rules" />
         <Separator className="my-4 bg-amber-800/20" />

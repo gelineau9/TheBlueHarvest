@@ -152,7 +152,7 @@ router.post(
   },
 );
 
-// GET /api/posts - List authenticated user's posts
+// GET /api/posts - List authenticated user's posts (owned or can edit)
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const typeFilter = req.query.type ? parseInt(req.query.type as string) : null;
@@ -182,8 +182,16 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           pt.type_name
         FROM posts p
         JOIN post_types pt ON p.post_type_id = pt.type_id
-        WHERE p.account_id = ${userId}
-          AND p.deleted = false
+        WHERE p.deleted = false
+          AND (
+            p.account_id = ${userId}
+            OR EXISTS (
+              SELECT 1 FROM post_editors pe
+              WHERE pe.post_id = p.post_id 
+                AND pe.account_id = ${userId} 
+                AND pe.deleted = false
+            )
+          )
           ${typeFilterFragment}
         ORDER BY p.created_at DESC
       `,

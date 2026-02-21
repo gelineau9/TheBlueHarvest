@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, X, Plus } from 'lucide-react';
+import { ArrowLeft, X} from 'lucide-react';
 import Link from 'next/link';
 
 const collectionFormSchema = z.object({
@@ -91,7 +91,7 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
           const data = await response.json();
           // Filter to only character, kinship, and organization profiles (types 1, 3, 4)
           const authorProfiles = data.filter(
-            (p: Profile) => p.profile_type_id === 1 || p.profile_type_id === 3 || p.profile_type_id === 4
+            (p: Profile) => p.profile_type_id === 1 || p.profile_type_id === 3 || p.profile_type_id === 4,
           );
           setProfiles(authorProfiles);
         }
@@ -126,14 +126,10 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
 
   // Filter posts by allowed types for this collection
   const allowedTypes = ALLOWED_POST_TYPES[collectionTypeId];
-  const filteredPosts = allowedTypes
-    ? posts.filter((p) => allowedTypes.includes(p.post_type_id))
-    : posts;
+  const filteredPosts = allowedTypes ? posts.filter((p) => allowedTypes.includes(p.post_type_id)) : posts;
 
   // Get available posts (not already selected)
-  const availablePosts = filteredPosts.filter(
-    (p) => !selectedPosts.some((sp) => sp.post_id === p.post_id)
-  );
+  const availablePosts = filteredPosts.filter((p) => !selectedPosts.some((sp) => sp.post_id === p.post_id));
 
   // Group posts by type for general collection
   const postsByType = availablePosts.reduce(
@@ -144,7 +140,7 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
       acc[post.post_type_id].push(post);
       return acc;
     },
-    {} as { [key: number]: Post[] }
+    {} as { [key: number]: Post[] },
   );
 
   const handleAddPost = (postId: number) => {
@@ -306,9 +302,7 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
         </div>
 
         {/* Error Display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">{error}</div>
-        )}
+        {error && <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">{error}</div>}
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -382,9 +376,7 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
           {/* Posts Selection */}
           <div className="space-y-2">
             <Label className="text-amber-900 font-medium">Add Posts</Label>
-            <p className="text-sm text-amber-600 mb-2">
-              Select posts to include in this {collectionTypeName}
-            </p>
+            <p className="text-sm text-amber-600 mb-2">Select posts to include in this {collectionTypeName}</p>
 
             {loadingPosts ? (
               <p className="text-amber-600">Loading posts...</p>

@@ -19,7 +19,7 @@ import {
   Film,
   CalendarDays,
 } from 'lucide-react';
-import { ContentCard } from '@/components/catalog/content-card';
+import { ContentCard } from '@/components/archive/content-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface CatalogItem {
+interface ArchiveItem {
   id: number;
   contentCategory: 'profile' | 'post';
   typeId: number;
@@ -45,8 +45,8 @@ interface CatalogItem {
   updatedAt: string;
 }
 
-interface CatalogResponse {
-  items: CatalogItem[];
+interface ArchiveResponse {
+  items: ArchiveItem[];
   total: number;
   hasMore: boolean;
 }
@@ -84,11 +84,11 @@ const POST_TYPES = [
   { id: 4, name: 'Event', icon: CalendarDays },
 ] as const;
 
-export default function CatalogPage() {
+export default function ArchivePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [items, setItems] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -143,7 +143,7 @@ export default function CatalogPage() {
           params.set(key, value);
         }
       });
-      router.push(`/catalog?${params.toString()}`);
+      router.push(`/archive?${params.toString()}`);
     },
     [searchParams, router],
   );
@@ -212,7 +212,7 @@ export default function CatalogPage() {
   // Clear all filters
   const handleClearAll = useCallback(() => {
     setSearchInput('');
-    router.push('/catalog');
+    router.push('/archive');
   }, [router]);
 
   // Check if any filters are active
@@ -235,10 +235,10 @@ export default function CatalogPage() {
       if (selectedPostTypes.length > 0) params.set('postTypes', selectedPostTypes.join(','));
       if (searchQuery) params.set('search', searchQuery);
 
-      const response = await fetch(`/api/catalog/public?${params.toString()}`);
+      const response = await fetch(`/api/archive/public?${params.toString()}`);
       if (!response.ok) return;
 
-      const data: CatalogResponse = await response.json();
+      const data: ArchiveResponse = await response.json();
       setItems((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore);
       setOffset((prev) => prev + LIMIT);
@@ -294,19 +294,19 @@ export default function CatalogPage() {
         if (selectedPostTypes.length > 0) params.set('postTypes', selectedPostTypes.join(','));
         if (searchQuery) params.set('search', searchQuery);
 
-        const response = await fetch(`/api/catalog/public?${params.toString()}`);
+        const response = await fetch(`/api/archive/public?${params.toString()}`);
 
         if (!response.ok) {
-          setError('Failed to load catalog');
+          setError('Failed to load archive');
           return;
         }
 
-        const data: CatalogResponse = await response.json();
+        const data: ArchiveResponse = await response.json();
         setItems(data.items);
         setTotal(data.total);
         setHasMore(data.hasMore);
       } catch {
-        setError('An error occurred while loading catalog');
+        setError('An error occurred while loading archive');
       } finally {
         setIsLoading(false);
       }
@@ -332,7 +332,7 @@ export default function CatalogPage() {
             Back to Home
           </Link>
 
-          <h1 className="text-4xl font-bold text-amber-900 mb-8">Catalog</h1>
+          <h1 className="text-4xl font-bold text-amber-900 mb-8">Archive</h1>
 
           {/* Loading Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -392,7 +392,7 @@ export default function CatalogPage() {
           </Link>
 
           <div className="flex items-baseline justify-between">
-            <h1 className="text-4xl font-bold text-amber-900">Catalog</h1>
+            <h1 className="text-4xl font-bold text-amber-900">Archive</h1>
             <p className="text-sm text-amber-700">
               {total} {total === 1 ? 'item' : 'items'}
               {hasActiveFilters ? ' (filtered)' : ' total'}

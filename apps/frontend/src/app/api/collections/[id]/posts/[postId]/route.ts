@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { API_CONFIG } from '@/config/api';
 
 // DELETE /api/collections/:id/posts/:postId - Remove a post from a collection
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; postId: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string; postId: string }> }) {
   const authToken = request.cookies.get('auth_token')?.value;
 
   if (!authToken) {

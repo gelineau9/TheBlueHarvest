@@ -152,9 +152,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
       if (response.ok) {
         // Remove post from local state
-        setCollection((prev) =>
-          prev ? { ...prev, posts: prev.posts.filter((p) => p.post_id !== postId) } : null
-        );
+        setCollection((prev) => (prev ? { ...prev, posts: prev.posts.filter((p) => p.post_id !== postId) } : null));
       }
     } catch (err) {
       console.error('Failed to remove post:', err);
@@ -308,9 +306,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
         {/* Posts List */}
         <Card className="p-6 bg-white border-amber-300">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-amber-900">
-              Posts ({collection.posts.length})
-            </h2>
+            <h2 className="text-xl font-semibold text-amber-900">Posts ({collection.posts.length})</h2>
           </div>
 
           {collection.posts.length === 0 ? (
@@ -326,7 +322,69 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                 </span>
               )}
             </p>
+          ) : collection.collection_type_id === 1 ? (
+            // Regular collection: group posts by type with subheadings
+            <div className="space-y-6">
+              {/* Group posts by type */}
+              {[
+                { typeId: 1, label: 'Writings related to this collection' },
+                { typeId: 2, label: 'Art related to this collection' },
+                { typeId: 3, label: 'Media related to this collection' },
+                { typeId: 4, label: 'Events related to this collection' },
+              ].map(({ typeId, label }) => {
+                const postsOfType = collection.posts.filter((p) => p.post_type_id === typeId);
+                if (postsOfType.length === 0) return null;
+
+                return (
+                  <div key={typeId}>
+                    <h3 className="text-lg font-semibold text-amber-800 mb-3">{label}</h3>
+                    <div className="space-y-3">
+                      {postsOfType.map((post) => {
+                        const PostIcon = postTypeIcons[post.post_type_id] || FileText;
+
+                        return (
+                          <div
+                            key={post.post_id}
+                            className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors"
+                          >
+                            <Link href={`/posts/${post.post_id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg flex-shrink-0">
+                                <PostIcon className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-amber-900 font-semibold truncate">{post.title}</h4>
+                                {post.primary_author_name && (
+                                  <p className="text-xs text-amber-600">by {post.primary_author_name}</p>
+                                )}
+                              </div>
+                            </Link>
+
+                            {/* Remove button for editors */}
+                            {collection.can_edit && (
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleRemovePost(post.post_id);
+                                }}
+                                disabled={removingPostId === post.post_id}
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-2 flex-shrink-0"
+                                title="Remove from collection"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            // Other collection types: flat list with type badges
             <div className="space-y-3">
               {collection.posts.map((post) => {
                 const PostIcon = postTypeIcons[post.post_type_id] || FileText;
@@ -336,10 +394,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                     key={post.post_id}
                     className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors"
                   >
-                    <Link
-                      href={`/posts/${post.post_id}`}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
+                    <Link href={`/posts/${post.post_id}`} className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg flex-shrink-0">
                         <PostIcon className="w-5 h-5" />
                       </div>
@@ -386,8 +441,8 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
           <DialogHeader>
             <DialogTitle className="text-amber-900">Delete Collection</DialogTitle>
             <DialogDescription className="text-amber-700">
-              Are you sure you want to delete this collection? This action cannot be undone.
-              The posts in this collection will not be deleted.
+              Are you sure you want to delete this collection? This action cannot be undone. The posts in this
+              collection will not be deleted.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">

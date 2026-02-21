@@ -52,7 +52,10 @@ router.post(
       .withMessage('Title is required and must not exceed 200 characters'),
     body('description').optional().trim(),
     body('content').optional(),
-    body('primary_author_profile_id').optional({ nullable: true }).isInt().withMessage('Primary author profile ID must be an integer'),
+    body('primary_author_profile_id')
+      .optional({ nullable: true })
+      .isInt()
+      .withMessage('Primary author profile ID must be an integer'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -583,7 +586,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-res.status(200).json({ message: 'Collection deleted successfully' });
+    res.status(200).json({ message: 'Collection deleted successfully' });
   } catch (err) {
     console.error('Collection deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });

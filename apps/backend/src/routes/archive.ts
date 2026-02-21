@@ -10,8 +10,8 @@ async function getPool() {
   return await pool;
 }
 
-// Validation schema for public catalog query params
-const publicCatalogQuerySchema = z.object({
+// Validation schema for public archive query params
+const publicArchiveQuerySchema = z.object({
   contentType: z.enum(['all', 'profiles', 'posts']).default('all'),
   profileTypes: z.string().optional(), // comma-separated profile type IDs (1-5)
   postTypes: z.string().optional(), // comma-separated post type IDs (1-4)
@@ -23,7 +23,7 @@ const publicCatalogQuerySchema = z.object({
 });
 
 /**
- * GET /api/catalog/public
+ * GET /api/archive/public
  * Returns a unified list of public profiles and posts
  * Supports filtering by content type, subtypes, search, sorting, and pagination
  */
@@ -31,7 +31,7 @@ router.get('/public', async (req: Request, res: Response) => {
   try {
     const db = await getPool();
     // Validate query parameters
-    const parseResult = publicCatalogQuerySchema.safeParse(req.query);
+    const parseResult = publicArchiveQuerySchema.safeParse(req.query);
     if (!parseResult.success) {
       return res.status(400).json({
         error: 'Invalid query parameters',
@@ -219,9 +219,9 @@ router.get('/public', async (req: Request, res: Response) => {
       hasMore: offset + items.length < total,
     });
   } catch (error) {
-    console.error('Error fetching public catalog:', error);
+    console.error('Error fetching public archive:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return res.status(500).json({ error: 'Failed to fetch catalog', details: errorMessage });
+    return res.status(500).json({ error: 'Failed to fetch archive', details: errorMessage });
   }
 });
 
