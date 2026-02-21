@@ -52,7 +52,7 @@ router.post(
       .withMessage('Title is required and must not exceed 200 characters'),
     body('description').optional().trim(),
     body('content').optional(),
-    body('primary_author_profile_id').isInt().withMessage('Primary author profile ID is required'),
+    body('primary_author_profile_id').optional({ nullable: true }).isInt().withMessage('Primary author profile ID must be an integer'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -67,16 +67,19 @@ router.post(
     try {
       const db = await getPool();
 
-      // Verify the primary author profile exists, is owned by user, and can author
-      const authorProfile = await getAuthorableProfile(db, primary_author_profile_id, userId);
-      if (!authorProfile) {
-        res.status(400).json({
-          error: 'Primary author must be a character, kinship, or organization that you own',
-        });
-        return;
+      // If a primary author is provided, verify it exists, is owned by user, and can author
+      let authorProfile = null;
+      if (primary_author_profile_id) {
+        authorProfile = await getAuthorableProfile(db, primary_author_profile_id, userId);
+        if (!authorProfile) {
+          res.status(400).json({
+            error: 'Primary author must be a character, kinship, or organization that you own',
+          });
+          return;
+        }
       }
 
-      // Create collection and primary author in a transaction
+      // Create collection and optionally add primary author in a transaction
       const result = await db.transaction(async (tx) => {
         // Create the collection
         const collection = await tx.one(
@@ -103,13 +106,15 @@ router.post(
           `,
         );
 
-        // Add primary author
-        await tx.query(
-          sql.type(z.object({}))`
-            INSERT INTO collection_authors (collection_id, profile_id, is_primary)
-            VALUES (${collection.collection_id}, ${primary_author_profile_id}, true)
-          `,
-        );
+        // Add primary author only if one was provided
+        if (primary_author_profile_id) {
+          await tx.query(
+            sql.type(z.object({}))`
+              INSERT INTO collection_authors (collection_id, profile_id, is_primary)
+              VALUES (${collection.collection_id}, ${primary_author_profile_id}, true)
+            `,
+          );
+        }
 
         return collection;
       });
@@ -122,10 +127,12 @@ router.post(
         description: result.description,
         content: result.content,
         created_at: result.created_at,
-        primary_author: {
-          profile_id: authorProfile.profile_id,
-          name: authorProfile.name,
-        },
+        primary_author: authorProfile
+          ? {
+              profile_id: authorProfile.profile_id,
+              name: authorProfile.name,
+            }
+          : null,
       });
     } catch (err: any) {
       console.error('Collection creation error:', err);
@@ -367,7 +374,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
     const authors = await db.any(
       sql.type(
         z.object({
-          author_id: z.number(),
+          collection_author_id: z.number(),
           profile_id: z.number(),
           profile_name: z.string(),
           profile_type_id: z.number(),
@@ -376,7 +383,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         }),
       )`
         SELECT 
-          ca.author_id,
+          ca.collection_author_id,
           ca.profile_id,
           prof.name as profile_name,
           prof.profile_type_id,
@@ -386,7 +393,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN profiles prof ON ca.profile_id = prof.profile_id
         JOIN profile_types pt ON prof.profile_type_id = pt.type_id
         WHERE ca.collection_id = ${collectionId} AND ca.deleted = false
-        ORDER BY ca.is_primary DESC, ca.created_at ASC
+        ORDER BY ca.is_primary DESC
       `,
     );
 
@@ -394,7 +401,6 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
     const posts = await db.any(
       sql.type(
         z.object({
-          collection_post_id: z.number(),
           post_id: z.number(),
           title: z.string(),
           post_type_id: z.number(),
@@ -404,7 +410,6 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         }),
       )`
         SELECT 
-          cp.collection_post_id,
           p.post_id,
           p.title,
           p.post_type_id,
@@ -416,7 +421,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN post_types pt ON p.post_type_id = pt.type_id
         LEFT JOIN authors auth ON p.post_id = auth.post_id AND auth.is_primary = true AND auth.deleted = false
         LEFT JOIN profiles author_profile ON auth.profile_id = author_profile.profile_id
-WHERE cp.collection_id = ${collectionId} 
+        WHERE cp.collection_id = ${collectionId} 
           AND p.deleted = false
         ORDER BY cp.sort_order ASC
       `,
