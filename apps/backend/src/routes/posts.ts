@@ -38,6 +38,7 @@ router.post(
       .withMessage('Title is required and must not exceed 200 characters'),
     body('content').optional(),
     body('primary_author_profile_id').optional().isInt().withMessage('Primary author profile ID must be an integer'),
+    body('is_published').optional().isBoolean().withMessage('is_published must be a boolean'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -46,7 +47,7 @@ router.post(
       return;
     }
 
-    const { post_type_id, title, content, primary_author_profile_id } = req.body;
+    const { post_type_id, title, content, primary_author_profile_id, is_published = true } = req.body;
     const userId = req.userId!;
 
     // Post types that require an author - currently none (authors are optional)
@@ -87,17 +88,19 @@ router.post(
               post_type_id: z.number(),
               title: z.string(),
               content: z.any().nullable(),
+              is_published: z.boolean(),
               created_at: z.string(),
             }),
           )`
-            INSERT INTO posts (account_id, post_type_id, title, content)
+            INSERT INTO posts (account_id, post_type_id, title, content, is_published)
             VALUES (
               ${userId},
               ${post_type_id},
               ${title},
-              ${content !== null && content !== undefined ? sql.jsonb(content) : null}
+              ${content !== null && content !== undefined ? sql.jsonb(content) : null},
+              ${is_published}
             )
-            RETURNING post_id, account_id, post_type_id, title, content, created_at::text
+            RETURNING post_id, account_id, post_type_id, title, content, is_published, created_at::text
           `,
         );
 
@@ -121,6 +124,7 @@ router.post(
         post_type_id: result.post_type_id,
         title: result.title,
         content: result.content,
+        is_published: result.is_published,
         created_at: result.created_at,
       };
 
@@ -164,6 +168,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           post_id: z.number(),
           post_type_id: z.number(),
           title: z.string(),
+          is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
@@ -173,6 +178,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           p.post_id,
           p.post_type_id,
           p.title,
+          p.is_published,
           p.created_at::text,
           p.updated_at::text,
           pt.type_name
@@ -293,6 +299,7 @@ router.get('/public', async (req: Request, res: Response) => {
         LEFT JOIN authors auth ON p.post_id = auth.post_id AND auth.is_primary = true AND auth.deleted = false
         LEFT JOIN profiles author_profile ON auth.profile_id = author_profile.profile_id
         WHERE p.deleted = false
+          AND p.is_published = true
         ${typeFilterFragment}
         ${searchFilterFragment}
         ${orderByFragment}
@@ -306,6 +313,7 @@ router.get('/public', async (req: Request, res: Response) => {
         SELECT COUNT(*) as total
         FROM posts p
         WHERE p.deleted = false
+          AND p.is_published = true
         ${typeFilterFragment}
         ${searchFilterFragment}
       `,
@@ -345,6 +353,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           post_type_id: z.number(),
           title: z.string(),
           content: z.any().nullable(),
+          is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
@@ -352,7 +361,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         }),
       )`
         SELECT 
-          p.post_id, p.account_id, p.post_type_id, p.title, p.content,
+          p.post_id, p.account_id, p.post_type_id, p.title, p.content, p.is_published,
           p.created_at::text, p.updated_at::text,
           pt.type_name, a.username
         FROM posts p
@@ -363,6 +372,15 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
     );
 
     if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    // Check if user can view this post (drafts only visible to owner/editors)
+    const canEdit = req.userId ? await canEditPost(db, postId, req.userId) : false;
+    const isOwner = req.userId ? post.account_id === req.userId : false;
+
+    if (!post.is_published && !canEdit) {
       res.status(404).json({ error: 'Post not found' });
       return;
     }
@@ -390,12 +408,9 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN profiles prof ON auth.profile_id = prof.profile_id
         JOIN profile_types pt ON prof.profile_type_id = pt.type_id
         WHERE auth.post_id = ${postId} AND auth.deleted = false
-        ORDER BY auth.is_primary DESC, auth.author_id ASC
+      ORDER BY auth.is_primary DESC, auth.author_id ASC
       `,
     );
-
-    const canEdit = req.userId ? await canEditPost(db, postId, req.userId) : false;
-    const isOwner = req.userId ? post.account_id === req.userId : false;
 
     res.json({
       post_id: post.post_id,
@@ -404,6 +419,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       type_name: post.type_name,
       title: post.title,
       content: post.content,
+      is_published: post.is_published,
       created_at: post.created_at,
       updated_at: post.updated_at,
       username: post.username,
@@ -429,6 +445,7 @@ router.put(
       .withMessage('Title must be between 1 and 200 characters'),
     body('content').optional(),
     body('primary_author_profile_id').optional().isInt().withMessage('Invalid author profile ID'),
+    body('is_published').optional().isBoolean().withMessage('is_published must be a boolean'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -439,14 +456,19 @@ router.put(
 
     const postId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
     const userId = req.userId!;
-    const { title, content, primary_author_profile_id } = req.body;
+    const { title, content, primary_author_profile_id, is_published } = req.body;
 
     if (isNaN(postId)) {
       res.status(400).json({ error: 'Invalid post ID' });
       return;
     }
 
-    if (title === undefined && content === undefined && primary_author_profile_id === undefined) {
+    if (
+      title === undefined &&
+      content === undefined &&
+      primary_author_profile_id === undefined &&
+      is_published === undefined
+    ) {
       res.status(400).json({ error: 'No fields to update' });
       return;
     }
@@ -482,6 +504,9 @@ router.put(
       if (content !== undefined) {
         updateFragments.push(sql.fragment`content = ${content !== null ? sql.jsonb(content) : null}`);
       }
+      if (is_published !== undefined) {
+        updateFragments.push(sql.fragment`is_published = ${is_published}`);
+      }
       updateFragments.push(sql.fragment`updated_at = NOW()`);
 
       const updateFragment = sql.join(updateFragments, sql.fragment`, `);
@@ -494,6 +519,7 @@ router.put(
             post_type_id: z.number(),
             title: z.string(),
             content: z.any().nullable(),
+            is_published: z.boolean(),
             created_at: z.string(),
             updated_at: z.string(),
           }),
@@ -501,7 +527,7 @@ router.put(
           UPDATE posts
           SET ${updateFragment}
           WHERE post_id = ${postId}
-          RETURNING post_id, account_id, post_type_id, title, content, created_at::text, updated_at::text
+          RETURNING post_id, account_id, post_type_id, title, content, is_published, created_at::text, updated_at::text
         `,
       );
 

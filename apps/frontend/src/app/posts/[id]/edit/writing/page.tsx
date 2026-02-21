@@ -22,9 +22,16 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
   const [body, setBody] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [authorId, setAuthorId] = useState<string>('');
+  const [isPublished, setIsPublished] = useState(true);
 
   // Original values for dirty checking
-  const [originalValues, setOriginalValues] = useState({ title: '', body: '', tagsInput: '', authorId: '' });
+  const [originalValues, setOriginalValues] = useState({
+    title: '',
+    body: '',
+    tagsInput: '',
+    authorId: '',
+    isPublished: true,
+  });
 
   // Initialize form when post and characters load
   useEffect(() => {
@@ -34,12 +41,20 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
       const initialTags = post.content?.tags?.join(', ') || '';
       const primaryAuthor = post.authors?.find((a) => a.is_primary);
       const initialAuthorId = primaryAuthor?.profile_id?.toString() || '';
+      const initialIsPublished = post.is_published !== false;
 
       setTitle(initialTitle);
       setBody(initialBody);
       setTagsInput(initialTags);
       setAuthorId(initialAuthorId);
-      setOriginalValues({ title: initialTitle, body: initialBody, tagsInput: initialTags, authorId: initialAuthorId });
+      setIsPublished(initialIsPublished);
+      setOriginalValues({
+        title: initialTitle,
+        body: initialBody,
+        tagsInput: initialTags,
+        authorId: initialAuthorId,
+        isPublished: initialIsPublished,
+      });
     }
   }, [post, charactersLoaded]);
 
@@ -47,7 +62,8 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
     title !== originalValues.title ||
     body !== originalValues.body ||
     tagsInput !== originalValues.tagsInput ||
-    authorId !== originalValues.authorId;
+    authorId !== originalValues.authorId ||
+    isPublished !== originalValues.isPublished;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -61,10 +77,10 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
 
     // Pass author ID (null to clear, number to set, undefined to leave unchanged)
     const authorProfileId = authorId ? parseInt(authorId, 10) : null;
-    const success = await savePost(title, { body, tags }, authorProfileId);
+    const success = await savePost(title, { body, tags }, authorProfileId, isPublished);
 
     if (success) {
-      setOriginalValues({ title: title.trim(), body, tagsInput, authorId });
+      setOriginalValues({ title: title.trim(), body, tagsInput, authorId, isPublished });
       navigateBack();
     }
   };
@@ -191,6 +207,33 @@ export default function EditWritingPage({ params }: { params: Promise<{ id: stri
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
               />
               <p className="text-sm text-amber-600">Tags help others discover your content.</p>
+            </div>
+
+            {/* Publish Status */}
+            <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div>
+                <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+                  {isPublished ? 'Published' : 'Draft'}
+                </Label>
+                <p className="text-sm text-amber-600">
+                  {isPublished ? 'This post is visible to everyone.' : 'Only you can see this draft.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPublished}
+                onClick={() => setIsPublished(!isPublished)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isPublished ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             {saveError && (

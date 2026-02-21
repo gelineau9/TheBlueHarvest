@@ -18,6 +18,7 @@ interface Profile {
   type_name: string;
   name: string;
   details: { description?: string } | null;
+  is_published?: boolean;
   created_at: string;
   updated_at: string;
   username: string;
@@ -37,13 +38,15 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublished, setIsPublished] = useState(true);
 
   // Original values for dirty checking (2.3.3)
   const [originalName, setOriginalName] = useState('');
   const [originalDescription, setOriginalDescription] = useState('');
+  const [originalIsPublished, setOriginalIsPublished] = useState(true);
 
   // Check if form has unsaved changes (2.3.3)
-  const isDirty = name !== originalName || description !== originalDescription;
+  const isDirty = name !== originalName || description !== originalDescription || isPublished !== originalIsPublished;
 
   // Use the unsaved changes hook for navigation warnings (2.3.3)
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
@@ -74,10 +77,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         // Set both current and original values
         const initialName = data.name;
         const initialDescription = data.details?.description || '';
+        const initialIsPublished = data.is_published !== false;
         setName(initialName);
         setDescription(initialDescription);
+        setIsPublished(initialIsPublished);
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
+        setOriginalIsPublished(initialIsPublished);
       } catch {
         setError('An error occurred while loading the profile');
       } finally {
@@ -102,6 +108,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         body: JSON.stringify({
           name: name.trim(),
           details: { description: description.trim() || undefined },
+          is_published: isPublished,
         }),
       });
 
@@ -114,6 +121,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       // Update original values to match saved state (prevents warning on redirect)
       setOriginalName(name.trim());
       setOriginalDescription(description.trim());
+      setOriginalIsPublished(isPublished);
 
       // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
@@ -215,6 +223,33 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 rows={6}
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
               />
+            </div>
+
+            {/* Publish Status */}
+            <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div>
+                <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+                  {isPublished ? 'Published' : 'Draft'}
+                </Label>
+                <p className="text-sm text-amber-600">
+                  {isPublished ? 'This profile is visible to everyone.' : 'Only you can see this draft.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPublished}
+                onClick={() => setIsPublished(!isPublished)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isPublished ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             {/* Error Message */}

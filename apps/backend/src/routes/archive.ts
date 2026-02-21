@@ -59,7 +59,7 @@ router.get('/public', async (req: Request, res: Response) => {
 
     // Profiles subquery
     if (includeProfiles) {
-      const profileConditions = [sql.fragment`p.deleted = false`];
+      const profileConditions = [sql.fragment`p.deleted = false`, sql.fragment`p.is_published = true`];
 
       if (profileTypeIds.length > 0) {
         profileConditions.push(sql.fragment`p.profile_type_id = ANY(${sql.array(profileTypeIds, 'int4')})`);
@@ -93,7 +93,7 @@ router.get('/public', async (req: Request, res: Response) => {
 
     // Posts subquery
     if (includePosts) {
-      const postConditions = [sql.fragment`ps.deleted = false`];
+      const postConditions = [sql.fragment`ps.deleted = false`, sql.fragment`ps.is_published = true`];
 
       if (postTypeIds.length > 0) {
         postConditions.push(sql.fragment`ps.post_type_id = ANY(${sql.array(postTypeIds, 'int4')})`);

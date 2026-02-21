@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, User, Building2, MapPin, ArrowLeft, Plus, Crown, PenLine, Loader2 } from 'lucide-react';
+import { Users, User, Building2, MapPin, ArrowLeft, Plus, Crown, PenLine, Loader2, EyeOff } from 'lucide-react';
 
 interface Profile {
   profile_id: number;
@@ -15,11 +15,13 @@ interface Profile {
   updated_at: string | null;
   type_name: string;
   is_owner: boolean;
+  is_published: boolean;
   parent_profile_id: number | null;
   parent_profile_name: string | null;
 }
 
 type FilterType = 'all' | 'owned' | 'editor';
+type StatusType = 'all' | 'published' | 'drafts';
 
 const PROFILE_TYPE_ICONS: Record<string, React.ElementType> = {
   character: User,
@@ -36,10 +38,16 @@ export default function MyProfilesPage() {
   const [hasMore, setHasMore] = useState(true);
   const [cursor, setCursor] = useState<number | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [status, setStatus] = useState<StatusType>('all');
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Fetch profiles function
-  const fetchProfiles = async (currentCursor: number | null, currentFilter: FilterType, append: boolean) => {
+  const fetchProfiles = async (
+    currentCursor: number | null,
+    currentFilter: FilterType,
+    currentStatus: StatusType,
+    append: boolean,
+  ) => {
     if (append) {
       setIsLoadingMore(true);
     } else {
@@ -50,6 +58,7 @@ export default function MyProfilesPage() {
       const params = new URLSearchParams({
         limit: '20',
         filter: currentFilter,
+        status: currentStatus,
       });
       if (currentCursor) {
         params.set('cursor', currentCursor.toString());
@@ -81,9 +90,9 @@ export default function MyProfilesPage() {
     if (isAuthorized) {
       setCursor(null);
       setHasMore(true);
-      fetchProfiles(null, filter, false);
+      fetchProfiles(null, filter, status, false);
     }
-  }, [isAuthorized, filter]);
+  }, [isAuthorized, filter, status]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -92,7 +101,7 @@ export default function MyProfilesPage() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore && cursor) {
-          fetchProfiles(cursor, filter, true);
+          fetchProfiles(cursor, filter, status, true);
         }
       },
       { threshold: 0.1 },
@@ -100,7 +109,7 @@ export default function MyProfilesPage() {
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [hasMore, isLoading, isLoadingMore, cursor, filter]);
+  }, [hasMore, isLoading, isLoadingMore, cursor, filter, status]);
 
   if (authLoading) {
     return (
@@ -146,7 +155,7 @@ export default function MyProfilesPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
           <Button
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
@@ -184,6 +193,47 @@ export default function MyProfilesPage() {
           >
             <PenLine className="h-3 w-3 mr-1" />
             Can Edit
+          </Button>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Button
+            variant={status === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatus('all')}
+            className={
+              status === 'all'
+                ? 'bg-stone-600 hover:bg-stone-700 text-white'
+                : 'border-stone-300 hover:border-stone-500 hover:bg-stone-50'
+            }
+          >
+            All Status
+          </Button>
+          <Button
+            variant={status === 'published' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatus('published')}
+            className={
+              status === 'published'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50 text-emerald-700'
+            }
+          >
+            Published
+          </Button>
+          <Button
+            variant={status === 'drafts' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatus('drafts')}
+            className={
+              status === 'drafts'
+                ? 'bg-stone-500 hover:bg-stone-600 text-white'
+                : 'border-stone-300 hover:border-stone-400 hover:bg-stone-50 text-stone-600'
+            }
+          >
+            <EyeOff className="h-3 w-3 mr-1" />
+            Drafts
           </Button>
         </div>
 
@@ -237,17 +287,25 @@ export default function MyProfilesPage() {
                         <div className="p-2 bg-amber-100 rounded-lg">
                           <Icon className="h-5 w-5 text-amber-600" />
                         </div>
-                        {profile.is_owner ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
-                            <Crown className="h-3 w-3" />
-                            Owner
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-stone-100 text-stone-600 rounded-full">
-                            <PenLine className="h-3 w-3" />
-                            Editor
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {!profile.is_published && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-stone-200 text-stone-700 rounded-full">
+                              <EyeOff className="h-3 w-3" />
+                              Draft
+                            </span>
+                          )}
+                          {profile.is_owner ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                              <Crown className="h-3 w-3" />
+                              Owner
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-stone-100 text-stone-600 rounded-full">
+                              <PenLine className="h-3 w-3" />
+                              Editor
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <h3 className="text-lg font-semibold text-amber-900 mb-2 line-clamp-2">{profile.name}</h3>
                       <div className="flex items-center gap-2 text-sm text-amber-600">

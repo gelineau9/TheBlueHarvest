@@ -26,6 +26,7 @@ export const createProfileSchema = z.object({
   name: z.string().min(1, 'Profile name is required').max(100, 'Profile name must not exceed 100 characters'),
   details: z.string().optional(),
   parent_profile_id: z.number().int().optional(),
+  is_published: z.boolean().optional(),
 });
 
 // Post types: 1=writing, 2=art, 3=media, 4=event
@@ -36,6 +37,7 @@ export const createPostSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
   content: z.object({}).passthrough(), // Flexible content structure - accepts any object
   primary_author_profile_id: z.number().int().optional(), // Optional for account-level posts (art, media, event)
+  is_published: z.boolean().optional(),
 });
 
 // Collection types: 1=collection, 2=chronicle, 3=album, 4=gallery, 5=event-series

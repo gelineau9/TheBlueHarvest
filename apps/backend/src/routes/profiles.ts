@@ -20,6 +20,7 @@ router.post(
       .withMessage('Profile name is required and must not exceed 100 characters'),
     body('details').optional(),
     body('parent_profile_id').optional().isInt().withMessage('Parent profile must be a valid profile ID'),
+    body('is_published').optional().isBoolean().withMessage('is_published must be a boolean'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -28,7 +29,7 @@ router.post(
       return;
     }
 
-    const { profile_type_id, name, details, parent_profile_id } = req.body;
+    const { profile_type_id, name, details, parent_profile_id, is_published = true } = req.body;
     const userId = req.userId!;
 
     try {
@@ -97,18 +98,20 @@ router.post(
             name: z.string(),
             details: z.any().nullable(),
             parent_profile_id: z.number().nullable(),
+            is_published: z.boolean(),
             created_at: z.string(),
           }),
         )`
-        INSERT INTO profiles (account_id, profile_type_id, name, details, parent_profile_id)
+        INSERT INTO profiles (account_id, profile_type_id, name, details, parent_profile_id, is_published)
         VALUES (
           ${userId}, 
           ${profile_type_id}, 
           ${name}, 
           ${details !== null && details !== undefined ? sql.jsonb(details) : null},
-          ${parent_profile_id || null}
+          ${parent_profile_id || null},
+          ${is_published}
         )
-        RETURNING profile_id, account_id, profile_type_id, name, details, parent_profile_id, created_at::text
+        RETURNING profile_id, account_id, profile_type_id, name, details, parent_profile_id, is_published, created_at::text
       `,
       );
 
@@ -119,6 +122,7 @@ router.post(
         name: result.name,
         details: result.details,
         parent_profile_id: result.parent_profile_id,
+        is_published: result.is_published,
         created_at: result.created_at,
       });
     } catch (err: any) {
@@ -177,6 +181,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       profile_id: z.number(),
       profile_type_id: z.number(),
       name: z.string(),
+      is_published: z.boolean(),
       created_at: z.string(),
       type_name: z.string(),
     });
@@ -190,6 +195,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           p.profile_id, 
           p.profile_type_id, 
           p.name, 
+          p.is_published,
           p.created_at::text,
           pt.type_name
         FROM profiles p
@@ -308,6 +314,7 @@ router.get('/public', async (req: Request, res: Response) => {
       JOIN profile_types pt ON p.profile_type_id = pt.type_id
       JOIN accounts a ON p.account_id = a.account_id
       WHERE p.deleted = false
+        AND p.is_published = true
       ${typeFilterFragment}
       ${searchFilterFragment}
       ${orderByFragment}
@@ -322,6 +329,7 @@ router.get('/public', async (req: Request, res: Response) => {
       SELECT COUNT(*) as total
       FROM profiles p
       WHERE p.deleted = false
+        AND p.is_published = true
       ${typeFilterFragment}
       ${searchFilterFragment}
     `,
@@ -363,6 +371,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           name: z.string(),
           details: z.any().nullable(),
           parent_profile_id: z.number().nullable(),
+          is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           deleted: z.boolean(),
@@ -373,7 +382,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         }),
       )`
       SELECT p.profile_id, p.account_id, p.profile_type_id, p.name, p.details, 
-             p.parent_profile_id, p.created_at::text, p.updated_at::text, p.deleted, 
+             p.parent_profile_id, p.is_published, p.created_at::text, p.updated_at::text, p.deleted, 
              pt.type_name, a.username,
              parent_p.name as parent_name,
              parent_p.profile_id as parent_id
@@ -395,6 +404,12 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
     // Determine if current user is the owner (for managing editors, deleting)
     const isOwner = req.userId ? profile.account_id === req.userId : false;
 
+    // Check if user can view this profile (drafts only visible to owner/editors)
+    if (!profile.is_published && !canEdit) {
+      res.status(404).json({ error: 'Profile not found' });
+      return;
+    }
+
     res.json({
       profile_id: profile.profile_id,
       account_id: profile.account_id,
@@ -405,6 +420,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       parent_profile_id: profile.parent_profile_id,
       parent_name: profile.parent_name,
       parent_id: profile.parent_id,
+      is_published: profile.is_published,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
       deleted: profile.deleted,
@@ -429,6 +445,7 @@ router.put(
       .isLength({ min: 1, max: 100 })
       .withMessage('Profile name must be between 1 and 100 characters'),
     body('details').optional(),
+    body('is_published').optional().isBoolean().withMessage('is_published must be a boolean'),
   ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -439,7 +456,7 @@ router.put(
 
     const profileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
     const userId = req.userId!;
-    const { name, details } = req.body;
+    const { name, details, is_published } = req.body;
 
     if (isNaN(profileId)) {
       res.status(400).json({ error: 'Invalid profile ID' });
@@ -447,7 +464,7 @@ router.put(
     }
 
     // Check if at least one field is being updated
-    if (name === undefined && details === undefined) {
+    if (name === undefined && details === undefined && is_published === undefined) {
       res.status(400).json({ error: 'No fields to update' });
       return;
     }
@@ -492,6 +509,9 @@ router.put(
       if (details !== undefined) {
         updateFragments.push(sql.fragment`details = ${details !== null ? sql.jsonb(details) : null}`);
       }
+      if (is_published !== undefined) {
+        updateFragments.push(sql.fragment`is_published = ${is_published}`);
+      }
 
       // Always update updated_at timestamp
       updateFragments.push(sql.fragment`updated_at = NOW()`);
@@ -506,6 +526,7 @@ router.put(
             profile_type_id: z.number(),
             name: z.string(),
             details: z.any().nullable(),
+            is_published: z.boolean(),
             created_at: z.string(),
             updated_at: z.string(),
           }),
@@ -519,6 +540,7 @@ router.put(
           profile_type_id, 
           name, 
           details, 
+          is_published,
           created_at::text, 
           updated_at::text
       `,
@@ -530,6 +552,7 @@ router.put(
         profile_type_id: updatedProfile.profile_type_id,
         name: updatedProfile.name,
         details: updatedProfile.details,
+        is_published: updatedProfile.is_published,
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,
       });

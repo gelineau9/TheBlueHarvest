@@ -26,6 +26,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const [error, setError] = useState<string | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
 
   // Profile types that need a parent: Items (2), Kinships (3), Organizations (4)
   const needsParent = [2, 3, 4].includes(profileTypeId);
@@ -75,7 +76,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createProfile(data);
+      const result = await createProfile({ ...data, is_published: isPublished });
       if (!result.success) {
         setError(result.error || 'Failed to create profile');
         return;
@@ -201,6 +202,36 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         </p>
       </div>
 
+      {/* Publish Status */}
+      <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+            {isPublished ? 'Publish immediately' : 'Save as draft'}
+          </Label>
+          <p className="text-sm text-amber-600">
+            {isPublished
+              ? `This ${getProfileTypeLabel().toLowerCase()} will be visible to everyone.`
+              : 'Only you can see drafts.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPublished}
+          onClick={() => setIsPublished(!isPublished)}
+          disabled={isSubmitting}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+          } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              isPublished ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+
       <div className="flex gap-4 justify-end">
         <Button
           type="button"
@@ -216,7 +247,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
           disabled={isSubmitting || (needsParent && (characters.length === 0 || !selectedParentId))}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
-          {isSubmitting ? 'Creating...' : `Create ${getProfileTypeLabel()}`}
+          {isSubmitting ? 'Creating...' : isPublished ? `Create ${getProfileTypeLabel()}` : 'Save as Draft'}
         </Button>
       </div>
     </form>

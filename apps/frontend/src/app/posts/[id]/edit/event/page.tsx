@@ -54,6 +54,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [location, setLocation] = useState('');
   const [maxAttendees, setMaxAttendees] = useState('');
   const [contactProfileId, setContactProfileId] = useState('');
+  const [isPublished, setIsPublished] = useState(true);
 
   // Original values for dirty checking
   const [originalValues, setOriginalValues] = useState({
@@ -66,6 +67,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     location: '',
     maxAttendees: '',
     contactProfileId: '',
+    isPublished: true,
   });
 
   // Initialize form when post and characters load
@@ -80,6 +82,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const initialLocation = post.content?.location || '';
       const initialMaxAttendees = post.content?.maxAttendees?.toString() || '';
       const initialContactProfileId = post.content?.contactProfileId?.toString() || '';
+      const initialIsPublished = post.is_published !== false;
 
       setTitle(initialTitle);
       setDescription(initialDescription);
@@ -90,6 +93,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       setLocation(initialLocation);
       setMaxAttendees(initialMaxAttendees);
       setContactProfileId(initialContactProfileId);
+      setIsPublished(initialIsPublished);
 
       setOriginalValues({
         title: initialTitle,
@@ -101,6 +105,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         location: initialLocation,
         maxAttendees: initialMaxAttendees,
         contactProfileId: initialContactProfileId,
+        isPublished: initialIsPublished,
       });
     }
   }, [post, charactersLoaded]);
@@ -114,7 +119,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     eventTime !== originalValues.eventTime ||
     location !== originalValues.location ||
     maxAttendees !== originalValues.maxAttendees ||
-    contactProfileId !== originalValues.contactProfileId;
+    contactProfileId !== originalValues.contactProfileId ||
+    isPublished !== originalValues.isPublished;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -173,7 +179,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       contactProfileId: contactProfileId ? parseInt(contactProfileId, 10) : undefined,
     };
 
-    const success = await savePost(title, content);
+    const success = await savePost(title, content, undefined, isPublished);
 
     if (success) {
       setOriginalValues({
@@ -186,6 +192,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         location,
         maxAttendees,
         contactProfileId,
+        isPublished,
       });
       navigateBack();
     }
@@ -432,6 +439,33 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
               />
               <p className="text-sm text-amber-600">Tags help others discover your event.</p>
+            </div>
+
+            {/* Publish Status */}
+            <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div>
+                <Label htmlFor="isPublished" className="text-amber-900 font-semibold">
+                  {isPublished ? 'Published' : 'Draft'}
+                </Label>
+                <p className="text-sm text-amber-600">
+                  {isPublished ? 'This event is visible to everyone.' : 'Only you can see this draft.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPublished}
+                onClick={() => setIsPublished(!isPublished)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isPublished ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isPublished ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             {saveError && (
