@@ -17,6 +17,8 @@ import {
   FileText,
   Film,
   X,
+  UserPlus,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -47,6 +49,13 @@ interface CollectionPost {
   post_type_name: string;
   sort_order: number;
   primary_author_name: string | null;
+}
+
+interface Editor {
+  editor_id: number;
+  account_id: number;
+  username: string;
+  added_at: string;
 }
 
 interface Collection {
@@ -93,6 +102,12 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [removingPostId, setRemovingPostId] = useState<number | null>(null);
+  const [editors, setEditors] = useState<Editor[]>([]);
+  const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
+  const [showAddEditorDialog, setShowAddEditorDialog] = useState(false);
+  const [editorUsername, setEditorUsername] = useState('');
+  const [addingEditor, setAddingEditor] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
 
   const { id } = use(params);
 
@@ -121,6 +136,25 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
     fetchCollection();
   }, [id]);
+
+  // Fetch editors when collection is loaded and user is owner
+  useEffect(() => {
+    const fetchEditors = async () => {
+      if (!collection?.is_owner) return;
+      
+      try {
+        const response = await fetch(`/api/collections/${id}/editors`);
+        if (response.ok) {
+          const data = await response.json();
+          setEditors(data.editors || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch editors:', err);
+      }
+    };
+
+    fetchEditors();
+  }, [id, collection?.is_owner]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -158,6 +192,53 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
       console.error('Failed to remove post:', err);
     } finally {
       setRemovingPostId(null);
+    }
+  };
+
+  const handleAddEditor = async () => {
+    if (!editorUsername.trim()) return;
+    
+    setAddingEditor(true);
+    setEditorError(null);
+    
+    try {
+      const response = await fetch(`/api/collections/${id}/editors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: editorUsername.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEditors((prev) => [...prev, data]);
+        setEditorUsername('');
+        setShowAddEditorDialog(false);
+      } else {
+        setEditorError(data.message || 'Failed to add editor');
+      }
+    } catch (err) {
+      console.error('Failed to add editor:', err);
+      setEditorError('An error occurred while adding the editor');
+    } finally {
+      setAddingEditor(false);
+    }
+  };
+
+  const handleRemoveEditor = async (editorId: number) => {
+    setRemovingEditorId(editorId);
+    try {
+      const response = await fetch(`/api/collections/${id}/editors/${editorId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok || response.status === 204) {
+        setEditors((prev) => prev.filter((e) => e.editor_id !== editorId));
+      }
+    } catch (err) {
+      console.error('Failed to remove editor:', err);
+    } finally {
+      setRemovingEditorId(null);
     }
   };
 
@@ -433,6 +514,63 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
         </Card>
+
+        {/* Editors Section (Owner only) */}
+        {collection.is_owner && (
+          <Card className="p-6 bg-white border-amber-300 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-700" />
+                <h2 className="text-xl font-semibold text-amber-900">Editors ({editors.length})</h2>
+              </div>
+              <Button
+                onClick={() => setShowAddEditorDialog(true)}
+                className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                size="sm"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Editor
+              </Button>
+            </div>
+
+            {editors.length === 0 ? (
+              <p className="text-amber-600 text-center py-4">
+                No editors yet. Add editors to allow others to manage this collection.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {editors.map((editor) => (
+                  <div
+                    key={editor.editor_id}
+                    className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 text-amber-700 rounded-full">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-amber-900">{editor.username}</span>
+                        <p className="text-xs text-amber-600">
+                          Added {new Date(editor.added_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveEditor(editor.editor_id)}
+                      disabled={removingEditorId === editor.editor_id}
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      title="Remove editor"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -456,6 +594,62 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
             </Button>
             <Button onClick={handleDelete} disabled={isDeleting} className="bg-red-600 text-white hover:bg-red-700">
               {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Editor Dialog */}
+      <Dialog open={showAddEditorDialog} onOpenChange={(open) => {
+        setShowAddEditorDialog(open);
+        if (!open) {
+          setEditorUsername('');
+          setEditorError(null);
+        }
+      }}>
+        <DialogContent className="bg-white border-amber-300">
+          <DialogHeader>
+            <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
+            <DialogDescription className="text-amber-700">
+              Enter the username of the person you want to add as an editor. Editors can manage posts in this collection.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label htmlFor="editor-username" className="block text-sm font-medium text-amber-800 mb-2">
+              Username
+            </label>
+            <input
+              id="editor-username"
+              type="text"
+              value={editorUsername}
+              onChange={(e) => setEditorUsername(e.target.value)}
+              placeholder="Enter username"
+              className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && editorUsername.trim()) {
+                  handleAddEditor();
+                }
+              }}
+            />
+            {editorError && (
+              <p className="mt-2 text-sm text-red-600">{editorError}</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddEditorDialog(false)}
+              disabled={addingEditor}
+              className="border-amber-600 text-amber-800 hover:bg-amber-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddEditor}
+              disabled={addingEditor || !editorUsername.trim()}
+              className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+            >
+              {addingEditor ? 'Adding...' : 'Add Editor'}
             </Button>
           </DialogFooter>
         </DialogContent>
