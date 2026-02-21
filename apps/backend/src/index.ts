@@ -9,6 +9,7 @@ import collectionPostsRoutes from './routes/collectionPosts.js';
 import uploadsRoutes from './routes/uploads.js';
 import archiveRoutes from './routes/archive.js';
 import commentsRoutes from './routes/comments.js';
+import usersRoutes from './routes/users.js';
 import {
   profileEditorRoutes,
   postEditorRoutes,
@@ -41,6 +42,7 @@ app.use('/api/collections', collectionAuthorRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/archive', archiveRoutes);
 app.use('/api/posts', commentsRoutes);
+app.use('/api/users', usersRoutes);
 
 //Basic route
 app.get('/', (req: Request, res: Response) => {

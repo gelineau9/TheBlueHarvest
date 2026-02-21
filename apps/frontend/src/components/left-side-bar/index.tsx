@@ -1,47 +1,16 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { NavItem } from '@/components/nav-item';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, FileText, FolderOpen, Users, FilePlus, FolderPlus, UserPlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/components/auth/auth-provider';
 
 export function LeftSidebar() {
-  const router = useRouter();
+  const pathname = usePathname();
   const { isLoggedIn } = useAuth();
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [loginDialogType, setLoginDialogType] = useState<'profile' | 'post' | 'collection'>('profile');
-
-  const handleCreateProfileClick = () => {
-    if (isLoggedIn) {
-      router.push('/profiles/create');
-    } else {
-      setLoginDialogType('profile');
-      setShowLoginDialog(true);
-    }
-  };
-
-  const handleCreatePostClick = () => {
-    if (isLoggedIn) {
-      router.push('/posts/create');
-    } else {
-      setLoginDialogType('post');
-      setShowLoginDialog(true);
-    }
-  };
-
-  const handleCreateCollectionClick = () => {
-    if (isLoggedIn) {
-      router.push('/collections/create');
-    } else {
-      setLoginDialogType('collection');
-      setShowLoginDialog(true);
-    }
-  };
 
   return (
     <div className="flex h-full flex-col">
@@ -67,39 +36,66 @@ export function LeftSidebar() {
         </div>
       </div>
 
-      <div className="mb-4 space-y-2">
-        <Button onClick={handleCreateProfileClick} className="w-full bg-amber-800 text-amber-50 hover:bg-amber-700">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Profile
-        </Button>
-        <Button
-          onClick={handleCreatePostClick}
-          variant="outline"
-          className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Post
-        </Button>
-        <Button
-          onClick={handleCreateCollectionClick}
-          variant="outline"
-          className="w-full border-amber-800 text-amber-800 hover:bg-amber-100"
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Collection
-        </Button>
-      </div>
-
-      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="bg-[#f5e6c8] border-amber-800/30">
-          <DialogHeader>
-            <DialogTitle className="text-amber-900">Login Required</DialogTitle>
-            <DialogDescription className="text-amber-800">
-              You need to be logged in to create a {loginDialogType}. Please log in or create an account to continue.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      {/* User Dashboard - Only visible when logged in */}
+      {isLoggedIn && (
+        <div className="mb-4">
+          <Separator className="mb-4 bg-amber-800/20" />
+          <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-amber-700">My Dashboard</h3>
+          <div className="space-y-1">
+            <Link
+              href="/my/posts"
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                pathname === '/my/posts' ? 'bg-amber-800 text-amber-50' : 'text-amber-900 hover:bg-amber-100/80'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              My Posts
+            </Link>
+            <Link
+              href="/my/collections"
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                pathname === '/my/collections' ? 'bg-amber-800 text-amber-50' : 'text-amber-900 hover:bg-amber-100/80'
+              }`}
+            >
+              <FolderOpen className="h-4 w-4" />
+              My Collections
+            </Link>
+            <Link
+              href="/my/profiles"
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                pathname === '/my/profiles' ? 'bg-amber-800 text-amber-50' : 'text-amber-900 hover:bg-amber-100/80'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              My Profiles
+            </Link>
+          </div>
+          <h4 className="mb-2 mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-amber-700">Quick Create</h4>
+          <div className="space-y-1">
+            <Link
+              href="/posts/create"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100/80"
+            >
+              <FilePlus className="h-4 w-4" />
+              New Post
+            </Link>
+            <Link
+              href="/collections/create"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100/80"
+            >
+              <FolderPlus className="h-4 w-4" />
+              New Collection
+            </Link>
+            <Link
+              href="/profiles/create"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100/80"
+            >
+              <UserPlus className="h-4 w-4" />
+              New Profile
+            </Link>
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 space-y-1">
         <NavItem href="#" label="Home" active />
