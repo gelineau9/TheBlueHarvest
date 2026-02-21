@@ -6,11 +6,11 @@
  * Collections are owned by accounts but visually attributed to profiles via collection_authors.
  *
  * Collection Types:
- *   - collection (NULL) - any post types allowed
- *   - chronicle (1) - writing only
- *   - album (3) - media only
- *   - gallery (2) - art only
- *   - event-series (4) - events only
+ *   - collection (1) - any post types allowed
+ *   - chronicle (2) - writing only (post_type_id = 1)
+ *   - album (3) - media only (post_type_id = 3)
+ *   - gallery (4) - art only (post_type_id = 2)
+ *   - event-series (5) - events only (post_type_id = 4)
  *
  * Routes:
  *   POST   /api/collections              - Create a collection with primary author
@@ -21,6 +21,8 @@
  *   DELETE /api/collections/:id          - Soft delete a collection
  *   POST   /api/collections/:id/authors  - Add an author to a collection
  *   DELETE /api/collections/:id/authors/:authorId - Remove an author
+ *   POST   /api/collections/:id/posts    - Add a post to a collection
+ *   DELETE /api/collections/:id/posts/:postId - Remove a post from a collection
  */
 
 import { Router, Response, Request } from 'express';
@@ -164,9 +166,9 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           c.updated_at::text,
           ct.type_name,
           (
-            SELECT COUNT(*)::text 
+SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            WHERE cp.collection_id = c.collection_id
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
@@ -275,9 +277,9 @@ router.get('/public', async (req: Request, res: Response) => {
           author_profile.profile_id as primary_author_id,
           author_profile.name as primary_author_name,
           (
-            SELECT COUNT(*)::text 
+SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            WHERE cp.collection_id = c.collection_id
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
@@ -414,8 +416,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
         JOIN post_types pt ON p.post_type_id = pt.type_id
         LEFT JOIN authors auth ON p.post_id = auth.post_id AND auth.is_primary = true AND auth.deleted = false
         LEFT JOIN profiles author_profile ON auth.profile_id = author_profile.profile_id
-        WHERE cp.collection_id = ${collectionId} 
-          AND cp.deleted = false 
+WHERE cp.collection_id = ${collectionId} 
           AND p.deleted = false
         ORDER BY cp.sort_order ASC
       `,
@@ -577,9 +578,186 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Collection deleted successfully' });
+res.status(200).json({ message: 'Collection deleted successfully' });
   } catch (err) {
     console.error('Collection deletion error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/collections/:id/posts - Add a post to a collection
+router.post(
+  '/:id/posts',
+  authenticateToken,
+  [body('post_id').isInt({ min: 1 }).withMessage('Post ID is required')],
+  async (req: AuthRequest, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const collectionId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+    const userId = req.userId!;
+    const { post_id } = req.body;
+
+    if (isNaN(collectionId)) {
+      res.status(400).json({ error: 'Invalid collection ID' });
+      return;
+    }
+
+    try {
+      const db = await getPool();
+
+      // Verify collection exists and get its type constraints
+      const collection = await db.maybeOne(
+        sql.type(
+          z.object({
+            collection_id: z.number(),
+            collection_type_id: z.number(),
+            allowed_post_types: z.array(z.number()).nullable(),
+          }),
+        )`
+          SELECT c.collection_id, c.collection_type_id, ct.allowed_post_types
+          FROM collections c
+          JOIN collection_types ct ON c.collection_type_id = ct.type_id
+          WHERE c.collection_id = ${collectionId} AND c.deleted = false
+        `,
+      );
+
+      if (!collection) {
+        res.status(404).json({ error: 'Collection not found' });
+        return;
+      }
+
+      // Check edit permission
+      const hasEditPermission = await canEditCollection(db, collectionId, userId);
+      if (!hasEditPermission) {
+        res.status(403).json({ error: 'You do not have permission to edit this collection' });
+        return;
+      }
+
+      // Verify post exists and get its type
+      const post = await db.maybeOne(
+        sql.type(z.object({ post_id: z.number(), post_type_id: z.number(), title: z.string() }))`
+          SELECT post_id, post_type_id, title FROM posts
+          WHERE post_id = ${post_id} AND deleted = false
+        `,
+      );
+
+      if (!post) {
+        res.status(404).json({ error: 'Post not found' });
+        return;
+      }
+
+      // Check if post type is allowed in this collection
+      if (collection.allowed_post_types !== null && !collection.allowed_post_types.includes(post.post_type_id)) {
+        const typeNames: { [key: number]: string } = { 1: 'writing', 2: 'art', 3: 'media', 4: 'event' };
+        const allowedNames = collection.allowed_post_types.map((t) => typeNames[t] || t).join(', ');
+        res.status(400).json({
+          error: `This collection only allows ${allowedNames} posts`,
+        });
+        return;
+      }
+
+      // Check if post is already in collection
+      const existing = await db.maybeOne(
+        sql.type(z.object({ collection_id: z.number() }))`
+          SELECT collection_id FROM collection_posts
+          WHERE collection_id = ${collectionId} AND post_id = ${post_id}
+        `,
+      );
+
+      if (existing) {
+        res.status(400).json({ error: 'Post is already in this collection' });
+        return;
+      }
+
+      // Get next sort order
+      const maxOrder = await db.maybeOne(
+        sql.type(z.object({ max_order: z.number().nullable() }))`
+          SELECT MAX(sort_order) as max_order FROM collection_posts
+          WHERE collection_id = ${collectionId}
+        `,
+      );
+      const nextOrder = (maxOrder?.max_order ?? -1) + 1;
+
+      // Add post to collection
+      await db.query(
+        sql.type(z.object({}))`
+          INSERT INTO collection_posts (collection_id, post_id, sort_order, added_by_account_id)
+          VALUES (${collectionId}, ${post_id}, ${nextOrder}, ${userId})
+        `,
+      );
+
+      res.status(201).json({
+        message: 'Post added to collection',
+        post_id: post.post_id,
+        title: post.title,
+        sort_order: nextOrder,
+      });
+    } catch (err) {
+      console.error('Add post to collection error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
+
+// DELETE /api/collections/:id/posts/:postId - Remove a post from a collection
+router.delete('/:id/posts/:postId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const collectionId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const postId = parseInt(Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId);
+  const userId = req.userId!;
+
+  if (isNaN(collectionId)) {
+    res.status(400).json({ error: 'Invalid collection ID' });
+    return;
+  }
+
+  if (isNaN(postId)) {
+    res.status(400).json({ error: 'Invalid post ID' });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+
+    // Verify collection exists
+    const collection = await db.maybeOne(
+      sql.type(z.object({ collection_id: z.number() }))`
+        SELECT collection_id FROM collections
+        WHERE collection_id = ${collectionId} AND deleted = false
+      `,
+    );
+
+    if (!collection) {
+      res.status(404).json({ error: 'Collection not found' });
+      return;
+    }
+
+    // Check edit permission
+    const hasEditPermission = await canEditCollection(db, collectionId, userId);
+    if (!hasEditPermission) {
+      res.status(403).json({ error: 'You do not have permission to edit this collection' });
+      return;
+    }
+
+    // Remove post from collection
+    const result = await db.query(
+      sql.type(z.object({}))`
+        DELETE FROM collection_posts
+        WHERE collection_id = ${collectionId} AND post_id = ${postId}
+      `,
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Post not found in this collection' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Post removed from collection' });
+  } catch (err) {
+    console.error('Remove post from collection error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
