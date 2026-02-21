@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createCollection } from '@/app/lib/actions';
+import { createCollection, updateCollection } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, X} from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import Link from 'next/link';
 
 const collectionFormSchema = z.object({
@@ -37,6 +37,14 @@ interface CollectionFormProps {
   collectionTypeId: number;
   collectionTypeName: string;
   collectionTypeLabel: string;
+  mode?: 'create' | 'edit';
+  collectionId?: number;
+  initialData?: {
+    title: string;
+    description?: string;
+    primary_author_profile_id?: number;
+  };
+  initialPosts?: Post[];
 }
 
 // Map collection types to allowed post types
@@ -56,15 +64,24 @@ const POST_TYPE_LABELS: { [key: number]: string } = {
   4: 'Events',
 };
 
-export function CollectionForm({ collectionTypeId, collectionTypeName, collectionTypeLabel }: CollectionFormProps) {
+export function CollectionForm({
+  collectionTypeId,
+  collectionTypeName,
+  collectionTypeLabel,
+  mode = 'create',
+  collectionId,
+  initialData,
+  initialPosts = [],
+}: CollectionFormProps) {
   const router = useRouter();
+  const isEditMode = mode === 'edit';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
-  const [selectedPosts, setSelectedPosts] = useState<Post[]>([]);
+  const [selectedPosts, setSelectedPosts] = useState<Post[]>(initialPosts);
 
   const {
     register,
@@ -75,8 +92,9 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
   } = useForm<CollectionFormData>({
     resolver: zodResolver(collectionFormSchema),
     defaultValues: {
-      title: '',
-      description: '',
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      primary_author_profile_id: initialData?.primary_author_profile_id,
     },
   });
 
@@ -159,35 +177,85 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
     setError(null);
 
     try {
-      const result = await createCollection({
-        collection_type_id: collectionTypeId,
-        title: data.title,
-        description: data.description,
-        content: {},
-        primary_author_profile_id: data.primary_author_profile_id,
-      });
+      if (isEditMode && collectionId) {
+        // Update existing collection
+        const result = await updateCollection(collectionId, {
+          title: data.title,
+          description: data.description,
+          primary_author_profile_id: data.primary_author_profile_id,
+        });
 
-      if (result.success && result.collection) {
-        // Add selected posts to the collection
-        for (const post of selectedPosts) {
-          try {
-            await fetch(`/api/collections/${result.collection.collection_id}/posts`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ post_id: post.post_id }),
-            });
-          } catch (err) {
-            console.error('Failed to add post to collection:', err);
+        if (result.success) {
+          // Sync posts: compare initialPosts with selectedPosts
+          const initialPostIds = new Set(initialPosts.map((p) => p.post_id));
+          const selectedPostIds = new Set(selectedPosts.map((p) => p.post_id));
+
+          // Find posts to remove (in initial but not in selected)
+          const postsToRemove = initialPosts.filter((p) => !selectedPostIds.has(p.post_id));
+          // Find posts to add (in selected but not in initial)
+          const postsToAdd = selectedPosts.filter((p) => !initialPostIds.has(p.post_id));
+
+          // Remove posts
+          for (const post of postsToRemove) {
+            try {
+              await fetch(`/api/collections/${collectionId}/posts/${post.post_id}`, {
+                method: 'DELETE',
+              });
+            } catch (err) {
+              console.error('Failed to remove post from collection:', err);
+            }
           }
-        }
 
-        router.push(`/collections/${result.collection.collection_id}`);
+          // Add posts
+          for (const post of postsToAdd) {
+            try {
+              await fetch(`/api/collections/${collectionId}/posts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_id: post.post_id }),
+              });
+            } catch (err) {
+              console.error('Failed to add post to collection:', err);
+            }
+          }
+
+          router.refresh();
+          router.push(`/collections/${collectionId}`);
+        } else {
+          setError(result.error || 'Failed to update collection');
+        }
       } else {
-        setError(result.error || 'Failed to create collection');
+        // Create new collection
+        const result = await createCollection({
+          collection_type_id: collectionTypeId,
+          title: data.title,
+          description: data.description,
+          content: {},
+          primary_author_profile_id: data.primary_author_profile_id,
+        });
+
+        if (result.success && result.collection) {
+          // Add selected posts to the collection
+          for (const post of selectedPosts) {
+            try {
+              await fetch(`/api/collections/${result.collection.collection_id}/posts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_id: post.post_id }),
+              });
+            } catch (err) {
+              console.error('Failed to add post to collection:', err);
+            }
+          }
+
+          router.push(`/collections/${result.collection.collection_id}`);
+        } else {
+          setError(result.error || 'Failed to create collection');
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
-      console.error('Collection creation error:', err);
+      console.error('Collection submission error:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -288,17 +356,23 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
         <Link
-          href="/collections/create"
+          href={isEditMode && collectionId ? `/collections/${collectionId}` : '/collections/create'}
           className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Collection Types
+          {isEditMode ? 'Back to Collection' : 'Back to Collection Types'}
         </Link>
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-amber-900 mb-2">Create {collectionTypeLabel}</h1>
-          <p className="text-lg text-amber-700">Fill out the details for your new {collectionTypeName}</p>
+          <h1 className="text-4xl font-bold text-amber-900 mb-2">
+            {isEditMode ? `Edit ${collectionTypeLabel}` : `Create ${collectionTypeLabel}`}
+          </h1>
+          <p className="text-lg text-amber-700">
+            {isEditMode
+              ? `Update the details for your ${collectionTypeName}`
+              : `Fill out the details for your new ${collectionTypeName}`}
+          </p>
         </div>
 
         {/* Error Display */}
@@ -387,7 +461,7 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
             )}
 
             {/* Selected Posts */}
-            {selectedPosts.length > 0 && (
+            {selectedPosts.length > 0 ? (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-amber-800">Selected Posts ({selectedPosts.length})</h4>
                 <div className="space-y-2">
@@ -414,6 +488,12 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
                   ))}
                 </div>
               </div>
+            ) : (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm text-amber-700">
+                  At least one post is required. Select a post above to continue.
+                </p>
+              </div>
             )}
           </div>
 
@@ -422,17 +502,25 @@ export function CollectionForm({ collectionTypeId, collectionTypeName, collectio
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push('/collections/create')}
+              onClick={() =>
+                router.push(isEditMode && collectionId ? `/collections/${collectionId}` : '/collections/create')
+              }
               className="border-amber-600 text-amber-700 hover:bg-amber-50"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || selectedPosts.length === 0}
               className="bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50"
             >
-              {isSubmitting ? 'Creating...' : 'Create Collection'}
+              {isSubmitting
+                ? isEditMode
+                  ? 'Saving...'
+                  : 'Creating...'
+                : isEditMode
+                  ? 'Save Changes'
+                  : 'Create Collection'}
             </Button>
           </div>
         </form>

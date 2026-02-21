@@ -442,3 +442,67 @@ export async function createCollection(formData: CreateCollectionInput) {
     return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
   }
 }
+
+// Update collection action
+export async function updateCollection(
+  collectionId: number,
+  formData: {
+    title: string;
+    description?: string;
+    content?: Record<string, unknown>;
+    primary_author_profile_id?: number;
+  },
+): Promise<{ success: boolean; error?: string; collection?: { collection_id: number } }> {
+  try {
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
+
+    if (!authToken) {
+      return { success: false, error: 'Not authenticated. Please log in.' };
+    }
+
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/collections/${collectionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken.value}`,
+      },
+      body: JSON.stringify({
+        title: formData.title.trim(),
+        description: formData.description?.trim() || '',
+        content: formData.content || {},
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        await cookieStore.set('auth_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 0,
+        });
+        return { success: false, error: 'Session expired. Please log in again.' };
+      }
+
+      if (response.status === 403) {
+        return { success: false, error: 'You do not have permission to edit this collection.' };
+      }
+
+      const errorData = await response.json();
+      return {
+        success: false,
+        error: errorData.error || 'Failed to update collection',
+      };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      collection: data,
+    };
+  } catch (error) {
+    console.error('Collection update error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+  }
+}
