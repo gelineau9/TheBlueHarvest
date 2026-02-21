@@ -7,6 +7,7 @@
  *   POST   /api/posts/:postId/comments              - Create a comment (authenticated)
  *   GET    /api/posts/:postId/comments              - Get all comments for a post
  *   PUT    /api/posts/:postId/comments/:commentId   - Edit a comment (authenticated, owner only)
+ *   DELETE /api/posts/:postId/comments/:commentId   - Soft-delete a comment (authenticated, owner only)
  */
 
 import { Router, Response } from 'express';
@@ -316,5 +317,64 @@ router.put(
     }
   },
 );
+
+// DELETE /api/posts/:postId/comments/:commentId - Soft-delete a comment
+router.delete('/:postId/comments/:commentId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const postId = parseInt(Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId);
+  const commentId = parseInt(Array.isArray(req.params.commentId) ? req.params.commentId[0] : req.params.commentId);
+
+  if (isNaN(postId)) {
+    res.status(400).json({ error: 'Invalid post ID' });
+    return;
+  }
+  if (isNaN(commentId)) {
+    res.status(400).json({ error: 'Invalid comment ID' });
+    return;
+  }
+
+  const userId = req.userId!;
+
+  try {
+    const db = await getPool();
+
+    // Check if comment exists and belongs to the user
+    const existingComment = await db.maybeOne(
+      sql.type(z.object({ comment_id: z.number(), account_id: z.number(), is_deleted: z.boolean() }))`
+          SELECT comment_id, account_id, is_deleted
+          FROM comments
+          WHERE comment_id = ${commentId} AND post_id = ${postId}
+        `,
+    );
+
+    if (!existingComment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    if (existingComment.is_deleted) {
+      res.status(400).json({ error: 'Comment is already deleted' });
+      return;
+    }
+
+    if (existingComment.account_id !== userId) {
+      res.status(403).json({ error: 'You can only delete your own comments' });
+      return;
+    }
+
+    // Soft-delete the comment
+    await db.query(
+      sql.unsafe`
+          UPDATE comments
+          SET is_deleted = true, updated_at = NOW()
+          WHERE comment_id = ${commentId}
+        `,
+    );
+
+    res.json({ success: true, message: 'Comment deleted' });
+  } catch (err) {
+    console.error('Error deleting comment:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
+});
 
 export default router;

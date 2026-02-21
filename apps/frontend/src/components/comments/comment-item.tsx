@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Pencil, X, Check } from 'lucide-react';
+import { User, Pencil, X, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -31,6 +31,11 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // Delete state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -40,20 +45,14 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
   });
 
   // Check if comment was edited (updated_at is different from created_at)
-  const isEdited = comment.created_at !== comment.updated_at;
+  const isEdited = comment.created_at !== comment.updated_at && !comment.is_deleted;
 
   // Display name: use profile_name (character) if attributed, otherwise username
   const displayName = comment.profile_name || comment.username;
   const isCharacterAttributed = !!comment.profile_name;
 
-  // Check if current user can edit this comment
-  console.log('canEdit check:', {
-    currentUserId,
-    commentAccountId: comment.account_id,
-    isDeleted: comment.is_deleted,
-    canEdit: currentUserId !== null && currentUserId === comment.account_id && !comment.is_deleted,
-  });
-  const canEdit = currentUserId !== null && currentUserId === comment.account_id && !comment.is_deleted;
+  // Check if current user can edit/delete this comment
+  const canModify = currentUserId !== null && currentUserId === comment.account_id && !comment.is_deleted;
 
   const handleEditClick = () => {
     setEditContent(comment.content || '');
@@ -97,10 +96,43 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
     }
   };
 
+  const handleDeleteClick = () => {
+    setDeleteError(null);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/posts/${comment.post_id}/comments/${comment.comment_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to delete comment');
+      }
+
+      setShowDeleteConfirm(false);
+      onCommentUpdated();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete comment');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (comment.is_deleted) {
     return (
       <div className="p-4 bg-amber-50/50 rounded-lg border border-amber-200/50">
-        <p className="text-amber-500 italic text-sm">[This comment has been deleted]</p>
+        <p className="text-amber-500 italic text-sm">[deleted]</p>
       </div>
     );
   }
@@ -119,18 +151,56 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
               <span className="text-xs text-amber-500">{formattedDate}</span>
               {isEdited && <span className="text-xs text-amber-500 italic">(edited)</span>}
             </div>
-            {canEdit && !isEditing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleEditClick}
-                className="h-7 px-2 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
-              >
-                <Pencil className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
+            {canModify && !isEditing && !showDeleteConfirm && (
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEditClick}
+                  className="h-7 px-2 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteClick}
+                  className="h-7 px-2 text-red-600 hover:text-red-800 hover:bg-red-100"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
+
+          {/* Delete Confirmation */}
+          {showDeleteConfirm && (
+            <div className="mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800 mb-2">Are you sure you want to delete this comment?</p>
+              {deleteError && <p className="text-red-600 text-xs mb-2">{deleteError}</p>}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="h-7 bg-red-600 text-white hover:bg-red-700"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                  className="h-7 border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
 
           {isEditing ? (
             <div className="space-y-2">
@@ -165,7 +235,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
               </div>
             </div>
           ) : (
-            <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
+            !showDeleteConfirm && <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
           )}
         </div>
       </div>

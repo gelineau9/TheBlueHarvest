@@ -629,3 +629,158 @@ describe('PUT /api/posts/:postId/comments/:commentId - Edit Comment', () => {
     });
   });
 });
+
+describe('DELETE /api/posts/:postId/comments/:commentId - Delete Comment', () => {
+  let deletableCommentId: number;
+
+  beforeEach(async () => {
+    // Create a comment to delete
+    const result = await pool.one(sql.unsafe`
+      INSERT INTO comments (post_id, account_id, content)
+      VALUES (${testPostId}, ${testAccountId}, 'Comment to be deleted')
+      RETURNING comment_id
+    `);
+    deletableCommentId = result.comment_id as number;
+  });
+
+  afterEach(async () => {
+    if (deletableCommentId) {
+      await pool.query(sql.unsafe`DELETE FROM comments WHERE comment_id = ${deletableCommentId}`);
+    }
+  });
+
+  describe('Success Cases', () => {
+    it('should allow user to delete their own comment (soft delete)', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Comment deleted');
+
+      // Verify comment is soft-deleted
+      const comment = await pool.one(sql.unsafe`
+        SELECT is_deleted, content FROM comments WHERE comment_id = ${deletableCommentId}
+      `);
+      expect(comment.is_deleted).toBe(true);
+      // Content should still exist in DB (soft delete)
+      expect(comment.content).toBe('Comment to be deleted');
+    });
+
+    it('should return deleted comment in GET but with null content', async () => {
+      // First delete the comment
+      await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Then fetch comments
+      const response = await request(app).get(`/api/posts/${testPostId}/comments`);
+
+      expect(response.status).toBe(200);
+      const deletedComment = response.body.find((c: any) => c.comment_id === deletableCommentId);
+      expect(deletedComment).toBeDefined();
+      expect(deletedComment.is_deleted).toBe(true);
+      expect(deletedComment.content).toBeNull();
+    });
+  });
+
+  describe('Authorization', () => {
+    it("should return 403 when trying to delete another user's comment", async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${otherToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('You can only delete your own comments');
+
+      // Verify comment was NOT deleted
+      const comment = await pool.one(sql.unsafe`
+        SELECT is_deleted FROM comments WHERE comment_id = ${deletableCommentId}
+      `);
+      expect(comment.is_deleted).toBe(false);
+    });
+
+    it('should return 401 without auth token', async () => {
+      const response = await request(app).delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Authentication required');
+    });
+
+    it('should return 401 with invalid token', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Invalid token');
+    });
+  });
+
+  describe('Validation Errors', () => {
+    it('should return 400 for invalid post ID', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/invalid/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid post ID');
+    });
+
+    it('should return 400 for invalid comment ID', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/invalid`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid comment ID');
+    });
+  });
+
+  describe('Not Found Cases', () => {
+    it('should return 404 for non-existent comment', async () => {
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/999999`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Comment not found');
+    });
+
+    it('should return 404 when comment exists but on different post', async () => {
+      // Create another post
+      const otherPost = await pool.one(sql.unsafe`
+        INSERT INTO posts (account_id, post_type_id, title, content)
+        VALUES (${testAccountId}, 1, 'Other Post for Delete', '{}')
+        RETURNING post_id
+      `);
+
+      const response = await request(app)
+        .delete(`/api/posts/${otherPost.post_id}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Comment not found');
+
+      // Cleanup
+      await pool.query(sql.unsafe`DELETE FROM posts WHERE post_id = ${otherPost.post_id}`);
+    });
+  });
+
+  describe('Already Deleted Comments', () => {
+    it('should return 400 when trying to delete an already deleted comment', async () => {
+      // First delete the comment
+      await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      // Try to delete again
+      const response = await request(app)
+        .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
+        .set('Authorization', `Bearer ${validToken}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Comment is already deleted');
+    });
+  });
+});

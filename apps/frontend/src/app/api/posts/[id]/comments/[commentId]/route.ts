@@ -4,6 +4,7 @@
  * Proxies individual comment requests to the backend.
  * Routes:
  *   PUT    /api/posts/[id]/comments/[commentId]  - Edit a comment (authenticated, owner only)
+ *   DELETE /api/posts/[id]/comments/[commentId]  - Delete a comment (authenticated, owner only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -40,5 +41,35 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error) {
     console.error('Error updating comment:', error);
     return NextResponse.json({ message: 'An error occurred while updating the comment' }, { status: 500 });
+  }
+}
+
+// DELETE /api/posts/[id]/comments/[commentId] - Delete a comment
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string; commentId: string }> }) {
+  try {
+    const { id, commentId } = await params;
+    const authToken = request.cookies.get('auth_token')?.value;
+
+    if (!authToken) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
+    }
+
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json({ message: data.error || 'Failed to delete comment' }, { status: response.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    return NextResponse.json({ message: 'An error occurred while deleting the comment' }, { status: 500 });
   }
 }
