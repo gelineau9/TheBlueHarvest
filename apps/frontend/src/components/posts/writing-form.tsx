@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPostSchema, CreatePostInput } from '@/app/lib/validations';
@@ -9,23 +9,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
 interface WritingFormProps {
   onSuccess: (postId: number) => void;
   onCancel: () => void;
 }
 
-interface Character {
-  profile_id: number;
-  name: string;
-}
-
 export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [isLoadingCharacters, setIsLoadingCharacters] = useState(true);
   const [tagsInput, setTagsInput] = useState('');
+
+  const { characters, isLoading: isLoadingCharacters, error: charactersError } = useCharacterProfiles();
 
   const {
     register,
@@ -44,28 +40,6 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const selectedAuthorId = watch('primary_author_profile_id');
   const titleValue = watch('title') || '';
   const titleLength = titleValue.length;
-
-  // Fetch user's characters (only characters can author)
-  useEffect(() => {
-    fetchCharacters();
-  }, []);
-
-  const fetchCharacters = async () => {
-    setIsLoadingCharacters(true);
-    try {
-      const response = await fetch('/api/profiles?type=1');
-      if (response.ok) {
-        const data = await response.json();
-        setCharacters(data);
-      } else {
-        setError('Failed to load your characters. Please try again.');
-      }
-    } catch {
-      setError('Failed to load your characters. Please try again.');
-    } finally {
-      setIsLoadingCharacters(false);
-    }
-  };
 
   const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -99,11 +73,13 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     }
   };
 
+  const displayError = error || charactersError;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
+      {displayError && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{displayError}</p>
         </div>
       )}
 

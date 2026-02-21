@@ -1,14 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 const router = Router();
-
-// Helper function to get database pool
-async function getPool() {
-  return await pool;
-}
 
 // Validation schema for public archive query params
 const publicArchiveQuerySchema = z.object({

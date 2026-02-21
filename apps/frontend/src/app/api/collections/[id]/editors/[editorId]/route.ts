@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { API_CONFIG } from '@/config/api';
 
 // DELETE /api/collections/:id/editors/:editorId - Remove an editor from a collection
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; editorId: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string; editorId: string }> }) {
   const authToken = request.cookies.get('auth_token')?.value;
 
   if (!authToken) {

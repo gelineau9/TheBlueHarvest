@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,17 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
+import { useImageUpload } from '@/hooks/useImageUpload';
 
 interface ArtFormProps {
   onSuccess: (postId: number) => void;
   onCancel: () => void;
-}
-
-interface UploadedImage {
-  filename: string;
-  originalName: string;
-  url: string;
-  size: number;
 }
 
 // Validation schema for art posts
@@ -34,11 +28,11 @@ type ArtPostInput = z.infer<typeof artPostSchema>;
 
 export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [tagsInput, setTagsInput] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadedImages, isUploading, uploadError, fileInputRef, handleFileSelect, handleRemoveImage } =
+    useImageUpload({ maxImages: 10 });
 
   const {
     register,
@@ -57,54 +51,6 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
 
   const titleValue = watch('title') || '';
   const titleLength = titleValue.length;
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    // Check total image count
-    if (uploadedImages.length + files.length > 10) {
-      setError('Maximum 10 images allowed per post');
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      Array.from(files).forEach((file) => {
-        formData.append('images', file);
-      });
-
-      const response = await fetch('/api/uploads/images', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to upload images');
-        return;
-      }
-
-      setUploadedImages((prev) => [...prev, ...data.files]);
-    } catch {
-      setError('Failed to upload images. Please try again.');
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleRemoveImage = (filename: string) => {
-    setUploadedImages((prev) => prev.filter((img) => img.filename !== filename));
-    // Optionally delete from server - for now we just remove from UI
-  };
 
   const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -142,9 +88,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
         },
       };
 
-      console.log('Submitting art post:', JSON.stringify(postData, null, 2));
       const result = await createPost(postData);
-      console.log('createPost result:', result);
 
       if (!result.success) {
         setError(result.error || 'Failed to create post');
@@ -161,11 +105,13 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
     }
   };
 
+  const displayError = error || uploadError;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
+      {displayError && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{displayError}</p>
         </div>
       )}
 

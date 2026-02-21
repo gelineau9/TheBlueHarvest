@@ -2,16 +2,11 @@ import { Router, Response, Request } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditProfile } from './editors.js';
 
 const router = Router();
-
-// Helper function to get database pool
-async function getPool() {
-  return await pool;
-}
 
 // Create profile endpoint
 router.post(

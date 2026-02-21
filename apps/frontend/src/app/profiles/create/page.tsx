@@ -1,26 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { ProfileTypeSelector } from '@/components/profiles/profile-type-selector';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getProfileTypeById } from '@/config/profile-types';
 
 export default function CreateProfilePage() {
   const router = useRouter();
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isAuthorized, isLoading } = useRequireAuth();
   const [selectedType, setSelectedType] = useState<number | null>(null);
 
-  // Authentication guard
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/');
-    }
-  }, [isLoggedIn, isLoading, router]);
-
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
@@ -29,24 +22,16 @@ export default function CreateProfilePage() {
     );
   }
 
-  // Don't render content if not logged in (will redirect)
-  if (!isLoggedIn) {
+  if (!isAuthorized) {
     return null;
   }
 
   const handleContinue = () => {
     if (selectedType) {
-      // Map profile type ID to route name
-      const typeRoutes: { [key: number]: string } = {
-        1: 'character',
-        2: 'item',
-        3: 'kinship',
-        4: 'organization',
-        5: 'location',
-      };
-
-      const typeName = typeRoutes[selectedType];
-      router.push(`/profiles/create/${typeName}`);
+      const typeConfig = getProfileTypeById(selectedType);
+      if (typeConfig) {
+        router.push(`/profiles/create/${typeConfig.slug}`);
+      }
     }
   };
 

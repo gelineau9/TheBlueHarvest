@@ -1,26 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { CollectionTypeSelector } from '@/components/collections/collection-type-selector';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { getCollectionTypeById } from '@/config/collection-types';
 
 export default function CreateCollectionPage() {
   const router = useRouter();
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isAuthorized, isLoading } = useRequireAuth();
   const [selectedType, setSelectedType] = useState<number | null>(null);
 
-  // Authentication guard
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/');
-    }
-  }, [isLoggedIn, isLoading, router]);
-
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
@@ -29,24 +22,16 @@ export default function CreateCollectionPage() {
     );
   }
 
-  // Don't render content if not logged in (will redirect)
-  if (!isLoggedIn) {
+  if (!isAuthorized) {
     return null;
   }
 
   const handleContinue = () => {
     if (selectedType) {
-      // Map collection type ID to route name
-      const typeRoutes: { [key: number]: string } = {
-        1: 'collection',
-        2: 'chronicle',
-        3: 'album',
-        4: 'gallery',
-        5: 'event-series',
-      };
-
-      const typeName = typeRoutes[selectedType];
-      router.push(`/collections/create/${typeName}`);
+      const typeConfig = getCollectionTypeById(selectedType);
+      if (typeConfig) {
+        router.push(`/collections/create/${typeConfig.slug}`);
+      }
     }
   };
 

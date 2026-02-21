@@ -14,14 +14,10 @@ import { Router, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
-
-async function getPool() {
-  return await pool;
-}
 
 // Zod schemas for type-safe queries
 const CommentSchema = z.object({

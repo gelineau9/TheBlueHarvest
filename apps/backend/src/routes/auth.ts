@@ -4,15 +4,9 @@ import { z } from 'zod';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import pool from '../config/database.js';
+import { getPool } from '../config/database.js';
 
 const router = Router();
-
-// Helper function to get database pool
-async function getPool() {
-  console.log('Using database pool:', pool);
-  return await pool;
-}
 
 // Signup route
 router.post(
