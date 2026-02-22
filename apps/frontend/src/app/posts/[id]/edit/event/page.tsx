@@ -77,8 +77,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const initialDescription = post.content?.description || '';
       const initialTags = post.content?.tags?.join(', ') || '';
       const initialHeaderImage = post.content?.headerImage || null;
-      const initialEventDate = post.content?.eventDate || '';
-      const initialEventTime = post.content?.eventTime || '';
+      
+      // Parse UTC eventDateTime into local date and time for form inputs
+      let initialEventDate = '';
+      let initialEventTime = '';
+      if (post.content?.eventDateTime) {
+        const utcDate = new Date(post.content.eventDateTime);
+        // Convert to local date string (YYYY-MM-DD)
+        initialEventDate = utcDate.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+        // Convert to local time string (HH:MM)
+        initialEventTime = utcDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      }
+      
       const initialLocation = post.content?.location || '';
       const initialMaxAttendees = post.content?.maxAttendees?.toString() || '';
       const initialContactProfileId = post.content?.contactProfileId?.toString() || '';
@@ -168,12 +178,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
+    // Combine date and time into a UTC ISO string
+    let eventDateTime: string | undefined;
+    if (eventDate && eventTime) {
+      const localDateTime = new Date(`${eventDate}T${eventTime}`);
+      eventDateTime = localDateTime.toISOString();
+    }
+
     const content = {
       description,
       tags,
       headerImage: headerImage || undefined,
-      eventDate,
-      eventTime,
+      eventDateTime,
       location,
       maxAttendees: maxAttendees ? parseInt(maxAttendees, 10) : undefined,
       contactProfileId: contactProfileId ? parseInt(contactProfileId, 10) : undefined,

@@ -1,41 +1,107 @@
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { ActivityItem } from './ActivityItem';
-import { EventItem } from './EventItem';
+import { EventCalendar, CalendarEvent } from '@/components/events/EventCalendar';
+import { EventFeed, EventFeedItem } from '@/components/events/EventFeed';
+
+interface PostContent {
+  description?: string;
+  eventDateTime?: string; // UTC ISO string
+  location?: string;
+}
+
+interface EventPost {
+  post_id: number;
+  title: string;
+  content: PostContent;
+}
+
+interface PostsResponse {
+  posts: EventPost[];
+  total: number;
+  hasMore: boolean;
+}
 
 export function RightSidebar() {
+  const [events, setEvents] = useState<EventPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        // Fetch events (post_type_id = 4)
+        const response = await fetch('/api/posts/public?post_type_id=4&limit=20&sortBy=created_at&order=desc');
+
+        if (response.ok) {
+          const data: PostsResponse = await response.json();
+          setEvents(data.posts);
+        }
+      } catch {
+        // Silently fail - sidebar is non-critical
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  // Transform posts to calendar/feed format and filter for upcoming events
+  const { calendarEvents, upcomingEvents } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const transformed: (CalendarEvent & EventFeedItem)[] = events
+      .filter((post) => post.content?.eventDateTime)
+      .map((post) => ({
+        id: post.post_id,
+        title: post.title,
+        eventDateTime: post.content.eventDateTime!,
+        location: post.content.location,
+        description: post.content.description,
+      }));
+
+    // All events for the calendar (current month)
+    const calendarEvents = transformed;
+
+    // Only upcoming events for the feed (today or later), sorted by date ascending (nearest first)
+    const upcomingEvents = transformed
+      .filter((event) => {
+        const eventDate = new Date(event.eventDateTime);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      })
+      .sort((a, b) => new Date(a.eventDateTime).getTime() - new Date(b.eventDateTime).getTime());
+
+    return { calendarEvents, upcomingEvents };
+  }, [events]);
+
   return (
     <div className="space-y-6">
       {/* Calendar */}
       <div>
-        <h2 className="mb-3 font-fantasy text-xl font-semibold text-amber-900">Upcoming Events</h2>
-        <div className="mb-4 rounded-lg border border-amber-800/20 bg-amber-50/50 p-4">
-          <div className="mb-2 text-center font-medium text-amber-900">FEBRUARY 2025</div>
-          <div className="grid grid-cols-7 gap-1 text-center text-sm">
-            <div className="text-amber-700">Sun</div>
-            <div className="text-amber-700">Mon</div>
-            <div className="text-amber-700">Tue</div>
-            <div className="text-amber-700">Wed</div>
-            <div className="text-amber-700">Thu</div>
-            <div className="text-amber-700">Fri</div>
-            <div className="text-amber-700">Sat</div>
-            {Array.from({ length: 28 }, (_, i) => (
-              <div
-                key={i}
-                className={`rounded p-1 ${
-                  [7, 14, 21, 28].includes(i + 1) ? 'bg-amber-200/50 font-medium text-amber-900' : ''
-                }`}
-              >
-                {i + 1}
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-fantasy text-xl font-semibold text-amber-900">Upcoming Events</h2>
+          <Link href="/events" className="text-sm text-amber-700 hover:text-amber-900 hover:underline">
+            View all
+          </Link>
         </div>
 
-        <div className="space-y-3">
-          <EventItem date="Feb 21" title="Elven Festival Day" location="Rivendell" />
-          <EventItem date="Feb 24" title="Hall & Fire Workshop" location="Bree-land" />
-          <EventItem date="Feb 27" title="Dwarven Council Meeting" location="Thorin's Hall" />
-          <EventItem date="Feb 28" title="At the Sign of the Prancing Pony" location="Bree" />
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+          </div>
+        ) : (
+          <>
+            <EventCalendar events={calendarEvents} />
+            <div className="mt-4">
+              <EventFeed events={upcomingEvents.slice(0, 5)} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Recent Activity */}
