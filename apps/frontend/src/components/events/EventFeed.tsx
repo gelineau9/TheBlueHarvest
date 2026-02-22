@@ -6,8 +6,7 @@ import Link from 'next/link';
 export interface EventFeedItem {
   id: number;
   title: string;
-  eventDate: string; // YYYY-MM-DD
-  eventTime?: string; // HH:MM
+  eventDateTime: string; // UTC ISO string
   location?: string;
   description?: string;
 }
@@ -17,8 +16,9 @@ interface EventFeedProps {
   showFullDetails?: boolean;
 }
 
-function formatDate(dateStr: string): { month: string; day: string; weekday: string } {
-  const date = new Date(dateStr);
+// Format UTC datetime to local date parts
+function formatDate(utcDateStr: string): { month: string; day: string; weekday: string } {
+  const date = new Date(utcDateStr);
   return {
     month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
     day: String(date.getDate()),
@@ -26,12 +26,14 @@ function formatDate(dateStr: string): { month: string; day: string; weekday: str
   };
 }
 
-function formatTime(timeStr: string): string {
-  const [hours, minutes] = timeStr.split(':');
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
+// Format UTC datetime to local time
+function formatTime(utcDateStr: string): string {
+  const date = new Date(utcDateStr);
+  return date.toLocaleTimeString('default', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
 }
 
 export function EventFeed({ events, showFullDetails = false }: EventFeedProps) {
@@ -47,7 +49,8 @@ export function EventFeed({ events, showFullDetails = false }: EventFeedProps) {
   return (
     <div className="space-y-3">
       {events.map((event) => {
-        const { month, day, weekday } = formatDate(event.eventDate);
+        const { month, day, weekday } = formatDate(event.eventDateTime);
+        const time = formatTime(event.eventDateTime);
 
         return (
           <Link key={event.id} href={`/posts/${event.id}`} className="block group">
@@ -66,12 +69,10 @@ export function EventFeed({ events, showFullDetails = false }: EventFeedProps) {
 
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-amber-700">
                   {showFullDetails && <span className="text-amber-600">{weekday}</span>}
-                  {event.eventTime && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatTime(event.eventTime)}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {time}
+                  </span>
                   {event.location && (
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3 h-3" />

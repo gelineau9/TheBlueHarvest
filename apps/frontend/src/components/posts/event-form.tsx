@@ -112,13 +112,17 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
     setError(null);
 
     try {
+      // Combine date and time into a UTC ISO string
+      // The user enters in their local timezone, we convert to UTC for storage
+      const localDateTime = new Date(`${data.eventDate}T${data.eventTime}`);
+      const eventDateTime = localDateTime.toISOString();
+
       const postData = {
         post_type_id: 4, // Event
         title: data.title,
         content: {
           description: data.description,
-          eventDate: data.eventDate,
-          eventTime: data.eventTime,
+          eventDateTime: eventDateTime, // UTC ISO string
           location: data.location,
           maxAttendees: data.maxAttendees ? parseInt(data.maxAttendees, 10) : null,
           contactProfileId: data.contactProfileId ? parseInt(data.contactProfileId, 10) : null,

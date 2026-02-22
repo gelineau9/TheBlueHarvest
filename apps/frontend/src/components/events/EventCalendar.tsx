@@ -6,8 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 export interface CalendarEvent {
   id: number;
   title: string;
-  eventDate: string; // YYYY-MM-DD
-  eventTime?: string; // HH:MM
+  eventDateTime: string; // UTC ISO string
   location?: string;
   description?: string;
 }
@@ -80,16 +79,20 @@ export function EventCalendar({ events, onDateClick }: EventCalendarProps) {
     return days;
   }, [displayMonth, displayYear]);
 
-  // Create a map of dates to events
+  // Create a map of dates to events (using LOCAL date from UTC)
   const eventsByDate = useMemo(() => {
     const map = new Map<number, CalendarEvent[]>();
     events.forEach((event) => {
-      const eventDate = new Date(event.eventDate);
-      // Only include events from the displayed month
-      if (eventDate.getMonth() === displayMonth && eventDate.getFullYear() === displayYear) {
-        const day = eventDate.getDate();
-        const existing = map.get(day) || [];
-        map.set(day, [...existing, event]);
+      // Parse UTC and get LOCAL date components
+      const utcDate = new Date(event.eventDateTime);
+      const localMonth = utcDate.getMonth();
+      const localYear = utcDate.getFullYear();
+      const localDay = utcDate.getDate();
+      
+      // Only include events from the displayed month (in local time)
+      if (localMonth === displayMonth && localYear === displayYear) {
+        const existing = map.get(localDay) || [];
+        map.set(localDay, [...existing, event]);
       }
     });
     return map;

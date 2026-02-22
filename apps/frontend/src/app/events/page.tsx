@@ -9,8 +9,7 @@ import { Card } from '@/components/ui/card';
 
 interface PostContent {
   description?: string;
-  eventDate?: string;
-  eventTime?: string;
+  eventDateTime?: string; // UTC ISO string
   location?: string;
 }
 
@@ -62,12 +61,11 @@ export default function EventsPage() {
     today.setHours(0, 0, 0, 0);
 
     const transformed: (CalendarEvent & EventFeedItem)[] = events
-      .filter((post) => post.content?.eventDate)
+      .filter((post) => post.content?.eventDateTime)
       .map((post) => ({
         id: post.post_id,
         title: post.title,
-        eventDate: post.content.eventDate!,
-        eventTime: post.content.eventTime,
+        eventDateTime: post.content.eventDateTime!,
         location: post.content.location,
         description: post.content.description,
       }));
@@ -78,11 +76,11 @@ export default function EventsPage() {
     // Only upcoming events for the feed (today or later), sorted by date ascending
     const upcomingEvents = transformed
       .filter((event) => {
-        const eventDate = new Date(event.eventDate);
+        const eventDate = new Date(event.eventDateTime);
         eventDate.setHours(0, 0, 0, 0);
         return eventDate >= today;
       })
-      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+      .sort((a, b) => new Date(a.eventDateTime).getTime() - new Date(b.eventDateTime).getTime());
 
     return { calendarEvents, upcomingEvents };
   }, [events]);

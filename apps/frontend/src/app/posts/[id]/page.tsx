@@ -46,8 +46,7 @@ interface Post {
     }>;
     description?: string;
     // Event-specific fields
-    eventDate?: string;
-    eventTime?: string;
+    eventDateTime?: string; // UTC ISO string
     location?: string;
     maxAttendees?: number;
     contactProfileId?: number;
@@ -411,13 +410,13 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               {/* Event Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Date */}
-                {post.content.eventDate && (
+                {post.content.eventDateTime && (
                   <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
                     <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-amber-600 font-medium">Date</p>
                       <p className="text-amber-900">
-                        {new Date(post.content.eventDate).toLocaleDateString('en-US', {
+                        {new Date(post.content.eventDateTime).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -429,12 +428,18 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 )}
 
                 {/* Time */}
-                {post.content.eventTime && (
+                {post.content.eventDateTime && (
                   <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
                     <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-amber-600 font-medium">Time</p>
-                      <p className="text-amber-900">{post.content.eventTime}</p>
+                      <p className="text-amber-900">
+                        {new Date(post.content.eventDateTime).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
+                      </p>
                     </div>
                   </div>
                 )}

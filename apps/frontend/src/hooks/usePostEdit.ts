@@ -20,8 +20,7 @@ export interface Post {
     description?: string;
     images?: UploadedImage[];
     embeds?: Array<{ type: string; url: string; title?: string }>;
-    eventDate?: string;
-    eventTime?: string;
+    eventDateTime?: string; // UTC ISO string
     location?: string;
     maxAttendees?: number;
     contactProfileId?: number;
