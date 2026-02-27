@@ -3,13 +3,15 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useAvatarUpload, Avatar } from '@/hooks/useAvatarUpload';
+import { AvatarCropDialog } from '@/components/avatar/AvatarCropDialog';
 
 interface Profile {
   profile_id: number;
@@ -17,7 +19,7 @@ interface Profile {
   profile_type_id: number;
   type_name: string;
   name: string;
-  details: { description?: string } | null;
+  details: { description?: string; avatar?: Avatar } | null;
   is_published?: boolean;
   created_at: string;
   updated_at: string;
@@ -40,13 +42,34 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
 
+  // Avatar upload hook
+  const {
+    avatar,
+    setAvatar,
+    isUploading: isUploadingAvatar,
+    uploadError: avatarError,
+    isCropDialogOpen,
+    previewImageSrc,
+    fileInputRef,
+    handleFileSelect: handleAvatarSelect,
+    handleCropComplete,
+    handleCropCancel,
+    handleRemoveAvatar,
+    triggerFileSelect,
+  } = useAvatarUpload();
+
   // Original values for dirty checking (2.3.3)
   const [originalName, setOriginalName] = useState('');
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalIsPublished, setOriginalIsPublished] = useState(true);
+  const [originalAvatar, setOriginalAvatar] = useState<Avatar | null>(null);
 
   // Check if form has unsaved changes (2.3.3)
-  const isDirty = name !== originalName || description !== originalDescription || isPublished !== originalIsPublished;
+  const isDirty =
+    name !== originalName ||
+    description !== originalDescription ||
+    isPublished !== originalIsPublished ||
+    JSON.stringify(avatar) !== JSON.stringify(originalAvatar);
 
   // Use the unsaved changes hook for navigation warnings (2.3.3)
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
@@ -73,17 +96,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           return;
         }
 
-        setProfile(data);
+      setProfile(data);
         // Set both current and original values
         const initialName = data.name;
         const initialDescription = data.details?.description || '';
         const initialIsPublished = data.is_published !== false;
+        const initialAvatar = data.details?.avatar || null;
         setName(initialName);
         setDescription(initialDescription);
         setIsPublished(initialIsPublished);
+        setAvatar(initialAvatar);
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
         setOriginalIsPublished(initialIsPublished);
+        setOriginalAvatar(initialAvatar);
       } catch {
         setError('An error occurred while loading the profile');
       } finally {
@@ -92,7 +118,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     };
 
     fetchProfile();
-  }, [id]);
+  }, [id, setAvatar]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +133,10 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         },
         body: JSON.stringify({
           name: name.trim(),
-          details: { description: description.trim() || undefined },
+          details: {
+            description: description.trim() || undefined,
+            avatar: avatar || undefined,
+          },
           is_published: isPublished,
         }),
       });
@@ -122,6 +151,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalName(name.trim());
       setOriginalDescription(description.trim());
       setOriginalIsPublished(isPublished);
+      setOriginalAvatar(avatar);
 
       // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
@@ -162,11 +192,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             <Button onClick={() => router.push('/')} className="bg-amber-800 text-amber-50 hover:bg-amber-700">
               Go to Homepage
             </Button>
-          </Card>
-        </div>
+        </Card>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
@@ -192,6 +222,76 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Avatar Upload */}
+            <div className="space-y-2">
+              <Label className="text-amber-900 font-semibold">Avatar</Label>
+              <div className="flex items-start gap-4">
+                {/* Avatar Preview */}
+                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-amber-100 border-2 border-amber-300 flex-shrink-0">
+                  {avatar ? (
+                    <img
+                      src={avatar.url}
+                      alt="Avatar preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-amber-400">
+                      <Upload className="w-8 h-8" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Controls */}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleAvatarSelect}
+                    className="hidden"
+                    id="avatar-upload"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={triggerFileSelect}
+                      disabled={isUploadingAvatar}
+                      className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                    >
+                    {isUploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {avatar ? 'Change Avatar' : 'Upload Avatar'}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRemoveAvatar}
+                    disabled={!avatar || isUploadingAvatar}
+                    className="border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Remove
+                  </Button>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-2">
+                    JPG, PNG, GIF, or WEBP. Max 5MB. Will be resized to 400x400px.
+                  </p>
+                  {avatarError && (
+                    <p className="text-sm text-red-600 mt-1">{avatarError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Name Field */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-amber-900 font-semibold">
@@ -290,6 +390,15 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             </div>
           </form>
         </Card>
+
+        {/* Avatar Crop Dialog */}
+        <AvatarCropDialog
+          isOpen={isCropDialogOpen}
+          imageSrc={previewImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+          isUploading={isUploadingAvatar}
+        />
       </div>
     </div>
   );

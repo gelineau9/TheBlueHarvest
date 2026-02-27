@@ -29,10 +29,10 @@ function formatDate(utcDateStr: string): { month: string; day: string; weekday: 
 // Format UTC datetime to local time
 function formatTime(utcDateStr: string): string {
   const date = new Date(utcDateStr);
-  return date.toLocaleTimeString('default', { 
-    hour: 'numeric', 
+  return date.toLocaleTimeString('default', {
+    hour: 'numeric',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
   });
 }
 

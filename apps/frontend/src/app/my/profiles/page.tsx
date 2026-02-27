@@ -18,6 +18,7 @@ interface Profile {
   is_published: boolean;
   parent_profile_id: number | null;
   parent_profile_name: string | null;
+  details: { avatar?: { url: string; filename: string } } | null;
 }
 
 type FilterType = 'all' | 'owned' | 'editor';
@@ -284,9 +285,17 @@ export default function MyProfilesPage() {
                   <Card className="bg-white border-amber-200 hover:border-amber-400 hover:shadow-md transition-all duration-200 h-full">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <Icon className="h-5 w-5 text-amber-600" />
-                        </div>
+                        {profile.details?.avatar?.url ? (
+                          <img
+                            src={profile.details.avatar.url}
+                            alt={`${profile.name} avatar`}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-amber-200"
+                          />
+                        ) : (
+                          <div className="p-2 bg-amber-100 rounded-lg">
+                            <Icon className="h-5 w-5 text-amber-600" />
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           {!profile.is_published && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-stone-200 text-stone-700 rounded-full">

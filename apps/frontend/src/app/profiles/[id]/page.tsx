@@ -22,7 +22,7 @@ interface Profile {
   profile_type_id: number;
   type_name: string;
   name: string;
-  details: { description?: string } | null;
+  details: { description?: string; avatar?: { url: string; filename: string } } | null;
   created_at: string;
   updated_at: string;
   username: string;
@@ -234,11 +234,25 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {/* Profile Header */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
           <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
-                {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+            <div className="flex items-start gap-6">
+              {/* Avatar */}
+              {profile.details?.avatar?.url ? (
+                <img
+                  src={profile.details.avatar.url}
+                  alt={`${profile.name} avatar`}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-amber-200 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 flex-shrink-0">
+                  <User className="w-12 h-12 text-amber-400" />
+                </div>
+              )}
+              <div>
+                <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
+                  {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                </div>
+                <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
               </div>
-              <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
             </div>
             {/* Edit Button - visible to owner and editors */}
             {profile.can_edit && (

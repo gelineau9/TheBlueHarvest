@@ -77,7 +77,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       const initialDescription = post.content?.description || '';
       const initialTags = post.content?.tags?.join(', ') || '';
       const initialHeaderImage = post.content?.headerImage || null;
-      
+
       // Parse UTC eventDateTime into local date and time for form inputs
       let initialEventDate = '';
       let initialEventTime = '';
@@ -88,7 +88,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         // Convert to local time string (HH:MM)
         initialEventTime = utcDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       }
-      
+
       const initialLocation = post.content?.location || '';
       const initialMaxAttendees = post.content?.maxAttendees?.toString() || '';
       const initialContactProfileId = post.content?.contactProfileId?.toString() || '';
