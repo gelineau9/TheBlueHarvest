@@ -34,6 +34,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
+    "sharp": "^0.34.5",
     "slonik": "^48.8.7",
     "winston": "^3.19.0",
     "yn": "^5.1.0"
@@ -42,6 +43,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
+    "@types/sharp": "^0.31.1",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",

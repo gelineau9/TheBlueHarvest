@@ -11,6 +11,7 @@ interface ProfileCardProps {
   type_name: string;
   created_at: string;
   username: string;
+  avatar_url?: string;
 }
 
 const typeIcons = {
@@ -21,7 +22,7 @@ const typeIcons = {
   5: MapPin, // Location
 };
 
-export function ProfileCard({ profile_id, name, profile_type_id, type_name, created_at, username }: ProfileCardProps) {
+export function ProfileCard({ profile_id, name, profile_type_id, type_name, created_at, username, avatar_url }: ProfileCardProps) {
   const Icon = typeIcons[profile_type_id as keyof typeof typeIcons] || Users;
 
   const formattedDate = new Date(created_at).toLocaleDateString('en-US', {
@@ -34,9 +35,18 @@ export function ProfileCard({ profile_id, name, profile_type_id, type_name, crea
     <Link href={`/profiles/${profile_id}`}>
       <Card className="p-6 bg-white border-amber-300 hover:border-amber-500 hover:shadow-lg transition-all cursor-pointer h-full">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-lg bg-amber-100 text-amber-700 flex-shrink-0">
-            <Icon className="w-6 h-6" />
-          </div>
+          {/* Avatar or type icon */}
+          {avatar_url ? (
+            <img
+              src={avatar_url}
+              alt={`${name} avatar`}
+              className="w-12 h-12 rounded-full object-cover border-2 border-amber-200 flex-shrink-0"
+            />
+          ) : (
+            <div className="p-3 rounded-lg bg-amber-100 text-amber-700 flex-shrink-0">
+              <Icon className="w-6 h-6" />
+            </div>
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="inline-block px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full mb-2">

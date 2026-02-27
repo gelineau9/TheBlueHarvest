@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { Avatar } from '@/hooks/useAvatarUpload';
 
 interface ProfileFormProps {
   profileTypeId: number;
@@ -27,6 +29,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
+  const [avatar, setAvatar] = useState<Avatar | null>(null);
 
   // Profile types that need a parent: Items (2), Kinships (3), Organizations (4)
   const needsParent = [2, 3, 4].includes(profileTypeId);
@@ -76,7 +79,17 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createProfile({ ...data, is_published: isPublished });
+      // Build details object with description and avatar
+      const details = {
+        description: data.details || undefined,
+        avatar: avatar || undefined,
+      };
+      
+      const result = await createProfile({ 
+        ...data, 
+        details: JSON.stringify(details),
+        is_published: isPublished 
+      });
       if (!result.success) {
         setError(result.error || 'Failed to create profile');
         return;
@@ -109,6 +122,14 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
+
+      {/* Avatar Upload */}
+      <AvatarUploader
+        avatar={avatar}
+        onAvatarChange={setAvatar}
+        label="Avatar"
+        disabled={isSubmitting}
+      />
 
       {/* Parent Character Selection - Only shown for Items, Kinships, Organizations */}
       {needsParent && (

@@ -88,7 +88,7 @@ export function EventCalendar({ events, onDateClick }: EventCalendarProps) {
       const localMonth = utcDate.getMonth();
       const localYear = utcDate.getFullYear();
       const localDay = utcDate.getDate();
-      
+
       // Only include events from the displayed month (in local time)
       if (localMonth === displayMonth && localYear === displayYear) {
         const existing = map.get(localDay) || [];
@@ -117,25 +117,25 @@ export function EventCalendar({ events, onDateClick }: EventCalendarProps) {
           onClick={goToPrevMonth}
           disabled={!canGoBack}
           className={`p-1 rounded transition-colors ${
-            canGoBack 
-              ? 'text-amber-700 hover:bg-amber-200/50 hover:text-amber-900' 
+            canGoBack
+              ? 'text-amber-700 hover:bg-amber-200/50 hover:text-amber-900'
               : 'text-amber-300 cursor-not-allowed'
           }`}
           aria-label="Previous month"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        
+
         <div className="text-center font-medium text-amber-900">
           {monthName} {displayYear}
         </div>
-        
+
         <button
           onClick={goToNextMonth}
           disabled={!canGoForward}
           className={`p-1 rounded transition-colors ${
-            canGoForward 
-              ? 'text-amber-700 hover:bg-amber-200/50 hover:text-amber-900' 
+            canGoForward
+              ? 'text-amber-700 hover:bg-amber-200/50 hover:text-amber-900'
               : 'text-amber-300 cursor-not-allowed'
           }`}
           aria-label="Next month"

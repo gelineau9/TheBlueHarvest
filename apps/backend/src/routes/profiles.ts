@@ -298,6 +298,7 @@ router.get('/public', async (req: Request, res: Response) => {
           profile_id: z.number(),
           profile_type_id: z.number(),
           name: z.string(),
+          details: z.any().nullable(),
           created_at: z.string(),
           type_name: z.string(),
           username: z.string(),
@@ -306,7 +307,8 @@ router.get('/public', async (req: Request, res: Response) => {
       SELECT 
         p.profile_id, 
         p.profile_type_id, 
-        p.name, 
+        p.name,
+        p.details,
         p.created_at::text,
         pt.type_name,
         a.username

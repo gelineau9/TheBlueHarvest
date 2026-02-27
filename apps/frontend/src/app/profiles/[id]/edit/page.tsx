@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { Avatar } from '@/hooks/useAvatarUpload';
 
 interface Profile {
   profile_id: number;
@@ -17,7 +19,7 @@ interface Profile {
   profile_type_id: number;
   type_name: string;
   name: string;
-  details: { description?: string } | null;
+  details: { description?: string; avatar?: Avatar } | null;
   is_published?: boolean;
   created_at: string;
   updated_at: string;
@@ -39,14 +41,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
+  const [avatar, setAvatar] = useState<Avatar | null>(null);
 
   // Original values for dirty checking (2.3.3)
   const [originalName, setOriginalName] = useState('');
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalIsPublished, setOriginalIsPublished] = useState(true);
+  const [originalAvatar, setOriginalAvatar] = useState<Avatar | null>(null);
 
   // Check if form has unsaved changes (2.3.3)
-  const isDirty = name !== originalName || description !== originalDescription || isPublished !== originalIsPublished;
+  const isDirty =
+    name !== originalName ||
+    description !== originalDescription ||
+    isPublished !== originalIsPublished ||
+    JSON.stringify(avatar) !== JSON.stringify(originalAvatar);
 
   // Use the unsaved changes hook for navigation warnings (2.3.3)
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
@@ -73,17 +81,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           return;
         }
 
-        setProfile(data);
+      setProfile(data);
         // Set both current and original values
         const initialName = data.name;
         const initialDescription = data.details?.description || '';
         const initialIsPublished = data.is_published !== false;
+        const initialAvatar = data.details?.avatar || null;
         setName(initialName);
         setDescription(initialDescription);
         setIsPublished(initialIsPublished);
+        setAvatar(initialAvatar);
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
         setOriginalIsPublished(initialIsPublished);
+        setOriginalAvatar(initialAvatar);
       } catch {
         setError('An error occurred while loading the profile');
       } finally {
@@ -92,7 +103,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     };
 
     fetchProfile();
-  }, [id]);
+  }, [id, setAvatar]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +118,10 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         },
         body: JSON.stringify({
           name: name.trim(),
-          details: { description: description.trim() || undefined },
+          details: {
+            description: description.trim() || undefined,
+            avatar: avatar || undefined,
+          },
           is_published: isPublished,
         }),
       });
@@ -122,6 +136,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalName(name.trim());
       setOriginalDescription(description.trim());
       setOriginalIsPublished(isPublished);
+      setOriginalAvatar(avatar);
 
       // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
@@ -162,11 +177,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             <Button onClick={() => router.push('/')} className="bg-amber-800 text-amber-50 hover:bg-amber-700">
               Go to Homepage
             </Button>
-          </Card>
-        </div>
+        </Card>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
@@ -192,6 +207,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Avatar Upload */}
+            <AvatarUploader
+              avatar={avatar}
+              onAvatarChange={setAvatar}
+              disabled={isSaving}
+            />
+
             {/* Name Field */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-amber-900 font-semibold">
