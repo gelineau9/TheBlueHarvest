@@ -3,15 +3,15 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { useAvatarUpload, Avatar } from '@/hooks/useAvatarUpload';
-import { AvatarCropDialog } from '@/components/avatar/AvatarCropDialog';
+import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { Avatar } from '@/hooks/useAvatarUpload';
 
 interface Profile {
   profile_id: number;
@@ -41,22 +41,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
-
-  // Avatar upload hook
-  const {
-    avatar,
-    setAvatar,
-    isUploading: isUploadingAvatar,
-    uploadError: avatarError,
-    isCropDialogOpen,
-    previewImageSrc,
-    fileInputRef,
-    handleFileSelect: handleAvatarSelect,
-    handleCropComplete,
-    handleCropCancel,
-    handleRemoveAvatar,
-    triggerFileSelect,
-  } = useAvatarUpload();
+  const [avatar, setAvatar] = useState<Avatar | null>(null);
 
   // Original values for dirty checking (2.3.3)
   const [originalName, setOriginalName] = useState('');
@@ -223,74 +208,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar Upload */}
-            <div className="space-y-2">
-              <Label className="text-amber-900 font-semibold">Avatar</Label>
-              <div className="flex items-start gap-4">
-                {/* Avatar Preview */}
-                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-amber-100 border-2 border-amber-300 flex-shrink-0">
-                  {avatar ? (
-                    <img
-                      src={avatar.url}
-                      alt="Avatar preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-amber-400">
-                      <Upload className="w-8 h-8" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Upload Controls */}
-                <div className="flex-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleAvatarSelect}
-                    className="hidden"
-                    id="avatar-upload"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={triggerFileSelect}
-                      disabled={isUploadingAvatar}
-                      className="border-amber-300 text-amber-800 hover:bg-amber-50"
-                    >
-                    {isUploadingAvatar ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        {avatar ? 'Change Avatar' : 'Upload Avatar'}
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleRemoveAvatar}
-                    disabled={!avatar || isUploadingAvatar}
-                    className="border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Remove
-                  </Button>
-                  </div>
-                  <p className="text-sm text-amber-600 mt-2">
-                    JPG, PNG, GIF, or WEBP. Max 5MB. Will be resized to 400x400px.
-                  </p>
-                  {avatarError && (
-                    <p className="text-sm text-red-600 mt-1">{avatarError}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <AvatarUploader
+              avatar={avatar}
+              onAvatarChange={setAvatar}
+              disabled={isSaving}
+            />
 
             {/* Name Field */}
             <div className="space-y-2">
@@ -390,15 +312,6 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             </div>
           </form>
         </Card>
-
-        {/* Avatar Crop Dialog */}
-        <AvatarCropDialog
-          isOpen={isCropDialogOpen}
-          imageSrc={previewImageSrc}
-          onCropComplete={handleCropComplete}
-          onCancel={handleCropCancel}
-          isUploading={isUploadingAvatar}
-        />
       </div>
     </div>
   );

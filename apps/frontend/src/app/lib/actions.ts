@@ -236,7 +236,7 @@ export async function createProfile(formData: CreateProfileInput) {
       body: JSON.stringify({
         profile_type_id: result.data.profile_type_id,
         name: result.data.name.trim(),
-        details: result.data.details ? { description: result.data.details } : null,
+        details: result.data.details ? JSON.parse(result.data.details) : null,
         parent_profile_id: result.data.parent_profile_id,
         is_published: result.data.is_published,
       }),
