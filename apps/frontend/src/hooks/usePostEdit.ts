@@ -92,7 +92,6 @@ interface UsePostEditReturn {
   navigateBack: () => void;
 
   // Helpers
-  backendUrl: string;
   router: ReturnType<typeof useRouter>;
 }
 
@@ -111,8 +110,6 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
 
   const [characters, setCharacters] = useState<CharacterProfile[]>([]);
   const [charactersLoaded, setCharactersLoaded] = useState(false);
-
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
   // Fetch characters for event contact dropdown
   useEffect(() => {
@@ -278,7 +275,6 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
     charactersLoaded,
     savePost,
     navigateBack,
-    backendUrl,
     router,
   };
 }

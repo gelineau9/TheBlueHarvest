@@ -8,10 +8,7 @@ import { ContentCarousel } from '@/components/content-carousel';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
 
 function WritingCard({ post }: { post: PublicPost }) {
-  const preview =
-    typeof post.content?.body === 'string'
-      ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 180)
-      : '';
+  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 180) : '';
 
   const date = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -28,16 +25,10 @@ function WritingCard({ post }: { post: PublicPost }) {
         </span>
 
         {/* Title */}
-        <h3 className="line-clamp-2 font-fantasy text-base font-semibold text-amber-900 leading-snug">
-          {post.title}
-        </h3>
+        <h3 className="line-clamp-2 font-fantasy text-base font-semibold text-amber-900 leading-snug">{post.title}</h3>
 
         {/* Preview excerpt */}
-        {preview && (
-          <p className="line-clamp-3 flex-1 text-sm text-amber-800/80 leading-relaxed">
-            {preview}
-          </p>
-        )}
+        {preview && <p className="line-clamp-3 flex-1 text-sm text-amber-800/80 leading-relaxed">{preview}</p>}
 
         {/* Meta */}
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-600">

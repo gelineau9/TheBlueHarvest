@@ -116,12 +116,7 @@ export function AccountForm() {
           </div>
 
           {/* Avatar Upload */}
-          <AvatarUploader
-            avatar={avatar}
-            onAvatarChange={setAvatar}
-            label="Profile Picture"
-            disabled={isLoading}
-          />
+          <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} label="Profile Picture" disabled={isLoading} />
 
           <div className="space-y-2">
             <Label htmlFor="username" className="text-amber-900">

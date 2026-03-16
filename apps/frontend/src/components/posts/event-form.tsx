@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Calendar, Clock, MapPin, Users } from 'lucide-react';
+import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
@@ -171,11 +172,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
         {headerImage ? (
           <div className="relative">
-            <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-              <img
-                src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${headerImage.url}`}
+            <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+              <NextImage
+                fill
+                src={headerImage.url}
                 alt={headerImage.originalName}
-                className="w-full h-full object-cover"
+                sizes="(max-width: 768px) 100vw, 800px"
+                className="object-cover"
               />
             </div>
             <button

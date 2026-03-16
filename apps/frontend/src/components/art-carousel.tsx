@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { Image as ImageIcon, User, Users, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ContentCarousel } from '@/components/content-carousel';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000';
-
 function ArtCard({ post }: { post: PublicPost }) {
-  // Art posts store images as content.images[0].url (relative path from backend)
-  const rawThumbnail = post.content?.images?.[0]?.url ?? null;
-  const thumbnailUrl = rawThumbnail ? `${BACKEND_URL}${rawThumbnail}` : null;
+  // Art posts store images as content.images[0].url (absolute URL from backend)
+  const thumbnailUrl = post.content?.images?.[0]?.url ?? null;
 
   const date = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -26,11 +24,12 @@ function ArtCard({ post }: { post: PublicPost }) {
         {/* Image or placeholder */}
         <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-amber-100">
           {thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <NextImage
+              fill
               src={thumbnailUrl}
               alt={post.title}
-              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">

@@ -39,12 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Hamburger → left sidebar sheet */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-amber-800/30"
-                aria-label="Open navigation menu"
-              >
+              <Button variant="outline" size="icon" className="border-amber-800/30" aria-label="Open navigation menu">
                 <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
@@ -63,12 +58,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="border-amber-800/30"
-            aria-label="Search"
-          >
+          <Button variant="outline" size="icon" className="border-amber-800/30" aria-label="Search">
             <Search className="h-5 w-5" aria-hidden="true" />
           </Button>
           <ProfileButton />
@@ -86,9 +76,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Main content area */}
-        <main className="min-w-0 flex-1 overflow-x-hidden">
-          {children}
-        </main>
+        <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
 
         {/* Right sidebar — fixed-width desktop column, stacks below main on mobile */}
         <aside

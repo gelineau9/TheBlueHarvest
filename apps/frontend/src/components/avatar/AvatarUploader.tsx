@@ -3,6 +3,7 @@
 import { Upload, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import NextImage from 'next/image';
 import { AvatarCropDialog } from './AvatarCropDialog';
 import { useAvatarUpload, Avatar } from '@/hooks/useAvatarUpload';
 
@@ -111,7 +112,7 @@ export function AvatarUploader({
           className={`relative ${sizeClasses[size]} rounded-full overflow-hidden bg-amber-100 border-2 border-amber-300 flex-shrink-0`}
         >
           {displayAvatar ? (
-            <img src={displayAvatar.url} alt="Avatar preview" className="w-full h-full object-cover" />
+            <NextImage fill src={displayAvatar.url} alt="Avatar preview" sizes="128px" className="object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-amber-400">
               <Upload className={iconSizes[size]} />

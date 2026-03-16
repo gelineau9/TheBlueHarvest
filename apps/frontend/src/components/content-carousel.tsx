@@ -36,10 +36,7 @@ export function ContentCarousel<T>({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-fantasy text-2xl font-semibold text-amber-900">{title}</h2>
         {viewAllHref && (
-          <Link
-            href={viewAllHref}
-            className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline"
-          >
+          <Link href={viewAllHref} className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline">
             View all →
           </Link>
         )}
@@ -49,11 +46,7 @@ export function ContentCarousel<T>({
         /* Skeleton row — 3 placeholder cards matching carousel item sizing */
         <div className="flex gap-4 overflow-hidden">
           {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="min-w-0 shrink-0 basis-full sm:basis-1/2 md:basis-1/3 pl-4"
-              aria-hidden="true"
-            >
+            <div key={i} className="min-w-0 shrink-0 basis-full sm:basis-1/2 md:basis-1/3 pl-4" aria-hidden="true">
               <div className="h-52 animate-pulse rounded-lg border border-amber-800/20 bg-amber-100/60" />
             </div>
           ))}
@@ -61,16 +54,10 @@ export function ContentCarousel<T>({
       ) : items.length === 0 ? (
         <p className="py-8 text-center text-sm text-amber-700/70">{emptyMessage}</p>
       ) : (
-        <Carousel
-          opts={{ align: 'start' }}
-          className="w-full"
-        >
+        <Carousel opts={{ align: 'start' }} className="w-full">
           <CarouselContent>
             {items.map((item, index) => (
-              <CarouselItem
-                key={index}
-                className="basis-full sm:basis-1/2 md:basis-1/3"
-              >
+              <CarouselItem key={index} className="basis-full sm:basis-1/2 md:basis-1/3">
                 {renderItem(item, index)}
               </CarouselItem>
             ))}
