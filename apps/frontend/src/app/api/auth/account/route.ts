@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     const formData = new FormData();
 
     if (data.username) formData.append('username', data.username);
+    if (data.details !== undefined) formData.append('details', JSON.stringify(data.details));
 
     const result = await updateAccount(formData);
 

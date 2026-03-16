@@ -150,6 +150,8 @@ export async function register(formData: FormData) {
 export async function updateAccount(formData: FormData) {
   try {
     const username = formData.get('username');
+    const detailsRaw = formData.get('details');
+    const details = detailsRaw ? JSON.parse(detailsRaw as string) : undefined;
 
     // Validate input
     const result = accountUpdateSchema.safeParse({
@@ -173,6 +175,11 @@ export async function updateAccount(formData: FormData) {
       return { success: false, error: 'Not authenticated' };
     }
 
+    // Build request body — only include fields that were provided
+    const body: Record<string, unknown> = {};
+    if (result.data.username !== undefined) body.username = result.data.username;
+    if (details !== undefined) body.details = details;
+
     // Call backend API
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/account`, {
       method: 'PUT',
@@ -180,9 +187,7 @@ export async function updateAccount(formData: FormData) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authToken.value}`,
       },
-      body: JSON.stringify({
-        username: result.data.username,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -310,6 +315,7 @@ export async function getSession() {
       id: data.id,
       username: data.username,
       email: data.email,
+      details: data.details,
     };
   } catch (error) {
     console.error('Get session error:', error);

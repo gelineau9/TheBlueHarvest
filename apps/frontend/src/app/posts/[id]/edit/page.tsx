@@ -12,11 +12,20 @@ import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
 
-const getMinDate = () => new Date().toISOString().split('T')[0];
+const getMinDate = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 const getMaxDate = () => {
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().split('T')[0];
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -211,17 +220,24 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       }
       content = { description, images, tags };
     } else if (type === POST_TYPES.EVENT) {
-      if (eventDate) {
-        const sel = new Date(eventDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (sel < today) {
-          setSaveError('Event date cannot be in the past');
+      if (eventDate && eventTime) {
+        // Validate combined datetime in local timezone against right now
+        const eventDateTime = new Date(`${eventDate}T${eventTime}`);
+        if (eventDateTime <= new Date()) {
+          setSaveError('Event date and time must be in the future');
           return;
         }
         const oneYear = new Date();
         oneYear.setFullYear(oneYear.getFullYear() + 1);
-        if (sel > oneYear) {
+        if (eventDateTime > oneYear) {
+          setSaveError('Event date cannot be more than 1 year away');
+          return;
+        }
+      } else if (eventDate) {
+        // Date provided but no time yet — only check 1-year bound
+        const oneYear = new Date();
+        oneYear.setFullYear(oneYear.getFullYear() + 1);
+        if (new Date(eventDate) > oneYear) {
           setSaveError('Event date cannot be more than 1 year away');
           return;
         }

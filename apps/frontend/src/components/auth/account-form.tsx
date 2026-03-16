@@ -56,10 +56,9 @@ export function AccountForm() {
       // Validate form data
       const validatedData = accountUpdateSchema.parse(formData);
 
-      // Build details object with avatar
-      const details = {
-        avatar: avatar || undefined,
-      };
+      // Build details object with avatar — only include if avatar is set
+      // to avoid clearing existing details when only updating username
+      const details = avatar ? { avatar } : undefined;
 
       const response = await fetch('/api/auth/account', {
         method: 'POST',
