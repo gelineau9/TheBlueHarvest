@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NavItem } from '@/components/nav-item';
@@ -15,13 +14,6 @@ export function LeftSidebar() {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
-        <Image
-          src="/placeholder.svg?height=120&width=200"
-          alt="Brandy Hall Archives"
-          width={200}
-          height={120}
-          className="mx-auto mb-2"
-        />
         <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">Brandy Hall Archives</h1>
       </div>
 

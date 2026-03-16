@@ -161,9 +161,10 @@ router.get('/me', async (req: Request, res: Response) => {
           account_id: z.number(),
           username: z.string(),
           email: z.string(),
+          details: z.any().nullable(),
         }),
       )`
-        SELECT account_id, username, email
+        SELECT account_id, username, email, details
         FROM accounts
         WHERE account_id = ${decoded.userId}
       `,
@@ -178,6 +179,7 @@ router.get('/me', async (req: Request, res: Response) => {
       id: user.account_id,
       username: user.username,
       email: user.email,
+      details: user.details,
     });
   } catch (err) {
     console.error(err);
@@ -216,7 +218,7 @@ router.put(
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
       const pool = await getPool();
 
-      const { username } = req.body;
+      const { username, details } = req.body;
 
       // Check if username is already taken by another user
       if (username) {
@@ -240,6 +242,10 @@ router.put(
         updateFragments.push(sql.fragment`username = ${username}`);
       }
 
+      if (details !== undefined) {
+        updateFragments.push(sql.fragment`details = ${JSON.stringify(details)}`);
+      }
+
       if (updateFragments.length === 0) {
         res.status(400).json({ message: 'No fields to update' });
         return;
@@ -252,12 +258,13 @@ router.put(
             account_id: z.number(),
             username: z.string(),
             email: z.string(),
+            details: z.any().nullable(),
           }),
         )`
           UPDATE accounts
           SET ${sql.join(updateFragments, sql.fragment`, `)}
           WHERE account_id = ${decoded.userId}
-          RETURNING account_id, username, email
+          RETURNING account_id, username, email, details
         `,
       );
 
@@ -265,6 +272,7 @@ router.put(
         id: result.account_id,
         username: result.username,
         email: result.email,
+        details: result.details,
       });
     } catch (err) {
       console.error(err);

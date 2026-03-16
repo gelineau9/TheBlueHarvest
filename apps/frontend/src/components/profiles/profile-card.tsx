@@ -22,7 +22,15 @@ const typeIcons = {
   5: MapPin, // Location
 };
 
-export function ProfileCard({ profile_id, name, profile_type_id, type_name, created_at, username, avatar_url }: ProfileCardProps) {
+export function ProfileCard({
+  profile_id,
+  name,
+  profile_type_id,
+  type_name,
+  created_at,
+  username,
+  avatar_url,
+}: ProfileCardProps) {
   const Icon = typeIcons[profile_type_id as keyof typeof typeIcons] || Users;
 
   const formattedDate = new Date(created_at).toLocaleDateString('en-US', {

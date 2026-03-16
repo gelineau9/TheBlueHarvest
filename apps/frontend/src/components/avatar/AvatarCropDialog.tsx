@@ -3,13 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
@@ -158,9 +152,7 @@ export function AvatarCropDialog({
           </ReactCrop>
         </div>
 
-        <p className="text-sm text-amber-600 text-center">
-          Drag to reposition. Drag corners to resize.
-        </p>
+        <p className="text-sm text-amber-600 text-center">Drag to reposition. Drag corners to resize.</p>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button

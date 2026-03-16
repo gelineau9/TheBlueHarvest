@@ -111,11 +111,7 @@ export function AvatarUploader({
           className={`relative ${sizeClasses[size]} rounded-full overflow-hidden bg-amber-100 border-2 border-amber-300 flex-shrink-0`}
         >
           {displayAvatar ? (
-            <img
-              src={displayAvatar.url}
-              alt="Avatar preview"
-              className="w-full h-full object-cover"
-            />
+            <img src={displayAvatar.url} alt="Avatar preview" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-amber-400">
               <Upload className={iconSizes[size]} />
@@ -163,12 +159,8 @@ export function AvatarUploader({
               Remove
             </Button>
           </div>
-          <p className="text-sm text-amber-600 mt-2">
-            JPG, PNG, GIF, or WEBP. Max 5MB. Will be resized to 400x400px.
-          </p>
-          {uploadError && (
-            <p className="text-sm text-red-600 mt-1">{uploadError}</p>
-          )}
+          <p className="text-sm text-amber-600 mt-2">JPG, PNG, GIF, or WEBP. Max 5MB. Will be resized to 400x400px.</p>
+          {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
         </div>
       </div>
 

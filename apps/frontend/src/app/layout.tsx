@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth/auth-provider';
+import { Banner } from '@/components/banner';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -25,10 +27,22 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={inter.variable}>
+      <body className={`${inter.variable} flex min-h-screen flex-col bg-[#f5e6c8]`}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            {children}
+            {/*
+              Banner is a Server Component that renders the full-bleed hero.
+              It contains ProfileButton (client) as a leaf — safe here.
+            */}
+            <Banner />
+
+            {/*
+              DashboardLayout is a Client Component that owns the three-column
+              shell (left sidebar · main · right sidebar). Sidebars persist
+              across every route because they live here in RootLayout, not in
+              individual pages.
+            */}
+            <DashboardLayout>{children}</DashboardLayout>
           </ThemeProvider>
         </AuthProvider>
       </body>

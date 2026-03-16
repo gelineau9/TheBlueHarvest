@@ -58,16 +58,8 @@ export const POST_TYPE_NAMES: Record<number, string> = {
   4: 'Event',
 };
 
-export const POST_TYPE_ROUTES: Record<number, string> = {
-  1: 'writing',
-  2: 'art',
-  3: 'media',
-  4: 'event',
-};
-
 interface UsePostEditOptions {
   postId: string;
-  expectedType?: number; // If set, validates post type matches
 }
 
 interface UsePostEditReturn {
@@ -104,7 +96,7 @@ interface UsePostEditReturn {
   router: ReturnType<typeof useRouter>;
 }
 
-export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePostEditReturn {
+export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,16 +157,6 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
           return;
         }
 
-        // Check if post type matches expected type (for type-specific edit pages)
-        if (expectedType !== undefined && data.post_type_id !== expectedType) {
-          // Redirect to correct edit page
-          const correctRoute = POST_TYPE_ROUTES[data.post_type_id];
-          if (correctRoute) {
-            router.replace(`/posts/${postId}/edit/${correctRoute}`);
-            return;
-          }
-        }
-
         setPost(data);
       } catch {
         setError('An error occurred while loading the post');
@@ -184,7 +166,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
     };
 
     fetchPost();
-  }, [postId, expectedType, router]);
+  }, [postId]);
 
   // Upload images
   const uploadImages = useCallback(async (files: FileList, _maxImages = 10): Promise<UploadedImage[]> => {
