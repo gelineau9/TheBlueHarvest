@@ -221,7 +221,7 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
           content,
         };
 
-        // Include primary_author_profile_id if provided (even if null to clear it)
+        // Include primary_author_profile_id if provided (null = clear the author)
         if (primaryAuthorProfileId !== undefined) {
           body.primary_author_profile_id = primaryAuthorProfileId;
         }
@@ -241,7 +241,10 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
 
         if (!response.ok) {
           const data = await response.json();
-          setSaveError(data.message || data.error || 'Failed to save changes');
+          // express-validator returns { errors: [{msg, path, ...}] }
+          // other backend errors return { message } or { error }
+          const firstValidationMsg = Array.isArray(data.errors) ? data.errors[0]?.msg : undefined;
+          setSaveError(firstValidationMsg || data.message || data.error || 'Failed to save changes');
           return false;
         }
 
