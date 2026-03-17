@@ -261,6 +261,12 @@ router.get('/public', async (req: Request, res: Response) => {
   const startsWithLetter =
     startsWithParam && /^[a-zA-Z]$/.test(startsWithParam.trim()) ? startsWithParam.trim().toUpperCase() : '';
 
+  // Parse parent_profile_id filter (for owned-items section on character profile pages)
+  const parentProfileIdParam = req.query.parent_profile_id as string;
+  const parentProfileIdFilter = parentProfileIdParam ? parseInt(parentProfileIdParam, 10) : null;
+  const validParentProfileId =
+    parentProfileIdFilter && !isNaN(parentProfileIdFilter) ? parentProfileIdFilter : null;
+
   try {
     const db = await getPool();
 
@@ -301,6 +307,11 @@ router.get('/public', async (req: Request, res: Response) => {
       ? sql.fragment`AND p.name ILIKE ${startsWithLetter + '%'}`
       : sql.fragment``;
 
+    // Build parent_profile_id filter fragment (for items owned by a specific character)
+    const parentProfileFilterFragment = validParentProfileId
+      ? sql.fragment`AND p.parent_profile_id = ${validParentProfileId}`
+      : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -330,6 +341,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${typeFilterFragment}
       ${searchFilterFragment}
       ${startsWithFilterFragment}
+      ${parentProfileFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -346,6 +358,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${typeFilterFragment}
       ${searchFilterFragment}
       ${startsWithFilterFragment}
+      ${parentProfileFilterFragment}
     `,
     );
 

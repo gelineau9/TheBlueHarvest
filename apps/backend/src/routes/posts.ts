@@ -238,6 +238,15 @@ router.get('/public', async (req: Request, res: Response) => {
   const searchParam = req.query.search as string;
   const searchTerm = searchParam ? searchParam.trim().slice(0, 100) : '';
 
+  // Profile filter (for profile feed pages)
+  const profileIdParam = req.query.profile_id as string;
+  const profileId = profileIdParam ? parseInt(profileIdParam, 10) : null;
+  const validProfileId = profileId && !isNaN(profileId) ? profileId : null;
+
+  // Attribution filter: 'author' | 'featured' | 'both' (default 'both')
+  const attributionParam = (req.query.attribution as string) || 'both';
+  const attribution = ['author', 'featured', 'both'].includes(attributionParam) ? attributionParam : 'both';
+
   try {
     const db = await getPool();
 
@@ -269,6 +278,45 @@ router.get('/public', async (req: Request, res: Response) => {
     const searchFilterFragment = searchTerm
       ? sql.fragment`AND p.title ILIKE ${'%' + searchTerm + '%'}`
       : sql.fragment``;
+
+    // Profile attribution filter
+    let profileFilterFragment = sql.fragment``;
+    if (validProfileId !== null) {
+      if (attribution === 'author') {
+        profileFilterFragment = sql.fragment`
+          AND EXISTS (
+            SELECT 1 FROM authors a2
+            WHERE a2.post_id = p.post_id
+              AND a2.profile_id = ${validProfileId}
+              AND a2.deleted = false
+          )`;
+      } else if (attribution === 'featured') {
+        profileFilterFragment = sql.fragment`
+          AND EXISTS (
+            SELECT 1 FROM featured_profiles fp2
+            WHERE fp2.post_id = p.post_id
+              AND fp2.profile_id = ${validProfileId}
+              AND fp2.deleted = false
+          )`;
+      } else {
+        // 'both'
+        profileFilterFragment = sql.fragment`
+          AND (
+            EXISTS (
+              SELECT 1 FROM authors a2
+              WHERE a2.post_id = p.post_id
+                AND a2.profile_id = ${validProfileId}
+                AND a2.deleted = false
+            )
+            OR EXISTS (
+              SELECT 1 FROM featured_profiles fp2
+              WHERE fp2.post_id = p.post_id
+                AND fp2.profile_id = ${validProfileId}
+                AND fp2.deleted = false
+            )
+          )`;
+      }
+    }
 
     // Get posts with primary author info
     const posts = await db.any(
@@ -304,6 +352,7 @@ router.get('/public', async (req: Request, res: Response) => {
           AND p.is_published = true
         ${typeFilterFragment}
         ${searchFilterFragment}
+        ${profileFilterFragment}
         ${orderByFragment}
         LIMIT ${limit}
         OFFSET ${offset}
@@ -318,6 +367,7 @@ router.get('/public', async (req: Request, res: Response) => {
           AND p.is_published = true
         ${typeFilterFragment}
         ${searchFilterFragment}
+        ${profileFilterFragment}
       `,
     );
 
@@ -414,6 +464,31 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       `,
     );
 
+    // Get all featured profiles for this post
+    const featuredProfiles = await db.any(
+      sql.type(
+        z.object({
+          featured_profile_id: z.number(),
+          profile_id: z.number(),
+          name: z.string(),
+          profile_type_id: z.number(),
+          type_name: z.string(),
+        }),
+      )`
+        SELECT
+          fp.featured_profile_id,
+          fp.profile_id,
+          prof.name,
+          prof.profile_type_id,
+          pt.type_name
+        FROM featured_profiles fp
+        JOIN profiles prof ON fp.profile_id = prof.profile_id
+        JOIN profile_types pt ON prof.profile_type_id = pt.type_id
+        WHERE fp.post_id = ${postId} AND fp.deleted = false
+        ORDER BY fp.featured_profile_id ASC
+      `,
+    );
+
     res.json({
       post_id: post.post_id,
       account_id: post.account_id,
@@ -426,6 +501,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       updated_at: post.updated_at,
       username: post.username,
       authors,
+      featured_profiles: featuredProfiles,
       can_edit: canEdit,
       is_owner: isOwner,
     });

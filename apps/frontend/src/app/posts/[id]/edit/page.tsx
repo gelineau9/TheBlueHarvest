@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
+import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 
 const getMinDate = () => {
   const today = new Date();
@@ -72,6 +73,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   // ── Shared ─────────────────────────────────────────────────────────────────
   const [tagsInput, setTagsInput] = useState('');
 
+  // ── Featured Profiles ──────────────────────────────────────────────────────
+  const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
+
   // ── Original values for dirty-check ───────────────────────────────────────
   const [originalValues, setOriginalValues] = useState({
     title: '',
@@ -87,6 +91,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     maxAttendees: '',
     contactProfileId: '',
     tagsInput: '',
+    featuredProfiles: [] as FeaturedProfile[],
   });
 
   // ── Populate form when post loads ─────────────────────────────────────────
@@ -130,6 +135,17 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       }
     }
 
+    // Load featured profiles (only for writing/art/media, not events)
+    const initialFeatured: FeaturedProfile[] =
+      type !== POST_TYPES.EVENT
+        ? (post.featured_profiles || []).map((fp) => ({
+            profile_id: fp.profile_id,
+            name: fp.name,
+            profile_type_id: fp.profile_type_id,
+            type_name: fp.type_name,
+          }))
+        : [];
+
     setTitle(t);
     setIsPublished(pub);
     setTagsInput(tags);
@@ -143,6 +159,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     setLocation(initialLocation);
     setMaxAttendees(initialMaxAttendees);
     setContactProfileId(initialContactProfileId);
+    setFeaturedProfiles(initialFeatured);
 
     setOriginalValues({
       title: t,
@@ -158,6 +175,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       location: initialLocation,
       maxAttendees: initialMaxAttendees,
       contactProfileId: initialContactProfileId,
+      featuredProfiles: initialFeatured,
     });
   }, [post, charactersLoaded]);
 
@@ -174,7 +192,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     eventTime !== originalValues.eventTime ||
     location !== originalValues.location ||
     maxAttendees !== originalValues.maxAttendees ||
-    contactProfileId !== originalValues.contactProfileId;
+    contactProfileId !== originalValues.contactProfileId ||
+    JSON.stringify(featuredProfiles.map((p) => p.profile_id).sort()) !==
+      JSON.stringify(originalValues.featuredProfiles.map((p) => p.profile_id).sort());
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -257,6 +277,29 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
     const success = await savePost(title, content, authorProfileId, isPublished);
     if (success) {
+      // Apply featured profiles diff (only for writing/art/media)
+      const type2 = Number(post!.post_type_id);
+      if (type2 !== POST_TYPES.EVENT) {
+        const originalIds = new Set(originalValues.featuredProfiles.map((p) => p.profile_id));
+        const currentIds = new Set(featuredProfiles.map((p) => p.profile_id));
+
+        const toAdd = featuredProfiles.filter((p) => !originalIds.has(p.profile_id));
+        const toRemove = (post!.featured_profiles || []).filter((fp) => !currentIds.has(fp.profile_id));
+
+        await Promise.all([
+          ...toAdd.map((p) =>
+            fetch(`/api/posts/${id}/featured`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ profile_id: p.profile_id }),
+            }),
+          ),
+          ...toRemove.map((fp) =>
+            fetch(`/api/posts/${id}/featured/${fp.featured_profile_id}`, { method: 'DELETE' }),
+          ),
+        ]);
+      }
+
       setOriginalValues({
         title: title.trim(),
         isPublished,
@@ -271,6 +314,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         location,
         maxAttendees,
         contactProfileId,
+        featuredProfiles,
       });
       navigateBack();
     }
@@ -680,6 +724,16 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             )}
 
             {TagsField}
+
+            {/* Featured Profiles — writing, art, media only */}
+            {type !== POST_TYPES.EVENT && (
+              <FeaturedProfilesPicker
+                value={featuredProfiles}
+                onChange={setFeaturedProfiles}
+                disabled={isSaving}
+              />
+            )}
+
             {PublishToggle}
 
             {saveError && (

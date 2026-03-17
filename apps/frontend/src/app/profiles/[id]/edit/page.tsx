@@ -3,7 +3,8 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { AvatarCropDialog } from '@/components/avatar/AvatarCropDialog';
 import { Avatar } from '@/hooks/useAvatarUpload';
+import { useBannerUpload, BannerImage } from '@/hooks/useBannerUpload';
+
+interface ProfileDetails {
+  description?: string;
+  avatar?: Avatar;
+  banner?: BannerImage;
+  race?: string;
+  occupation?: string;
+  age?: string;
+  kinship?: string;
+  residence?: string;
+}
 
 interface Profile {
   profile_id: number;
@@ -19,7 +33,7 @@ interface Profile {
   profile_type_id: number;
   type_name: string;
   name: string;
-  details: { description?: string; avatar?: Avatar } | null;
+  details: ProfileDetails | null;
   is_published?: boolean;
   created_at: string;
   updated_at: string;
@@ -43,21 +57,57 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [isPublished, setIsPublished] = useState(true);
   const [avatar, setAvatar] = useState<Avatar | null>(null);
 
-  // Original values for dirty checking (2.3.3)
+  // Character-only fields
+  const [race, setRace] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [age, setAge] = useState('');
+  const [kinship, setKinship] = useState('');
+  const [residence, setResidence] = useState('');
+
+  // Original values for dirty checking
   const [originalName, setOriginalName] = useState('');
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalIsPublished, setOriginalIsPublished] = useState(true);
   const [originalAvatar, setOriginalAvatar] = useState<Avatar | null>(null);
+  const [originalBanner, setOriginalBanner] = useState<BannerImage | null>(null);
+  const [originalRace, setOriginalRace] = useState('');
+  const [originalOccupation, setOriginalOccupation] = useState('');
+  const [originalAge, setOriginalAge] = useState('');
+  const [originalKinship, setOriginalKinship] = useState('');
+  const [originalResidence, setOriginalResidence] = useState('');
 
-  // Check if form has unsaved changes (2.3.3)
+  // Banner upload hook (3:1 aspect, no circular crop)
+  const {
+    banner,
+    setBanner,
+    isUploading: isBannerUploading,
+    uploadError: bannerUploadError,
+    isCropDialogOpen: isBannerCropOpen,
+    previewImageSrc: bannerPreviewSrc,
+    fileInputRef: bannerFileInputRef,
+    handleFileSelect: handleBannerFileSelect,
+    handleCropComplete: handleBannerCropComplete,
+    handleCropCancel: handleBannerCropCancel,
+    handleRemoveBanner,
+    triggerFileSelect: triggerBannerFileSelect,
+  } = useBannerUpload({ initialBanner: null });
+
+  // Check if form has unsaved changes
   const isDirty =
     name !== originalName ||
     description !== originalDescription ||
     isPublished !== originalIsPublished ||
-    JSON.stringify(avatar) !== JSON.stringify(originalAvatar);
+    JSON.stringify(avatar) !== JSON.stringify(originalAvatar) ||
+    JSON.stringify(banner) !== JSON.stringify(originalBanner) ||
+    race !== originalRace ||
+    occupation !== originalOccupation ||
+    age !== originalAge ||
+    kinship !== originalKinship ||
+    residence !== originalResidence;
 
-  // Use the unsaved changes hook for navigation warnings (2.3.3)
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
+
+  const isCharacter = profile?.profile_type_id === 1;
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -75,26 +125,45 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
         const data: Profile = await response.json();
 
-        // Check if user can edit this profile
         if (!data.can_edit) {
           setError('You do not have permission to edit this profile');
           return;
         }
 
         setProfile(data);
-        // Set both current and original values
+
         const initialName = data.name;
         const initialDescription = data.details?.description || '';
         const initialIsPublished = data.is_published !== false;
         const initialAvatar = data.details?.avatar || null;
+        const initialBanner = data.details?.banner || null;
+        const initialRace = data.details?.race || '';
+        const initialOccupation = data.details?.occupation || '';
+        const initialAge = data.details?.age || '';
+        const initialKinship = data.details?.kinship || '';
+        const initialResidence = data.details?.residence || '';
+
         setName(initialName);
         setDescription(initialDescription);
         setIsPublished(initialIsPublished);
         setAvatar(initialAvatar);
+        if (initialBanner) setBanner(initialBanner);
+        setRace(initialRace);
+        setOccupation(initialOccupation);
+        setAge(initialAge);
+        setKinship(initialKinship);
+        setResidence(initialResidence);
+
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
         setOriginalIsPublished(initialIsPublished);
         setOriginalAvatar(initialAvatar);
+        setOriginalBanner(initialBanner);
+        setOriginalRace(initialRace);
+        setOriginalOccupation(initialOccupation);
+        setOriginalAge(initialAge);
+        setOriginalKinship(initialKinship);
+        setOriginalResidence(initialResidence);
       } catch {
         setError('An error occurred while loading the profile');
       } finally {
@@ -103,7 +172,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     };
 
     fetchProfile();
-  }, [id, setAvatar]);
+  }, [id, setBanner]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,17 +180,27 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     setIsSaving(true);
 
     try {
+      const details: ProfileDetails = {
+        description: description.trim() || undefined,
+        avatar: avatar || undefined,
+        banner: banner || undefined,
+      };
+
+      // Only include character fields for character profiles
+      if (isCharacter) {
+        if (race.trim()) details.race = race.trim();
+        if (occupation.trim()) details.occupation = occupation.trim();
+        if (age.trim()) details.age = age.trim();
+        if (kinship.trim()) details.kinship = kinship.trim();
+        if (residence.trim()) details.residence = residence.trim();
+      }
+
       const response = await fetch(`/api/profiles/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          details: {
-            description: description.trim() || undefined,
-            avatar: avatar || undefined,
-          },
+          details,
           is_published: isPublished,
         }),
       });
@@ -132,13 +211,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         return;
       }
 
-      // Update original values to match saved state (prevents warning on redirect)
+      // Update originals to prevent unsaved-changes warning on redirect
       setOriginalName(name.trim());
       setOriginalDescription(description.trim());
       setOriginalIsPublished(isPublished);
       setOriginalAvatar(avatar);
+      setOriginalBanner(banner);
+      setOriginalRace(race.trim());
+      setOriginalOccupation(occupation.trim());
+      setOriginalAge(age.trim());
+      setOriginalKinship(kinship.trim());
+      setOriginalResidence(residence.trim());
 
-      // Redirect back to profile page on success
       router.push(`/profiles/${id}`);
     } catch {
       setSaveError('An error occurred while saving changes');
@@ -186,7 +270,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Back Button - with unsaved changes warning (2.3.3) */}
+        {/* Back Button */}
         <button
           onClick={() => navigateWithWarning(`/profiles/${id}`)}
           className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
@@ -202,13 +286,103 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
             </div>
             <h1 className="text-3xl font-bold text-amber-900">Edit Profile</h1>
-            {/* Unsaved changes indicator (2.3.3) */}
             {isDirty && <p className="text-sm text-amber-600 mt-2">You have unsaved changes</p>}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar Upload */}
             <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
+
+            {/* Banner Upload — characters only */}
+            {isCharacter && (
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Banner Image</Label>
+                <p className="text-sm text-amber-600">Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.</p>
+
+                {/* Banner Preview */}
+                {banner ? (
+                  <div className="relative w-full aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                    <Image
+                      src={banner.url}
+                      alt="Banner preview"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 800px"
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveBanner}
+                      disabled={isSaving || isBannerUploading}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors disabled:opacity-50"
+                      aria-label="Remove banner"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full aspect-[3/1] rounded-lg bg-amber-50 border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-400">
+                    <div className="text-center">
+                      <Upload className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-sm">No banner uploaded</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    ref={bannerFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleBannerFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={triggerBannerFileSelect}
+                    disabled={isSaving || isBannerUploading}
+                    className="border-amber-300 text-amber-800 hover:bg-amber-50"
+                  >
+                    {isBannerUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {banner ? 'Change Banner' : 'Upload Banner'}
+                      </>
+                    )}
+                  </Button>
+                  {banner && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleRemoveBanner}
+                      disabled={isSaving || isBannerUploading}
+                      className="border-amber-300 text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                {bannerUploadError && <p className="text-sm text-red-600">{bannerUploadError}</p>}
+
+                {/* Banner crop dialog */}
+                <AvatarCropDialog
+                  isOpen={isBannerCropOpen}
+                  imageSrc={bannerPreviewSrc}
+                  onCropComplete={handleBannerCropComplete}
+                  onCancel={handleBannerCropCancel}
+                  isUploading={isBannerUploading}
+                  aspect={3}
+                  circularCrop={false}
+                  title="Adjust Banner"
+                />
+              </div>
+            )}
 
             {/* Name Field */}
             <div className="space-y-2">
@@ -242,6 +416,90 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
               />
             </div>
+
+            {/* Character-specific fields */}
+            {isCharacter && (
+              <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Details</h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="race" className="text-amber-900 font-medium">
+                      Race
+                    </Label>
+                    <Input
+                      id="race"
+                      type="text"
+                      value={race}
+                      onChange={(e) => setRace(e.target.value)}
+                      placeholder="e.g. Human, Elf, Dwarf…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="occupation" className="text-amber-900 font-medium">
+                      Occupation
+                    </Label>
+                    <Input
+                      id="occupation"
+                      type="text"
+                      value={occupation}
+                      onChange={(e) => setOccupation(e.target.value)}
+                      placeholder="e.g. Blacksmith, Mage…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="age" className="text-amber-900 font-medium">
+                      Age
+                    </Label>
+                    <Input
+                      id="age"
+                      type="text"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="e.g. 32, Ancient, Unknown…"
+                      maxLength={50}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="kinship" className="text-amber-900 font-medium">
+                      Kinship
+                    </Label>
+                    <Input
+                      id="kinship"
+                      type="text"
+                      value={kinship}
+                      onChange={(e) => setKinship(e.target.value)}
+                      placeholder="Family or clan name…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="residence" className="text-amber-900 font-medium">
+                      Residence
+                    </Label>
+                    <Input
+                      id="residence"
+                      type="text"
+                      value={residence}
+                      onChange={(e) => setResidence(e.target.value)}
+                      placeholder="Where does this character live?"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Publish Status */}
             <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -296,7 +554,6 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   </>
                 )}
               </Button>
-              {/* Cancel button - with unsaved changes warning (2.3.3) */}
               <Button
                 type="button"
                 variant="outline"

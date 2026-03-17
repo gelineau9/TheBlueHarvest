@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
+import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 
 interface WritingFormProps {
   onSuccess: (postId: number) => void;
@@ -21,6 +22,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
+  const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
 
   const { characters, isLoading: isLoadingCharacters, error: charactersError } = useCharacterProfiles();
 
@@ -64,8 +66,21 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
         setError(result.error || 'Failed to create post');
         return;
       }
-      if (result.post?.post_id) {
-        onSuccess(result.post.post_id);
+      const postId = result.post?.post_id;
+      if (postId) {
+        // Non-blocking: fire and forget featured profile inserts
+        if (featuredProfiles.length > 0) {
+          Promise.all(
+            featuredProfiles.map((p) =>
+              fetch(`/api/posts/${postId}/featured`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profile_id: p.profile_id }),
+              }),
+            ),
+          ).catch((err) => console.error('Failed to save featured profiles:', err));
+        }
+        onSuccess(postId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -187,6 +202,13 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
         />
         <p className="text-sm text-amber-700">Tags help others discover your writing.</p>
       </div>
+
+      {/* Featured Profiles */}
+      <FeaturedProfilesPicker
+        value={featuredProfiles}
+        onChange={setFeaturedProfiles}
+        disabled={isSubmitting}
+      />
 
       {/* Publish Status */}
       <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">

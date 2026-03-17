@@ -61,6 +61,13 @@ interface Post {
   type_name: string;
   username: string;
   authors: Author[];
+  featured_profiles?: Array<{
+    featured_profile_id: number;
+    profile_id: number;
+    name: string;
+    profile_type_id: number;
+    type_name: string;
+  }>;
   created_at: string;
   updated_at: string;
   can_edit?: boolean;
@@ -346,6 +353,23 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               {isEdited && <span className="text-amber-600 text-xs">(edited)</span>}
             </div>
           </div>
+
+          {/* Featuring row */}
+          {post.post_type_id !== 4 && post.featured_profiles && post.featured_profiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-amber-100 text-sm text-amber-700">
+              <span className="font-medium">Featuring:</span>
+              {post.featured_profiles.map((fp) => (
+                <Link
+                  key={fp.featured_profile_id}
+                  href={`/profiles/${fp.profile_id}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 hover:bg-amber-200 transition-colors text-xs font-medium"
+                >
+                  {fp.name}
+                  <span className="text-amber-600">· {fp.type_name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
 
           {/* Account owner info (smaller, secondary) */}
           <div className="mt-4 pt-4 border-t border-amber-200 text-xs text-amber-600">

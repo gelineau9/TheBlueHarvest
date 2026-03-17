@@ -32,6 +32,13 @@ export interface Post {
     name: string;
     is_primary: boolean;
   }>;
+  featured_profiles?: Array<{
+    featured_profile_id: number;
+    profile_id: number;
+    name: string;
+    profile_type_id: number;
+    type_name: string;
+  }>;
   is_published?: boolean;
   created_at: string;
   updated_at: string;

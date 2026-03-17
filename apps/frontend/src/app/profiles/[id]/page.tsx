@@ -4,7 +4,20 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
-import { ArrowLeft, User, Calendar, Pencil, Trash2, UserPlus, Users, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  Calendar,
+  Pencil,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+  Image as ImageIcon,
+  BookOpen,
+  Package,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +29,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ProfileDetails {
+  description?: string;
+  avatar?: { url: string; filename: string };
+  banner?: { url: string; filename: string };
+  race?: string;
+  occupation?: string;
+  age?: string;
+  kinship?: string;
+  residence?: string;
+}
 
 interface Profile {
   profile_id: number;
@@ -23,15 +50,15 @@ interface Profile {
   profile_type_id: number;
   type_name: string;
   name: string;
-  details: { description?: string; avatar?: { url: string; filename: string } } | null;
+  details: ProfileDetails | null;
   created_at: string;
   updated_at: string;
   username: string;
   parent_profile_id?: number | null;
   parent_name?: string | null;
   parent_id?: number | null;
-  can_edit?: boolean; // true if current user can edit (owner OR editor)
-  is_owner?: boolean; // true if current user is the owner (can manage editors, delete)
+  can_edit?: boolean;
+  is_owner?: boolean;
 }
 
 interface Editor {
@@ -43,6 +70,92 @@ interface Editor {
   created_at: string;
 }
 
+interface ItemProfile {
+  profile_id: number;
+  name: string;
+  profile_type_id: number;
+  type_name: string;
+  details: { avatar?: { url: string } } | null;
+}
+
+interface ItemsResponse {
+  profiles: ItemProfile[];
+  total: number;
+}
+
+// ─── Small inline cards ───────────────────────────────────────────────────────
+
+function WritingPostCard({ post }: { post: PublicPost }) {
+  const preview =
+    typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 160) : '';
+
+  return (
+    <Link href={`/posts/${post.post_id}`} className="block">
+      <Card className="flex flex-col gap-2 border-amber-800/20 bg-amber-50/90 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+        <span className="inline-block w-fit rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+          {post.type_name.charAt(0).toUpperCase() + post.type_name.slice(1)}
+        </span>
+        <h3 className="line-clamp-2 text-sm font-semibold text-amber-900 leading-snug">{post.title}</h3>
+        {preview && <p className="line-clamp-2 text-xs text-amber-700 leading-relaxed">{preview}</p>}
+        <p className="text-xs text-amber-500 mt-auto">
+          {new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+        </p>
+      </Card>
+    </Link>
+  );
+}
+
+function GalleryPostCard({ post }: { post: PublicPost }) {
+  const thumbnailUrl = post.content?.images?.[0]?.url ?? null;
+
+  return (
+    <Link href={`/posts/${post.post_id}`} className="block">
+      <Card className="overflow-hidden border-amber-800/20 bg-amber-50/90 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+        <div className="relative aspect-square w-full bg-amber-100">
+          {thumbnailUrl ? (
+            <NextImage
+              fill
+              src={thumbnailUrl}
+              alt={post.title}
+              sizes="(max-width: 768px) 50vw, 200px"
+              className="object-cover transition-transform duration-300 hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <ImageIcon className="h-8 w-8 text-amber-300" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-amber-900/60 to-transparent" />
+          <p className="absolute bottom-0 left-0 right-0 line-clamp-1 p-2 text-xs font-semibold text-amber-50 drop-shadow-sm">
+            {post.title}
+          </p>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function ItemCard({ item }: { item: ItemProfile }) {
+  return (
+    <Link href={`/profiles/${item.profile_id}`} className="block">
+      <Card className="flex flex-col items-center gap-2 border-amber-800/20 bg-amber-50/90 p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+        <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-amber-200 bg-amber-100 flex-shrink-0">
+          {item.details?.avatar?.url ? (
+            <NextImage fill src={item.details.avatar.url} alt={item.name} sizes="64px" className="object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Package className="h-8 w-8 text-amber-300" />
+            </div>
+          )}
+        </div>
+        <p className="line-clamp-2 text-sm font-semibold text-amber-900 leading-snug">{item.name}</p>
+      </Card>
+    </Link>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -50,29 +163,34 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Editor management state
+
+  // Editor management
   const [editors, setEditors] = useState<Editor[]>([]);
   const [showAddEditorDialog, setShowAddEditorDialog] = useState(false);
   const [newEditorUsername, setNewEditorUsername] = useState('');
   const [editorError, setEditorError] = useState<string | null>(null);
   const [isAddingEditor, setIsAddingEditor] = useState(false);
   const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
+
+  // Bottom sections (character only)
+  const [items, setItems] = useState<ItemProfile[]>([]);
+  const [galleryPosts, setGalleryPosts] = useState<PublicPost[]>([]);
+  const [writingPosts, setWritingPosts] = useState<PublicPost[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [writingLoading, setWritingLoading] = useState(false);
+
   const { id } = use(params);
 
+  // ── Fetch profile ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await fetch(`/api/profiles/${id}`);
-
         if (!response.ok) {
-          if (response.status === 404) {
-            setError('Profile not found');
-          } else {
-            setError('Failed to load profile');
-          }
+          setError(response.status === 404 ? 'Profile not found' : 'Failed to load profile');
           return;
         }
-
         const data = await response.json();
         setProfile(data);
       } catch {
@@ -81,11 +199,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         setIsLoading(false);
       }
     };
-
     fetchProfile();
   }, [id]);
 
-  // Fetch editors for this profile
+  // ── Fetch editors ──────────────────────────────────────────────────────────
   const fetchEditors = async () => {
     try {
       const response = await fetch(`/api/profiles/${id}/editors`);
@@ -98,37 +215,57 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  // Fetch editors when profile loads
   useEffect(() => {
-    if (profile) {
-      fetchEditors();
-    }
+    if (profile) fetchEditors();
   }, [profile?.profile_id]);
 
-  // Add a new editor
+  // ── Fetch character bottom sections ───────────────────────────────────────
+  useEffect(() => {
+    if (!profile || profile.profile_type_id !== 1) return;
+
+    const pid = profile.profile_id;
+
+    // Items (children with parent_profile_id = pid)
+    setItemsLoading(true);
+    fetch(`/api/profiles/public?parent_profile_id=${pid}&limit=6`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: ItemsResponse) => setItems(data.profiles || []))
+      .catch(() => setItems([]))
+      .finally(() => setItemsLoading(false));
+
+    // Gallery (art + media)
+    setGalleryLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=2,3&limit=6&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setGalleryPosts(data.posts || []))
+      .catch(() => setGalleryPosts([]))
+      .finally(() => setGalleryLoading(false));
+
+    // Writing
+    setWritingLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=1&limit=4&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setWritingPosts(data.posts || []))
+      .catch(() => setWritingPosts([]))
+      .finally(() => setWritingLoading(false));
+  }, [profile?.profile_id, profile?.profile_type_id]);
+
+  // ── Editor actions ─────────────────────────────────────────────────────────
   const handleAddEditor = async () => {
     if (!newEditorUsername.trim()) {
       setEditorError('Please enter a username');
       return;
     }
-
     setIsAddingEditor(true);
     setEditorError(null);
-
     try {
       const response = await fetch(`/api/profiles/${id}/editors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: newEditorUsername.trim() }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to add editor');
-      }
-
-      // Refresh editors list
+      if (!response.ok) throw new Error(data.message || 'Failed to add editor');
       await fetchEditors();
       setNewEditorUsername('');
       setShowAddEditorDialog(false);
@@ -139,21 +276,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  // Remove an editor
   const handleRemoveEditor = async (editorId: number) => {
     setRemovingEditorId(editorId);
-
     try {
-      const response = await fetch(`/api/profiles/${id}/editors/${editorId}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/profiles/${id}/editors/${editorId}`, { method: 'DELETE' });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Failed to remove editor');
       }
-
-      // Refresh editors list
       await fetchEditors();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove editor');
@@ -162,20 +292,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  // Handle profile deletion (2.4.1/2.4.2)
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/profiles/${id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Failed to delete profile');
       }
-
-      // Redirect to archive after successful deletion
       router.push('/archive');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete profile');
@@ -184,6 +308,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       setIsDeleting(false);
     }
   };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -197,17 +323,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          <Link
-            href="/"
-            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
-          >
+          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
-
           <Card className="p-8 bg-white border-amber-300">
             <h1 className="text-2xl font-bold text-amber-900 mb-4">{error || 'Profile not found'}</h1>
-            <p className="text-amber-700 mb-6">The profile you're looking for could not be found.</p>
+            <p className="text-amber-700 mb-6">The profile you&#39;re looking for could not be found.</p>
             <Button onClick={() => router.push('/')} className="bg-amber-800 text-amber-50 hover:bg-amber-700">
               Go to Homepage
             </Button>
@@ -223,6 +345,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     day: 'numeric',
   });
 
+  const isCharacter = profile.profile_type_id === 1;
+  const d = profile.details;
+  const hasCharacterInfo =
+    isCharacter && d && (d.race || d.occupation || d.age || d.kinship || d.residence);
+
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -232,102 +359,246 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           Back to Home
         </Link>
 
-        {/* Profile Header */}
-        <Card className="p-8 bg-white border-amber-300 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-start gap-6">
-              {/* Avatar */}
-              {profile.details?.avatar?.url ? (
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-amber-200 flex-shrink-0">
-                  <NextImage
-                    fill
-                    src={profile.details.avatar.url}
-                    alt={`${profile.name} avatar`}
-                    sizes="96px"
-                    className="object-cover"
-                  />
+        {/* Profile Header Card */}
+        <Card className="bg-white border-amber-300 mb-6 overflow-hidden">
+          {/* Banner (character only) */}
+          {isCharacter && d?.banner?.url && (
+            <div className="relative h-48 w-full bg-amber-100">
+              <NextImage
+                fill
+                src={d.banner.url}
+                alt={`${profile.name} banner`}
+                sizes="(max-width: 768px) 100vw, 896px"
+                className="object-cover"
+                priority
+              />
+            </div>
+          )}
+
+          <div className={`p-8 ${isCharacter && d?.banner?.url ? 'pt-6' : ''}`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start gap-6">
+                {/* Avatar — overlaps banner bottom-left when banner present */}
+                <div
+                  className={`relative flex-shrink-0 ${
+                    isCharacter && d?.banner?.url
+                      ? '-mt-14 w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-amber-100'
+                      : 'w-24 h-24 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-100'
+                  }`}
+                >
+                  {d?.avatar?.url ? (
+                    <NextImage fill src={d.avatar.url} alt={`${profile.name} avatar`} sizes="96px" className="object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-12 h-12 text-amber-400" />
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 flex-shrink-0">
-                  <User className="w-12 h-12 text-amber-400" />
+
+                <div>
+                  <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
+                    {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                  </div>
+                  <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
+                </div>
+              </div>
+
+              {/* Edit / Delete buttons */}
+              {profile.can_edit && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
+                    className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  {profile.is_owner && (
+                    <Button
+                      onClick={() => setShowDeleteDialog(true)}
+                      variant="outline"
+                      className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
+                  )}
                 </div>
               )}
-              <div>
-                <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
-                  {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
-                </div>
-                <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
+            </div>
+
+            {/* Created by / date */}
+            <div className="flex items-center gap-6 text-sm text-amber-700">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>Created by {profile.username}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>{formattedDate}</span>
               </div>
             </div>
-            {/* Edit Button - visible to owner and editors */}
-            {profile.can_edit && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
-                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                {/* Delete Button - only visible to profile owner */}
-                {profile.is_owner && (
-                  <Button
-                    onClick={() => setShowDeleteDialog(true)}
-                    variant="outline"
-                    className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                )}
+
+            {/* Parent ownership */}
+            {profile.parent_name && profile.parent_id && (
+              <div className="mt-4 pt-4 border-t border-amber-200">
+                <div className="flex items-center gap-2 text-sm text-amber-700">
+                  <User className="w-4 h-4" />
+                  <span>
+                    Owned by{' '}
+                    <Link
+                      href={`/profiles/${profile.parent_id}`}
+                      className="text-amber-900 hover:underline font-semibold"
+                    >
+                      {profile.parent_name}
+                    </Link>
+                  </span>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="flex items-center gap-6 text-sm text-amber-700">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span>Created by {profile.username}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>{formattedDate}</span>
-            </div>
-          </div>
-
-          {/* Show parent ownership for character-level profiles */}
-          {profile.parent_name && profile.parent_id && (
-            <div className="mt-4 pt-4 border-t border-amber-200">
-              <div className="flex items-center gap-2 text-sm text-amber-700">
-                <User className="w-4 h-4" />
-                <span>
-                  Owned by{' '}
-                  <Link
-                    href={`/profiles/${profile.parent_id}`}
-                    className="text-amber-900 hover:underline font-semibold"
-                  >
-                    {profile.parent_name}
-                  </Link>
-                </span>
-              </div>
-            </div>
-          )}
         </Card>
 
-        {/* Profile Details */}
-        {profile.details && (
-          <Card className="p-8 bg-white border-amber-300">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
-            <div className="prose prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap">{profile.details.description || ''}</p>
-            </div>
+        {/* Character info panel */}
+        {hasCharacterInfo && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+              {d?.race && (
+                <div>
+                  <dt className="text-amber-600 font-medium">Race</dt>
+                  <dd className="text-amber-900">{d.race}</dd>
+                </div>
+              )}
+              {d?.occupation && (
+                <div>
+                  <dt className="text-amber-600 font-medium">Occupation</dt>
+                  <dd className="text-amber-900">{d.occupation}</dd>
+                </div>
+              )}
+              {d?.age && (
+                <div>
+                  <dt className="text-amber-600 font-medium">Age</dt>
+                  <dd className="text-amber-900">{d.age}</dd>
+                </div>
+              )}
+              {d?.kinship && (
+                <div>
+                  <dt className="text-amber-600 font-medium">Kinship</dt>
+                  <dd className="text-amber-900">{d.kinship}</dd>
+                </div>
+              )}
+              {d?.residence && (
+                <div className="col-span-2 sm:col-span-1">
+                  <dt className="text-amber-600 font-medium">Residence</dt>
+                  <dd className="text-amber-900">{d.residence}</dd>
+                </div>
+              )}
+            </dl>
           </Card>
         )}
 
-        {!profile.details && (
-          <Card className="p-8 bg-white border-amber-300">
+        {/* Profile Description */}
+        {d?.description ? (
+          <Card className="p-8 bg-white border-amber-300 mb-6">
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
+            <div className="prose prose-amber max-w-none">
+              <p className="text-amber-800 whitespace-pre-wrap">{d.description}</p>
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-8 bg-white border-amber-300 mb-6">
             <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
           </Card>
+        )}
+
+        {/* ── Character bottom sections ───────────────────────────────────── */}
+        {isCharacter && (
+          <>
+            {/* Owned Items */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Items</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/items`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {itemsLoading ? (
+                <p className="text-amber-600 text-sm">Loading items…</p>
+              ) : items.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {items.map((item) => (
+                    <ItemCard key={item.profile_id} item={item} />
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Gallery (art + media) */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/gallery`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {galleryLoading ? (
+                <p className="text-amber-600 text-sm">Loading gallery…</p>
+              ) : galleryPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {galleryPosts.map((post) => (
+                    <GalleryPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Writing */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/writing`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {writingLoading ? (
+                <p className="text-amber-600 text-sm">Loading writing…</p>
+              ) : writingPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {writingPosts.map((post) => (
+                    <WritingPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
         )}
 
         {/* Editors Section */}
@@ -337,7 +608,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <Users className="w-5 h-5 text-amber-800" />
               <h2 className="text-2xl font-bold text-amber-900">Editors</h2>
             </div>
-            {/* Add Editor Button - only visible to owner */}
             {profile.is_owner && (
               <Button
                 onClick={() => {
@@ -368,7 +638,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       <span className="text-sm text-amber-600 ml-2">(invited by {editor.invited_by_username})</span>
                     )}
                   </div>
-                  {/* Remove button - visible to owner, or to the editor themselves */}
                   {(profile.is_owner || profile.can_edit) && (
                     <Button
                       variant="ghost"
@@ -377,7 +646,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       disabled={removingEditorId === editor.editor_id}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      {removingEditorId === editor.editor_id ? 'Removing...' : <X className="w-4 h-4" />}
+                      {removingEditorId === editor.editor_id ? 'Removing…' : <X className="w-4 h-4" />}
                     </Button>
                   )}
                 </li>
@@ -405,9 +674,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 setEditorError(null);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isAddingEditor) {
-                  handleAddEditor();
-                }
+                if (e.key === 'Enter' && !isAddingEditor) handleAddEditor();
               }}
               className="border-amber-300 focus:border-amber-500"
             />
@@ -427,13 +694,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               disabled={isAddingEditor || !newEditorUsername.trim()}
               className="bg-amber-800 text-amber-50 hover:bg-amber-700"
             >
-              {isAddingEditor ? 'Adding...' : 'Add Editor'}
+              {isAddingEditor ? 'Adding…' : 'Add Editor'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog (2.4.1) */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="bg-white border-amber-300">
           <DialogHeader>
@@ -452,7 +719,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               Cancel
             </Button>
             <Button onClick={handleDelete} disabled={isDeleting} className="bg-red-600 text-white hover:bg-red-700">
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Deleting…' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
