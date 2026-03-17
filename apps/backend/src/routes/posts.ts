@@ -446,7 +446,10 @@ router.put(
       .isLength({ min: 1, max: 200 })
       .withMessage('Title must be between 1 and 200 characters'),
     body('content').optional(),
-    body('primary_author_profile_id').optional().isInt().withMessage('Invalid author profile ID'),
+    body('primary_author_profile_id')
+      .optional({ nullable: true })
+      .custom((val) => val === null || Number.isInteger(val))
+      .withMessage('Invalid author profile ID'),
     body('is_published').optional().isBoolean().withMessage('is_published must be a boolean'),
   ],
   async (req: AuthRequest, res: Response) => {

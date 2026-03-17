@@ -16,10 +16,9 @@ interface ImageLightboxProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (index: number) => void;
-  baseUrl?: string;
 }
 
-export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigate, baseUrl = '' }: ImageLightboxProps) {
+export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigate }: ImageLightboxProps) {
   const currentImage = images[currentIndex];
   const hasMultipleImages = images.length > 1;
 
@@ -53,7 +52,7 @@ export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigat
 
   if (!currentImage) return null;
 
-  const imageUrl = `${baseUrl}${currentImage.url}`;
+  const imageUrl = currentImage.url;
   const imageAlt = currentImage.originalName || currentImage.filename || `Image ${currentIndex + 1}`;
 
   return (
@@ -111,6 +110,7 @@ export function ImageLightbox({ images, currentIndex, isOpen, onClose, onNavigat
 
         {/* Main image container */}
         <div className="flex items-center justify-center w-full h-full min-h-[50vh] p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt={imageAlt} className="max-w-full max-h-[85vh] object-contain" />
         </div>
 

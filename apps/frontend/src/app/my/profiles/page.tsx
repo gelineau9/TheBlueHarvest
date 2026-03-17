@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -286,11 +287,15 @@ export default function MyProfilesPage() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         {profile.details?.avatar?.url ? (
-                          <img
-                            src={profile.details.avatar.url}
-                            alt={`${profile.name} avatar`}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-amber-200"
-                          />
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-amber-200 flex-shrink-0">
+                            <NextImage
+                              fill
+                              src={profile.details.avatar.url}
+                              alt={`${profile.name} avatar`}
+                              sizes="40px"
+                              className="object-cover"
+                            />
+                          </div>
                         ) : (
                           <div className="p-2 bg-amber-100 rounded-lg">
                             <Icon className="h-5 w-5 text-amber-600" />

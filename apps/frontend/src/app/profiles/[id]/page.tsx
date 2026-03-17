@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { ArrowLeft, User, Calendar, Pencil, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -237,11 +238,15 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             <div className="flex items-start gap-6">
               {/* Avatar */}
               {profile.details?.avatar?.url ? (
-                <img
-                  src={profile.details.avatar.url}
-                  alt={`${profile.name} avatar`}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-amber-200 flex-shrink-0"
-                />
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-amber-200 flex-shrink-0">
+                  <NextImage
+                    fill
+                    src={profile.details.avatar.url}
+                    alt={`${profile.name} avatar`}
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 flex-shrink-0">
                   <User className="w-12 h-12 text-amber-400" />

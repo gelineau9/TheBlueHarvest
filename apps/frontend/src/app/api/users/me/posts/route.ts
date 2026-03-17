@@ -12,11 +12,13 @@ export async function GET(request: NextRequest) {
   const limit = searchParams.get('limit') || '20';
   const cursor = searchParams.get('cursor') || '';
   const filter = searchParams.get('filter') || 'all';
+  const status = searchParams.get('status') || 'all';
 
   const queryString = new URLSearchParams({
     limit,
     ...(cursor && { cursor }),
     filter,
+    status,
   }).toString();
 
   try {

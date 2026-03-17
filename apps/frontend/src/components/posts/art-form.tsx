@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
+import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 
 interface ArtFormProps {
@@ -157,11 +158,13 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
             {uploadedImages.map((image) => (
               <div key={image.filename} className="relative group">
-                <div className="aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                  <NextImage
+                    fill
+                    src={image.url}
                     alt={image.originalName}
-                    className="w-full h-full object-cover"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
                   />
                 </div>
                 <button

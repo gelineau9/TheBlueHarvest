@@ -81,7 +81,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           return;
         }
 
-      setProfile(data);
+        setProfile(data);
         // Set both current and original values
         const initialName = data.name;
         const initialDescription = data.details?.description || '';
@@ -177,11 +177,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             <Button onClick={() => router.push('/')} className="bg-amber-800 text-amber-50 hover:bg-amber-700">
               Go to Homepage
             </Button>
-        </Card>
+          </Card>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
@@ -208,11 +208,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Avatar Upload */}
-            <AvatarUploader
-              avatar={avatar}
-              onAvatarChange={setAvatar}
-              disabled={isSaving}
-            />
+            <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
 
             {/* Name Field */}
             <div className="space-y-2">

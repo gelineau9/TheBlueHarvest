@@ -84,11 +84,11 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         description: data.details || undefined,
         avatar: avatar || undefined,
       };
-      
-      const result = await createProfile({ 
-        ...data, 
+
+      const result = await createProfile({
+        ...data,
         details: JSON.stringify(details),
-        is_published: isPublished 
+        is_published: isPublished,
       });
       if (!result.success) {
         setError(result.error || 'Failed to create profile');
@@ -124,12 +124,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
       )}
 
       {/* Avatar Upload */}
-      <AvatarUploader
-        avatar={avatar}
-        onAvatarChange={setAvatar}
-        label="Avatar"
-        disabled={isSubmitting}
-      />
+      <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} label="Avatar" disabled={isSubmitting} />
 
       {/* Parent Character Selection - Only shown for Items, Kinships, Organizations */}
       {needsParent && (

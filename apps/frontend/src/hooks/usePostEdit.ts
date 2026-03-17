@@ -58,16 +58,8 @@ export const POST_TYPE_NAMES: Record<number, string> = {
   4: 'Event',
 };
 
-export const POST_TYPE_ROUTES: Record<number, string> = {
-  1: 'writing',
-  2: 'art',
-  3: 'media',
-  4: 'event',
-};
-
 interface UsePostEditOptions {
   postId: string;
-  expectedType?: number; // If set, validates post type matches
 }
 
 interface UsePostEditReturn {
@@ -100,11 +92,10 @@ interface UsePostEditReturn {
   navigateBack: () => void;
 
   // Helpers
-  backendUrl: string;
   router: ReturnType<typeof useRouter>;
 }
 
-export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePostEditReturn {
+export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,8 +110,6 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
 
   const [characters, setCharacters] = useState<CharacterProfile[]>([]);
   const [charactersLoaded, setCharactersLoaded] = useState(false);
-
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
   // Fetch characters for event contact dropdown
   useEffect(() => {
@@ -165,16 +154,6 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
           return;
         }
 
-        // Check if post type matches expected type (for type-specific edit pages)
-        if (expectedType !== undefined && data.post_type_id !== expectedType) {
-          // Redirect to correct edit page
-          const correctRoute = POST_TYPE_ROUTES[data.post_type_id];
-          if (correctRoute) {
-            router.replace(`/posts/${postId}/edit/${correctRoute}`);
-            return;
-          }
-        }
-
         setPost(data);
       } catch {
         setError('An error occurred while loading the post');
@@ -184,7 +163,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
     };
 
     fetchPost();
-  }, [postId, expectedType, router]);
+  }, [postId]);
 
   // Upload images
   const uploadImages = useCallback(async (files: FileList, _maxImages = 10): Promise<UploadedImage[]> => {
@@ -242,7 +221,7 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
           content,
         };
 
-        // Include primary_author_profile_id if provided (even if null to clear it)
+        // Include primary_author_profile_id if provided (null = clear the author)
         if (primaryAuthorProfileId !== undefined) {
           body.primary_author_profile_id = primaryAuthorProfileId;
         }
@@ -262,7 +241,10 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
 
         if (!response.ok) {
           const data = await response.json();
-          setSaveError(data.message || data.error || 'Failed to save changes');
+          // express-validator returns { errors: [{msg, path, ...}] }
+          // other backend errors return { message } or { error }
+          const firstValidationMsg = Array.isArray(data.errors) ? data.errors[0]?.msg : undefined;
+          setSaveError(firstValidationMsg || data.message || data.error || 'Failed to save changes');
           return false;
         }
 
@@ -296,7 +278,6 @@ export function usePostEdit({ postId, expectedType }: UsePostEditOptions): UsePo
     charactersLoaded,
     savePost,
     navigateBack,
-    backendUrl,
     router,
   };
 }

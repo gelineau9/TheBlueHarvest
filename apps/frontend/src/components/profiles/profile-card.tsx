@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { Users, Sword, Package, Building2, MapPin, User, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
@@ -22,7 +23,15 @@ const typeIcons = {
   5: MapPin, // Location
 };
 
-export function ProfileCard({ profile_id, name, profile_type_id, type_name, created_at, username, avatar_url }: ProfileCardProps) {
+export function ProfileCard({
+  profile_id,
+  name,
+  profile_type_id,
+  type_name,
+  created_at,
+  username,
+  avatar_url,
+}: ProfileCardProps) {
   const Icon = typeIcons[profile_type_id as keyof typeof typeIcons] || Users;
 
   const formattedDate = new Date(created_at).toLocaleDateString('en-US', {
@@ -37,11 +46,9 @@ export function ProfileCard({ profile_id, name, profile_type_id, type_name, crea
         <div className="flex items-start gap-4">
           {/* Avatar or type icon */}
           {avatar_url ? (
-            <img
-              src={avatar_url}
-              alt={`${name} avatar`}
-              className="w-12 h-12 rounded-full object-cover border-2 border-amber-200 flex-shrink-0"
-            />
+            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-amber-200 flex-shrink-0">
+              <NextImage fill src={avatar_url} alt={`${name} avatar`} sizes="48px" className="object-cover" />
+            </div>
           ) : (
             <div className="p-3 rounded-lg bg-amber-100 text-amber-700 flex-shrink-0">
               <Icon className="w-6 h-6" />

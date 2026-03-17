@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Calendar, Clock, MapPin, Users } from 'lucide-react';
+import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
@@ -20,41 +21,57 @@ interface EventFormProps {
 
 // Helper functions for date validation
 const getMinDate = () => {
+  // Use local date parts to avoid UTC offset shifting the date
   const today = new Date();
-  return today.toISOString().split('T')[0];
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 const getMaxDate = () => {
   const oneYearFromNow = new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-  return oneYearFromNow.toISOString().split('T')[0];
+  const yyyy = oneYearFromNow.getFullYear();
+  const mm = String(oneYearFromNow.getMonth() + 1).padStart(2, '0');
+  const dd = String(oneYearFromNow.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 // Validation schema for event posts
-const eventPostSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
-  description: z.string().min(1, 'Description is required'),
-  eventDate: z
-    .string()
-    .min(1, 'Event date is required')
-    .refine((date) => {
-      const selected = new Date(date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return selected >= today;
-    }, 'Event date cannot be in the past')
-    .refine((date) => {
-      const selected = new Date(date);
-      const oneYearFromNow = new Date();
-      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-      return selected <= oneYearFromNow;
-    }, 'Event date cannot be more than 1 year away'),
-  eventTime: z.string().min(1, 'Event time is required'),
-  location: z.string().min(1, 'Location is required'),
-  maxAttendees: z.string().optional(),
-  contactProfileId: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
+const eventPostSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
+    description: z.string().min(1, 'Description is required'),
+    eventDate: z
+      .string()
+      .min(1, 'Event date is required')
+      .refine((date) => {
+        const selected = new Date(date);
+        const oneYearFromNow = new Date();
+        oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+        return selected <= oneYearFromNow;
+      }, 'Event date cannot be more than 1 year away'),
+    eventTime: z.string().min(1, 'Event time is required'),
+    location: z.string().min(1, 'Location is required'),
+    maxAttendees: z.string().optional(),
+    contactProfileId: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Validate combined date+time in the user's local timezone against the current moment.
+    // new Date(`${date}T${time}`) is parsed as local time (no Z suffix), which is correct.
+    if (data.eventDate && data.eventTime) {
+      const eventDateTime = new Date(`${data.eventDate}T${data.eventTime}`);
+      if (eventDateTime <= new Date()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Event date and time must be in the future',
+          path: ['eventTime'],
+        });
+      }
+    }
+  });
 
 type EventPostInput = z.infer<typeof eventPostSchema>;
 
@@ -171,11 +188,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
         {headerImage ? (
           <div className="relative">
-            <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-              <img
-                src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${headerImage.url}`}
+            <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+              <NextImage
+                fill
+                src={headerImage.url}
                 alt={headerImage.originalName}
-                className="w-full h-full object-cover"
+                sizes="(max-width: 768px) 100vw, 800px"
+                className="object-cover"
               />
             </div>
             <button

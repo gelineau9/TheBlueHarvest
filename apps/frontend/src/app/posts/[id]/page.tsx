@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText, Clock, MapPin, Users, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -367,10 +368,12 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                       key={index}
                       className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300"
                     >
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${image.url}`}
+                      <Image
+                        src={image.url}
                         alt={image.originalName || `Image ${index + 1}`}
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => {
                           setLightboxIndex(index);
                           setLightboxOpen(true);
@@ -398,11 +401,13 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             <div className="space-y-6">
               {/* Header Image */}
               {post.content.headerImage && (
-                <div className="aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${post.content.headerImage.url}`}
+                <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                  <Image
+                    src={post.content.headerImage.url}
                     alt={post.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    className="object-cover"
                   />
                 </div>
               )}
@@ -667,7 +672,6 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             isOpen={lightboxOpen}
             onClose={() => setLightboxOpen(false)}
             onNavigate={setLightboxIndex}
-            baseUrl={process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}
           />
         )}
     </div>

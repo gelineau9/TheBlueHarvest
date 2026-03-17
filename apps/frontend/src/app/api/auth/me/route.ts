@@ -14,10 +14,11 @@ export async function GET() {
       id: session.id,
       username: session.username,
       email: session.email,
-      avatarUrl: '',
+      details: session.details,
     });
   } catch (err) {
     console.error('Auth check error:', err);
     return NextResponse.json({ isLoggedIn: false }, { status: 500 });
   }
 }
+

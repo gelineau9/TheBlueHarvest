@@ -10,11 +10,13 @@ interface AuthContextType {
   username?: string;
   avatarUrl?: string;
   email?: string;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   isLoading: true,
+  refreshAuth: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
           accountId: data.id,
           username: data.username,
-          avatarUrl: data.avatarUrl,
+          avatarUrl: data.details?.avatar?.url,
           email: data.email,
         });
       } else {
@@ -50,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [pathname]); // Recheck auth when route changes
 
-  return <AuthContext.Provider value={authState}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...authState, refreshAuth: checkAuth }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

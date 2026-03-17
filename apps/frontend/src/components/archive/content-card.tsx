@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import NextImage from 'next/image';
 import {
   Users,
   Sword,
@@ -91,11 +92,13 @@ export function ContentCard({
       <Card className="bg-white border-amber-300 hover:border-amber-500 hover:shadow-lg transition-all cursor-pointer h-full overflow-hidden">
         {/* Thumbnail for art/media/event posts */}
         {hasThumbnail && (
-          <div className="aspect-video w-full bg-amber-50 overflow-hidden">
-            <img
-              src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}${thumbnail}`}
+          <div className="relative aspect-video w-full bg-amber-50 overflow-hidden">
+            <NextImage
+              fill
+              src={thumbnail!}
               alt={name}
-              className="w-full h-full object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
         )}

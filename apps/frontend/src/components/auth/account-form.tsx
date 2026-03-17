@@ -7,13 +7,16 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { accountUpdateSchema, type AccountUpdateInput } from '@/app/lib/validations';
 import { useAuth } from './auth-provider';
+import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { Avatar } from '@/hooks/useAvatarUpload';
 import Link from 'next/link';
 
 export function AccountForm() {
-  const { username, email } = useAuth();
+  const { username, email, avatarUrl, refreshAuth } = useAuth();
   const [formData, setFormData] = useState<AccountUpdateInput>({
     username: '',
   });
+  const [avatar, setAvatar] = useState<Avatar | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof AccountUpdateInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -25,7 +28,15 @@ export function AccountForm() {
         username,
       });
     }
-  }, [username]);
+    // Initialize avatar from auth context
+    if (avatarUrl) {
+      setAvatar({
+        url: avatarUrl,
+        filename: '',
+        originalName: '',
+      });
+    }
+  }, [username, avatarUrl]);
 
   const handleInputChange = (field: keyof AccountUpdateInput, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -45,12 +56,19 @@ export function AccountForm() {
       // Validate form data
       const validatedData = accountUpdateSchema.parse(formData);
 
+      // Build details object with avatar — only include if avatar is set
+      // to avoid clearing existing details when only updating username
+      const details = avatar ? { avatar } : undefined;
+
       const response = await fetch('/api/auth/account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(validatedData),
+        body: JSON.stringify({
+          ...validatedData,
+          details,
+        }),
       });
 
       if (!response.ok) {
@@ -59,10 +77,8 @@ export function AccountForm() {
       }
 
       setSuccess(true);
-      // Refresh the page to update auth state
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      // Refresh auth state to update avatar in header
+      await refreshAuth();
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
         // Handle validation errors
@@ -97,6 +113,9 @@ export function AccountForm() {
             <Input id="email" type="email" value={email || ''} disabled className="text-amber-900 bg-gray-100" />
             <p className="text-xs text-amber-600">Email cannot be changed</p>
           </div>
+
+          {/* Avatar Upload */}
+          <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} label="Profile Picture" disabled={isLoading} />
 
           <div className="space-y-2">
             <Label htmlFor="username" className="text-amber-900">
