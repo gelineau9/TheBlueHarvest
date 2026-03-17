@@ -256,6 +256,11 @@ router.get('/public', async (req: Request, res: Response) => {
   const searchParam = req.query.search as string;
   const searchTerm = searchParam ? searchParam.trim().slice(0, 100) : '';
 
+  // Parse startsWith parameter — single letter filter for alphabetical browsing
+  const startsWithParam = req.query.startsWith as string;
+  const startsWithLetter =
+    startsWithParam && /^[a-zA-Z]$/.test(startsWithParam.trim()) ? startsWithParam.trim().toUpperCase() : '';
+
   try {
     const db = await getPool();
 
@@ -291,6 +296,11 @@ router.get('/public', async (req: Request, res: Response) => {
     // Uses ILIKE for case-insensitive partial matching
     const searchFilterFragment = searchTerm ? sql.fragment`AND p.name ILIKE ${'%' + searchTerm + '%'}` : sql.fragment``;
 
+    // Build startsWith filter fragment — anchored prefix match for alphabetical browsing
+    const startsWithFilterFragment = startsWithLetter
+      ? sql.fragment`AND p.name ILIKE ${startsWithLetter + '%'}`
+      : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -319,6 +329,7 @@ router.get('/public', async (req: Request, res: Response) => {
         AND p.is_published = true
       ${typeFilterFragment}
       ${searchFilterFragment}
+      ${startsWithFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -334,6 +345,7 @@ router.get('/public', async (req: Request, res: Response) => {
         AND p.is_published = true
       ${typeFilterFragment}
       ${searchFilterFragment}
+      ${startsWithFilterFragment}
     `,
     );
 
