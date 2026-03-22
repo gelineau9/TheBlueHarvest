@@ -32,7 +32,10 @@ export async function DELETE(
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json({ message: data.error || 'Failed to remove featured profile' }, { status: response.status });
+      return NextResponse.json(
+        { message: data.error || 'Failed to remove featured profile' },
+        { status: response.status },
+      );
     }
 
     return NextResponse.json(data);

@@ -204,11 +204,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       </div>
 
       {/* Featured Profiles */}
-      <FeaturedProfilesPicker
-        value={featuredProfiles}
-        onChange={setFeaturedProfiles}
-        disabled={isSubmitting}
-      />
+      <FeaturedProfilesPicker value={featuredProfiles} onChange={setFeaturedProfiles} disabled={isSubmitting} />
 
       {/* Publish Status */}
       <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">

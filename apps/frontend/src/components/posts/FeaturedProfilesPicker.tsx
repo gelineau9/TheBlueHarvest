@@ -215,7 +215,9 @@ export function FeaturedProfilesPicker({ value, onChange, disabled = false }: Fe
         )}
       </div>
 
-      <p className="text-xs text-amber-700">Tag profiles that appear in this post. Type at least 2 characters to search.</p>
+      <p className="text-xs text-amber-700">
+        Tag profiles that appear in this post. Type at least 2 characters to search.
+      </p>
     </div>
   );
 }

@@ -17,6 +17,8 @@ import {
   BookOpen,
   Package,
   ChevronRight,
+  Heart,
+  Swords,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -35,6 +37,7 @@ import type { PublicPost, PublicPostsResponse } from '@/types/posts';
 
 interface ProfileDetails {
   description?: string;
+  appearance?: string;
   avatar?: { url: string; filename: string };
   banner?: { url: string; filename: string };
   race?: string;
@@ -83,11 +86,19 @@ interface ItemsResponse {
   total: number;
 }
 
+interface LiveRelationship {
+  relationship_id: number;
+  other_profile_id: number;
+  other_profile_name: string;
+  other_profile_avatar_url: string | null;
+  type_name: string;
+  label: string | null;
+}
+
 // ─── Small inline cards ───────────────────────────────────────────────────────
 
 function WritingPostCard({ post }: { post: PublicPost }) {
-  const preview =
-    typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 160) : '';
+  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 160) : '';
 
   return (
     <Link href={`/posts/${post.post_id}`} className="block">
@@ -180,6 +191,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [writingLoading, setWritingLoading] = useState(false);
 
+  // Relationships (character only)
+  const [relationships, setRelationships] = useState<LiveRelationship[]>([]);
+  const [relationshipsLoading, setRelationshipsLoading] = useState(false);
+  const [removingRelId, setRemovingRelId] = useState<number | null>(null);
+
   const { id } = use(params);
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
@@ -217,6 +233,26 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (profile) fetchEditors();
+  }, [profile?.profile_id]);
+
+  // ── Fetch relationships ────────────────────────────────────────────────────
+  const fetchRelationships = async () => {
+    setRelationshipsLoading(true);
+    try {
+      const response = await fetch(`/api/profiles/${id}/relationships`);
+      if (response.ok) {
+        const data = await response.json();
+        setRelationships(data.relationships || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch relationships:', err);
+    } finally {
+      setRelationshipsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (profile && profile.profile_type_id === 1) fetchRelationships();
   }, [profile?.profile_id]);
 
   // ── Fetch character bottom sections ───────────────────────────────────────
@@ -292,6 +328,22 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const handleRemoveRelationship = async (relId: number) => {
+    setRemovingRelId(relId);
+    try {
+      const response = await fetch(`/api/profiles/${id}/relationships/${relId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to remove relationship');
+      }
+      await fetchRelationships();
+    } catch (err) {
+      console.error('Failed to remove relationship:', err);
+    } finally {
+      setRemovingRelId(null);
+    }
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -323,7 +375,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
@@ -347,8 +402,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   const isCharacter = profile.profile_type_id === 1;
   const d = profile.details;
-  const hasCharacterInfo =
-    isCharacter && d && (d.race || d.occupation || d.age || d.kinship || d.residence);
 
   return (
     <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
@@ -387,7 +440,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   }`}
                 >
                   {d?.avatar?.url ? (
-                    <NextImage fill src={d.avatar.url} alt={`${profile.name} avatar`} sizes="96px" className="object-cover" />
+                    <NextImage
+                      fill
+                      src={d.avatar.url}
+                      alt={`${profile.name} avatar`}
+                      sizes="96px"
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <User className="w-12 h-12 text-amber-400" />
@@ -460,51 +519,158 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         </Card>
 
         {/* Character info panel */}
-        {hasCharacterInfo && (
+        {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
             <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
-            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-              {d?.race && (
-                <div>
-                  <dt className="text-amber-600 font-medium">Race</dt>
-                  <dd className="text-amber-900">{d.race}</dd>
-                </div>
-              )}
-              {d?.occupation && (
-                <div>
-                  <dt className="text-amber-600 font-medium">Occupation</dt>
-                  <dd className="text-amber-900">{d.occupation}</dd>
-                </div>
-              )}
-              {d?.age && (
-                <div>
-                  <dt className="text-amber-600 font-medium">Age</dt>
-                  <dd className="text-amber-900">{d.age}</dd>
-                </div>
-              )}
-              {d?.kinship && (
-                <div>
-                  <dt className="text-amber-600 font-medium">Kinship</dt>
-                  <dd className="text-amber-900">{d.kinship}</dd>
-                </div>
-              )}
-              {d?.residence && (
-                <div className="col-span-2 sm:col-span-1">
-                  <dt className="text-amber-600 font-medium">Residence</dt>
-                  <dd className="text-amber-900">{d.residence}</dd>
-                </div>
-              )}
-            </dl>
+            {d && (d.race || d.occupation || d.age || d.kinship || d.residence) ? (
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                {d?.race && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Race</dt>
+                    <dd className="text-amber-900">{d.race}</dd>
+                  </div>
+                )}
+                {d?.occupation && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Occupation</dt>
+                    <dd className="text-amber-900">{d.occupation}</dd>
+                  </div>
+                )}
+                {d?.age && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Age</dt>
+                    <dd className="text-amber-900">{d.age}</dd>
+                  </div>
+                )}
+                {d?.kinship && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Kinship</dt>
+                    <dd className="text-amber-900">{d.kinship}</dd>
+                  </div>
+                )}
+                {d?.residence && (
+                  <div className="col-span-2 sm:col-span-1">
+                    <dt className="text-amber-600 font-medium">Residence</dt>
+                    <dd className="text-amber-900">{d.residence}</dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="text-amber-600 text-sm italic">No character info has been added yet.</p>
+            )}
           </Card>
         )}
 
-        {/* Profile Description */}
+        {/* Relationships (character only) */}
+        {isCharacter && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Heart className="w-5 h-5 text-amber-800" />
+              <h2 className="text-xl font-bold text-amber-900">Relationships</h2>
+            </div>
+
+            {relationshipsLoading ? (
+              <p className="text-amber-600 text-sm">Loading relationships…</p>
+            ) : relationships.length === 0 ? (
+              <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
+            ) : (
+              <div className="space-y-6">
+                {(
+                  [
+                    { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                    { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
+                    {
+                      label: 'Rivals & Enemies',
+                      color: 'text-red-600',
+                      filter: (t: string) => t === 'rival' || t === 'enemy',
+                    },
+                  ] as const
+                ).map(({ label: groupLabel, color, filter }) => {
+                  const group = relationships.filter((r) => filter(r.type_name));
+                  if (group.length === 0) return null;
+                  return (
+                    <div key={groupLabel}>
+                      <h3 className={`text-sm font-semibold mb-2 ${color}`}>{groupLabel}</h3>
+                      <ul className="space-y-2">
+                        {group.map((rel) => (
+                          <li
+                            key={rel.relationship_id}
+                            className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                                {rel.other_profile_avatar_url ? (
+                                  <NextImage
+                                    fill
+                                    src={rel.other_profile_avatar_url}
+                                    alt={rel.other_profile_name}
+                                    sizes="28px"
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center">
+                                    <User className="w-3.5 h-3.5 text-amber-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <Link
+                                  href={`/profiles/${rel.other_profile_id}`}
+                                  className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
+                                >
+                                  {rel.other_profile_name}
+                                </Link>
+                                {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
+                              </div>
+                            </div>
+                            {profile.can_edit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveRelationship(rel.relationship_id)}
+                                disabled={removingRelId === rel.relationship_id}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                              >
+                                {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Appearance (character only) */}
+        {isCharacter && (
+          <Card className="p-8 bg-white border-amber-300 mb-6">
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">Appearance</h2>
+            {d?.appearance ? (
+              <p className="text-amber-800 whitespace-pre-wrap">{d.appearance}</p>
+            ) : (
+              <p className="text-amber-600 italic">No appearance description has been added yet.</p>
+            )}
+          </Card>
+        )}
+
+        {/* Background / Description */}
         {d?.description ? (
           <Card className="p-8 bg-white border-amber-300 mb-6">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
-            <div className="prose prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap">{d.description}</p>
-            </div>
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">{isCharacter ? 'Background' : 'Details'}</h2>
+            {isCharacter ? (
+              <div
+                className="prose prose-amber max-w-none text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: d.description }}
+              />
+            ) : (
+              <div className="prose prose-amber max-w-none">
+                <p className="text-amber-800 whitespace-pre-wrap">{d.description}</p>
+              </div>
+            )}
           </Card>
         ) : (
           <Card className="p-8 bg-white border-amber-300 mb-6">

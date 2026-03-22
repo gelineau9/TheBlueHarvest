@@ -121,9 +121,7 @@ router.post(
 // DELETE /api/posts/:id/featured/:featuredId - Remove a featured profile from a post
 router.delete('/:id/featured/:featuredId', authenticateToken, async (req: AuthRequest, res: Response) => {
   const postId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const featuredId = parseInt(
-    Array.isArray(req.params.featuredId) ? req.params.featuredId[0] : req.params.featuredId,
-  );
+  const featuredId = parseInt(Array.isArray(req.params.featuredId) ? req.params.featuredId[0] : req.params.featuredId);
   const userId = req.userId!;
 
   if (isNaN(postId) || isNaN(featuredId)) {

@@ -294,9 +294,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
               body: JSON.stringify({ profile_id: p.profile_id }),
             }),
           ),
-          ...toRemove.map((fp) =>
-            fetch(`/api/posts/${id}/featured/${fp.featured_profile_id}`, { method: 'DELETE' }),
-          ),
+          ...toRemove.map((fp) => fetch(`/api/posts/${id}/featured/${fp.featured_profile_id}`, { method: 'DELETE' })),
         ]);
       }
 
@@ -727,11 +725,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
             {/* Featured Profiles — writing, art, media only */}
             {type !== POST_TYPES.EVENT && (
-              <FeaturedProfilesPicker
-                value={featuredProfiles}
-                onChange={setFeaturedProfiles}
-                disabled={isSaving}
-              />
+              <FeaturedProfilesPicker value={featuredProfiles} onChange={setFeaturedProfiles} disabled={isSaving} />
             )}
 
             {PublishToggle}

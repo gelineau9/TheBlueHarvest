@@ -264,8 +264,7 @@ router.get('/public', async (req: Request, res: Response) => {
   // Parse parent_profile_id filter (for owned-items section on character profile pages)
   const parentProfileIdParam = req.query.parent_profile_id as string;
   const parentProfileIdFilter = parentProfileIdParam ? parseInt(parentProfileIdParam, 10) : null;
-  const validParentProfileId =
-    parentProfileIdFilter && !isNaN(parentProfileIdFilter) ? parentProfileIdFilter : null;
+  const validParentProfileId = parentProfileIdFilter && !isNaN(parentProfileIdFilter) ? parentProfileIdFilter : null;
 
   try {
     const db = await getPool();

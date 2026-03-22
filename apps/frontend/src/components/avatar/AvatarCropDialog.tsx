@@ -184,11 +184,13 @@ export function AvatarCropDialog({
             {isUploading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Uploading...
-            </>
-          ) : (
-            title === 'Adjust Avatar' ? 'Save Avatar' : 'Save Image'
-          )}
+                Uploading...
+              </>
+            ) : title === 'Adjust Avatar' ? (
+              'Save Avatar'
+            ) : (
+              'Save Image'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

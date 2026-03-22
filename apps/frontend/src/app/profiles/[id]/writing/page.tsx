@@ -21,8 +21,7 @@ const ATTRIBUTION_OPTIONS: { value: AttributionFilter; label: string }[] = [
 // ─── Post card ────────────────────────────────────────────────────────────────
 
 function WritingPostCard({ post }: { post: PublicPost }) {
-  const preview =
-    typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 200) : '';
+  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 200) : '';
 
   return (
     <Link href={`/posts/${post.post_id}`} className="block">

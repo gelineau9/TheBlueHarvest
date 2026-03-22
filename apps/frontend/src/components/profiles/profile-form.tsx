@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { AvatarUploader } from '@/components/avatar/AvatarUploader';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Avatar } from '@/hooks/useAvatarUpload';
+import { RelationshipsPicker, PendingRelationship } from '@/components/profiles/RelationshipsPicker';
 
 interface ProfileFormProps {
   profileTypeId: number;
@@ -31,8 +33,19 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const [isPublished, setIsPublished] = useState(true);
   const [avatar, setAvatar] = useState<Avatar | null>(null);
 
+  // Character-specific fields (only used when profileTypeId === 1)
+  const [race, setRace] = useState('');
+  const [residence, setResidence] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [kinship, setKinship] = useState('');
+  const [age, setAge] = useState('');
+  const [appearance, setAppearance] = useState('');
+  const [background, setBackground] = useState('');
+  const [pendingRelationships, setPendingRelationships] = useState<PendingRelationship[]>([]);
+
   // Profile types that need a parent: Items (2), Kinships (3), Organizations (4)
   const needsParent = [2, 3, 4].includes(profileTypeId);
+  const isCharacter = profileTypeId === 1;
 
   const {
     register,
@@ -51,7 +64,6 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const nameValue = watch('name') || '';
   const nameLength = nameValue.length;
 
-  // Fetch user's characters if this profile type needs a parent
   useEffect(() => {
     if (needsParent) {
       fetchCharacters();
@@ -76,14 +88,29 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   };
 
   const onSubmit = async (data: CreateProfileInput) => {
+    // Race is required for characters
+    if (isCharacter && !race.trim()) {
+      setError('Race is required for characters.');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
-      // Build details object with description and avatar
-      const details = {
-        description: data.details || undefined,
+      const details: Record<string, unknown> = {
         avatar: avatar || undefined,
       };
+
+      if (isCharacter) {
+        details.description = background || undefined;
+        details.appearance = appearance.trim() || undefined;
+        if (race.trim()) details.race = race.trim();
+        if (residence.trim()) details.residence = residence.trim();
+        if (occupation.trim()) details.occupation = occupation.trim();
+        if (kinship.trim()) details.kinship = kinship.trim();
+        if (age.trim()) details.age = age.trim();
+      } else {
+        details.description = data.details || undefined;
+      }
 
       const result = await createProfile({
         ...data,
@@ -95,7 +122,26 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         return;
       }
       if (result.profile?.profile_id) {
-        onSuccess(result.profile.profile_id);
+        const newProfileId = result.profile.profile_id;
+
+        // POST pending relationships (characters only, best-effort — failures are silent)
+        if (isCharacter && pendingRelationships.length > 0) {
+          await Promise.allSettled(
+            pendingRelationships.map((rel) =>
+              fetch(`/api/profiles/${newProfileId}/relationships`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  profile_id_2: rel.profile_id_2,
+                  type: rel.type,
+                  label: rel.label,
+                }),
+              }),
+            ),
+          );
+        }
+
+        onSuccess(newProfileId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -125,6 +171,27 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
       {/* Avatar Upload */}
       <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} label="Avatar" disabled={isSubmitting} />
+
+      {/* ── Name field (always shown) ───────────────────────────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="name" className="text-amber-900 font-semibold">
+            {isCharacter ? 'Character Name' : `${getProfileTypeLabel()} Name`} *
+          </Label>
+          <span className={`text-xs ${nameLength > 100 ? 'text-red-600 font-semibold' : 'text-amber-600'}`}>
+            {nameLength}/100 characters
+          </span>
+        </div>
+        <Input
+          id="name"
+          {...register('name')}
+          placeholder={`Enter a name for your ${getProfileTypeLabel().toLowerCase()}`}
+          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+          disabled={isSubmitting}
+          maxLength={100}
+        />
+        {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+      </div>
 
       {/* Parent Character Selection - Only shown for Items, Kinships, Organizations */}
       {needsParent && (
@@ -180,43 +247,151 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         </div>
       )}
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="name" className="text-amber-900 font-semibold">
-            {getProfileTypeLabel()} Name *
-          </Label>
-          <span className={`text-xs ${nameLength > 100 ? 'text-red-600 font-semibold' : 'text-amber-600'}`}>
-            {nameLength}/100 characters
-          </span>
-        </div>
-        <Input
-          id="name"
-          {...register('name')}
-          placeholder={`Enter a name for your ${getProfileTypeLabel().toLowerCase()}`}
-          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-          disabled={isSubmitting}
-          maxLength={100}
-        />
-        {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
-      </div>
+      {/* ── Character Info fields ───────────────────────────────────────────── */}
+      {isCharacter && (
+        <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Info</h2>
 
-      <div className="space-y-2">
-        <Label htmlFor="details" className="text-amber-900 font-semibold">
-          Details (Optional)
-        </Label>
-        <Textarea
-          id="details"
-          {...register('details')}
-          placeholder={`Add details about your ${getProfileTypeLabel().toLowerCase()}...`}
-          rows={6}
-          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
-          disabled={isSubmitting}
-        />
-        {errors.details && <p className="text-sm text-red-600">{errors.details.message}</p>}
-        <p className="text-sm text-amber-700">
-          You can add a description, backstory, or any other relevant information here.
-        </p>
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="race" className="text-amber-900 font-medium">
+                Race *
+              </Label>
+              <Input
+                id="race"
+                type="text"
+                value={race}
+                onChange={(e) => {
+                  setRace(e.target.value);
+                  if (error === 'Race is required for characters.') setError(null);
+                }}
+                placeholder="e.g. Human, Elf, Dwarf…"
+                maxLength={100}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+              {!race.trim() && error === 'Race is required for characters.' && (
+                <p className="text-sm text-red-600">Race is required</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="occupation" className="text-amber-900 font-medium">
+                Occupation
+              </Label>
+              <Input
+                id="occupation"
+                type="text"
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+                placeholder="e.g. Blacksmith, Mage…"
+                maxLength={100}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="age" className="text-amber-900 font-medium">
+                Age
+              </Label>
+              <Input
+                id="age"
+                type="text"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="e.g. 32, Ancient, Unknown…"
+                maxLength={50}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="kinship" className="text-amber-900 font-medium">
+                Kinship
+              </Label>
+              <Input
+                id="kinship"
+                type="text"
+                value={kinship}
+                onChange={(e) => setKinship(e.target.value)}
+                placeholder="Family or clan name…"
+                maxLength={100}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="residence" className="text-amber-900 font-medium">
+                Residence
+              </Label>
+              <Input
+                id="residence"
+                type="text"
+                value={residence}
+                onChange={(e) => setResidence(e.target.value)}
+                placeholder="Where does this character live?"
+                maxLength={100}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Appearance (character only, plain text) ─────────────────────────── */}
+      {isCharacter && (
+        <div className="space-y-2">
+          <Label htmlFor="appearance" className="text-amber-900 font-semibold">
+            Appearance
+          </Label>
+          <Textarea
+            id="appearance"
+            value={appearance}
+            onChange={(e) => setAppearance(e.target.value)}
+            placeholder="Describe your character's physical appearance…"
+            rows={4}
+            className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
+            disabled={isSubmitting}
+          />
+        </div>
+      )}
+
+      {/* ── Background (character) / Details (other) ────────────────────────── */}
+      {isCharacter ? (
+        <div className="space-y-2">
+          <Label className="text-amber-900 font-semibold">Background</Label>
+          <RichTextEditor
+            value={background}
+            onChange={setBackground}
+            placeholder="Add your character's backstory, history, or any other background information…"
+            disabled={isSubmitting}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="details" className="text-amber-900 font-semibold">
+            Details
+          </Label>
+          <Textarea
+            id="details"
+            {...register('details')}
+            placeholder={`Add details about your ${getProfileTypeLabel().toLowerCase()}...`}
+            rows={6}
+            className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
+            disabled={isSubmitting}
+          />
+          {errors.details && <p className="text-sm text-red-600">{errors.details.message}</p>}
+        </div>
+      )}
+
+      {/* ── Relationships (character only) ──────────────────────────────────── */}
+      {isCharacter && (
+        <RelationshipsPicker value={pendingRelationships} onChange={setPendingRelationships} disabled={isSubmitting} />
+      )}
 
       {/* Publish Status */}
       <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">

@@ -15,9 +15,12 @@ import { AvatarUploader } from '@/components/avatar/AvatarUploader';
 import { AvatarCropDialog } from '@/components/avatar/AvatarCropDialog';
 import { Avatar } from '@/hooks/useAvatarUpload';
 import { useBannerUpload, BannerImage } from '@/hooks/useBannerUpload';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { RelationshipsPicker, PendingRelationship } from '@/components/profiles/RelationshipsPicker';
 
 interface ProfileDetails {
   description?: string;
+  appearance?: string;
   avatar?: Avatar;
   banner?: BannerImage;
   race?: string;
@@ -25,6 +28,18 @@ interface ProfileDetails {
   age?: string;
   kinship?: string;
   residence?: string;
+}
+
+interface LiveRelationship {
+  relationship_id: number;
+  profile_id_1: number;
+  profile_id_2: number;
+  type_name: string;
+  label: string | null;
+  other_profile_id: number;
+  other_profile_name: string;
+  other_profile_avatar_url: string | null;
+  created_at: string;
 }
 
 interface Profile {
@@ -63,6 +78,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [age, setAge] = useState('');
   const [kinship, setKinship] = useState('');
   const [residence, setResidence] = useState('');
+  const [appearance, setAppearance] = useState('');
+
+  // Live relationships (characters only) — managed separately from the form submit
+  const [liveRelationships, setLiveRelationships] = useState<LiveRelationship[]>([]);
+  const [pendingRelationships, setPendingRelationships] = useState<PendingRelationship[]>([]);
+  const [isSavingRelationships, setIsSavingRelationships] = useState(false);
+  const [removingRelId, setRemovingRelId] = useState<number | null>(null);
+  const [relationshipError, setRelationshipError] = useState<string | null>(null);
 
   // Original values for dirty checking
   const [originalName, setOriginalName] = useState('');
@@ -75,6 +98,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [originalAge, setOriginalAge] = useState('');
   const [originalKinship, setOriginalKinship] = useState('');
   const [originalResidence, setOriginalResidence] = useState('');
+  const [originalAppearance, setOriginalAppearance] = useState('');
 
   // Banner upload hook (3:1 aspect, no circular crop)
   const {
@@ -103,7 +127,8 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     occupation !== originalOccupation ||
     age !== originalAge ||
     kinship !== originalKinship ||
-    residence !== originalResidence;
+    residence !== originalResidence ||
+    appearance !== originalAppearance;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -142,6 +167,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         const initialAge = data.details?.age || '';
         const initialKinship = data.details?.kinship || '';
         const initialResidence = data.details?.residence || '';
+        const initialAppearance = data.details?.appearance || '';
 
         setName(initialName);
         setDescription(initialDescription);
@@ -153,6 +179,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         setAge(initialAge);
         setKinship(initialKinship);
         setResidence(initialResidence);
+        setAppearance(initialAppearance);
 
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
@@ -164,6 +191,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         setOriginalAge(initialAge);
         setOriginalKinship(initialKinship);
         setOriginalResidence(initialResidence);
+        setOriginalAppearance(initialAppearance);
       } catch {
         setError('An error occurred while loading the profile');
       } finally {
@@ -173,6 +201,69 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
     fetchProfile();
   }, [id, setBanner]);
+
+  // ── Fetch live relationships (character only) ──────────────────────────────
+  const fetchRelationships = async () => {
+    try {
+      const res = await fetch(`/api/profiles/${id}/relationships`);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveRelationships(data.relationships || []);
+      }
+    } catch {
+      // non-fatal
+    }
+  };
+
+  useEffect(() => {
+    if (isCharacter) fetchRelationships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCharacter, id]);
+
+  // ── Add pending relationships ──────────────────────────────────────────────
+  const handleSaveRelationships = async () => {
+    if (pendingRelationships.length === 0) return;
+    setIsSavingRelationships(true);
+    setRelationshipError(null);
+    const results = await Promise.allSettled(
+      pendingRelationships.map((rel) =>
+        fetch(`/api/profiles/${id}/relationships`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile_id_2: rel.profile_id_2,
+            type: rel.type,
+            label: rel.label,
+          }),
+        }),
+      ),
+    );
+    const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
+    if (failed.length > 0) {
+      setRelationshipError(`${failed.length} relationship(s) failed to save.`);
+    }
+    setPendingRelationships([]);
+    await fetchRelationships();
+    setIsSavingRelationships(false);
+  };
+
+  // ── Remove a live relationship ─────────────────────────────────────────────
+  const handleRemoveRelationship = async (relId: number) => {
+    setRemovingRelId(relId);
+    try {
+      const res = await fetch(`/api/profiles/${id}/relationships/${relId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        setRelationshipError(data.message || 'Failed to remove relationship');
+      } else {
+        await fetchRelationships();
+      }
+    } catch {
+      setRelationshipError('Failed to remove relationship');
+    } finally {
+      setRemovingRelId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +284,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         if (age.trim()) details.age = age.trim();
         if (kinship.trim()) details.kinship = kinship.trim();
         if (residence.trim()) details.residence = residence.trim();
+        if (appearance.trim()) details.appearance = appearance.trim();
       }
 
       const response = await fetch(`/api/profiles/${id}`, {
@@ -222,6 +314,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalAge(age.trim());
       setOriginalKinship(kinship.trim());
       setOriginalResidence(residence.trim());
+      setOriginalAppearance(appearance.trim());
 
       router.push(`/profiles/${id}`);
     } catch {
@@ -297,7 +390,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             {isCharacter && (
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Banner Image</Label>
-                <p className="text-sm text-amber-600">Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.</p>
+                <p className="text-sm text-amber-600">
+                  Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.
+                </p>
 
                 {/* Banner Preview */}
                 {banner ? (
@@ -402,25 +497,10 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               <p className="text-sm text-amber-600">{name.length}/100 characters</p>
             </div>
 
-            {/* Description Field */}
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-amber-900 font-semibold">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter a description for this profile..."
-                rows={6}
-                className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
-              />
-            </div>
-
-            {/* Character-specific fields */}
+            {/* Character Info fields */}
             {isCharacter && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Details</h2>
+                <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Info</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -498,6 +578,119 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Appearance Field — characters only */}
+            {isCharacter && (
+              <div className="space-y-2">
+                <Label htmlFor="appearance" className="text-amber-900 font-semibold">
+                  Appearance
+                </Label>
+                <Textarea
+                  id="appearance"
+                  value={appearance}
+                  onChange={(e) => setAppearance(e.target.value)}
+                  placeholder="Describe your character's physical appearance…"
+                  rows={4}
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
+                  disabled={isSaving}
+                />
+              </div>
+            )}
+
+            {/* Background / Description Field */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-amber-900 font-semibold">
+                {isCharacter ? 'Background' : 'Description'}
+              </Label>
+              {isCharacter ? (
+                <>
+                  <RichTextEditor
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="Add your character's backstory, history, or any other background information…"
+                    disabled={isSaving}
+                  />
+                  <p className="text-sm text-amber-700">
+                    Supports rich formatting — headings, lists, links, and inline images.
+                  </p>
+                </>
+              ) : (
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter a description for this profile..."
+                  rows={6}
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
+                />
+              )}
+            </div>
+
+            {/* ── Relationships (character only) ──────────────────────────── */}
+            {isCharacter && (
+              <div className="space-y-4">
+                {/* Existing live relationships */}
+                {liveRelationships.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-amber-900 font-semibold">Current Relationships</Label>
+                    {liveRelationships.map((rel) => (
+                      <div
+                        key={rel.relationship_id}
+                        className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm"
+                      >
+                        <span className="font-medium text-amber-900 flex-1">{rel.other_profile_name}</span>
+                        {rel.label && <span className="text-xs text-amber-600">· {rel.label}</span>}
+                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">
+                          {rel.type_name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={removingRelId === rel.relationship_id}
+                          onClick={() => handleRemoveRelationship(rel.relationship_id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                        >
+                          {removingRelId === rel.relationship_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <X className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Picker to add new relationships */}
+                <RelationshipsPicker
+                  value={pendingRelationships}
+                  onChange={setPendingRelationships}
+                  disabled={isSaving || isSavingRelationships}
+                  excludeProfileIds={liveRelationships.map((r) => r.other_profile_id)}
+                />
+
+                {pendingRelationships.length > 0 && (
+                  <Button
+                    type="button"
+                    onClick={handleSaveRelationships}
+                    disabled={isSavingRelationships}
+                    className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {isSavingRelationships ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      `Save ${pendingRelationships.length} relationship${pendingRelationships.length !== 1 ? 's' : ''}`
+                    )}
+                  </Button>
+                )}
+
+                {relationshipError && <p className="text-sm text-red-600">{relationshipError}</p>}
               </div>
             )}
 

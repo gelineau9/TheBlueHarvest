@@ -33,7 +33,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const data = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json({ message: data.error || 'Failed to add featured profile' }, { status: response.status });
+      return NextResponse.json(
+        { message: data.error || 'Failed to add featured profile' },
+        { status: response.status },
+      );
     }
 
     return NextResponse.json(data);
