@@ -8,7 +8,7 @@ import NextImage from 'next/image';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type RelationshipType = 'friend' | 'relative' | 'rival';
+export type RelationshipType = 'friend' | 'relative' | 'rival' | 'ally' | 'enemy';
 
 export interface PendingRelationship {
   /** Unique key for list rendering (temp ID) */
@@ -36,6 +36,11 @@ interface RelationshipsPickerProps {
   disabled?: boolean;
   /** Profile IDs already in a live relationship (to exclude from search) */
   excludeProfileIds?: number[];
+  /**
+   * Which profile_type_ids to include in search results.
+   * Defaults to [1] (characters only). Pass [1, 3] for characters + kinships.
+   */
+  allowedProfileTypes?: number[];
 }
 
 // ── Category config ───────────────────────────────────────────────────────────
@@ -43,19 +48,25 @@ interface RelationshipsPickerProps {
 const CATEGORIES: { type: RelationshipType; label: string }[] = [
   { type: 'friend', label: 'Friend' },
   { type: 'relative', label: 'Relative' },
-  { type: 'rival', label: 'Enemy / Rival' },
+  { type: 'ally', label: 'Ally' },
+  { type: 'rival', label: 'Rival' },
+  { type: 'enemy', label: 'Enemy' },
 ];
 
 const CATEGORY_COLORS: Record<RelationshipType, string> = {
   friend: 'bg-emerald-100 border-emerald-300 text-emerald-900',
   relative: 'bg-blue-100 border-blue-300 text-blue-900',
-  rival: 'bg-red-100 border-red-300 text-red-900',
+  ally: 'bg-teal-100 border-teal-300 text-teal-900',
+  rival: 'bg-orange-100 border-orange-300 text-orange-900',
+  enemy: 'bg-red-100 border-red-300 text-red-900',
 };
 
 const CATEGORY_BADGE: Record<RelationshipType, string> = {
   friend: 'bg-emerald-100 text-emerald-800',
   relative: 'bg-blue-100 text-blue-800',
-  rival: 'bg-red-100 text-red-800',
+  ally: 'bg-teal-100 text-teal-800',
+  rival: 'bg-orange-100 text-orange-800',
+  enemy: 'bg-red-100 text-red-800',
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -65,6 +76,7 @@ export function RelationshipsPicker({
   onChange,
   disabled = false,
   excludeProfileIds = [],
+  allowedProfileTypes = [1],
 }: RelationshipsPickerProps) {
   const [selectedType, setSelectedType] = useState<RelationshipType>('friend');
   const [label, setLabel] = useState('');
@@ -93,7 +105,7 @@ export function RelationshipsPicker({
         const params = new URLSearchParams({
           search: term.trim(),
           limit: '10',
-          profile_type_id: '1', // characters only
+          profile_type_id: allowedProfileTypes.join(','),
         });
 
         const res = await fetch(`/api/profiles/public?${params.toString()}`);
@@ -110,7 +122,7 @@ export function RelationshipsPicker({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [value, excludeProfileIds],
+    [value, excludeProfileIds, allowedProfileTypes],
   );
 
   useEffect(() => {
@@ -254,7 +266,8 @@ export function RelationshipsPicker({
       </div>
 
       <p className="text-xs text-amber-700">
-        Type at least 2 characters to search. Only character profiles can be linked.
+        Type at least 2 characters to search.{' '}
+        {allowedProfileTypes.includes(3) ? 'Characters and kinships can be linked.' : 'Only character profiles can be linked.'}
       </p>
 
       {/* Selected relationships chips */}

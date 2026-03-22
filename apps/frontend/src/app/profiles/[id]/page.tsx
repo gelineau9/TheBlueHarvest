@@ -44,7 +44,20 @@ interface ProfileDetails {
   occupation?: string;
   age?: string;
   kinship?: string;
+  kinship_profile_id?: number;
   residence?: string;
+  // Kinship-specific
+  founding_date?: string;
+  kinship_type?: string;
+  status?: string;
+  recruiters?: number[];
+}
+
+interface KinshipMember {
+  character_id: number;
+  character_name: string;
+  avatar_url: string | null;
+  joined_at: string;
 }
 
 interface Profile {
@@ -196,6 +209,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [relationshipsLoading, setRelationshipsLoading] = useState(false);
   const [removingRelId, setRemovingRelId] = useState<number | null>(null);
 
+  // Kinship members
+  const [members, setMembers] = useState<KinshipMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
+
+  // Kinship profile link (for character info panel)
+  const [kinshipProfileName, setKinshipProfileName] = useState<string | null>(null);
+
   const { id } = use(params);
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
@@ -252,8 +273,38 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   };
 
   useEffect(() => {
-    if (profile && profile.profile_type_id === 1) fetchRelationships();
+    if (profile && (profile.profile_type_id === 1 || profile.profile_type_id === 3)) fetchRelationships();
   }, [profile?.profile_id]);
+
+  // ── Fetch kinship members ──────────────────────────────────────────────────
+  const fetchMembers = async () => {
+    setMembersLoading(true);
+    try {
+      const response = await fetch(`/api/profiles/${id}/members`);
+      if (response.ok) {
+        const data = await response.json();
+        setMembers(data.members || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (profile && profile.profile_type_id === 3) fetchMembers();
+  }, [profile?.profile_id]);
+
+  // ── Fetch kinship profile name (for character info panel) ──────────────────
+  useEffect(() => {
+    const kid = profile?.details?.kinship_profile_id;
+    if (!kid) return;
+    fetch(`/api/profiles/${kid}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((k) => { if (k) setKinshipProfileName(k.name); })
+      .catch(() => {});
+  }, [profile?.profile_id, profile?.details?.kinship_profile_id]);
 
   // ── Fetch character bottom sections ───────────────────────────────────────
   useEffect(() => {
@@ -270,6 +321,29 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       .finally(() => setItemsLoading(false));
 
     // Gallery (art + media)
+    setGalleryLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=2,3&limit=6&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setGalleryPosts(data.posts || []))
+      .catch(() => setGalleryPosts([]))
+      .finally(() => setGalleryLoading(false));
+
+    // Writing
+    setWritingLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=1&limit=4&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setWritingPosts(data.posts || []))
+      .catch(() => setWritingPosts([]))
+      .finally(() => setWritingLoading(false));
+  }, [profile?.profile_id, profile?.profile_type_id]);
+
+  // ── Fetch kinship bottom sections ─────────────────────────────────────────
+  useEffect(() => {
+    if (!profile || profile.profile_type_id !== 3) return;
+
+    const pid = profile.profile_id;
+
+    // Gallery (art + media authored by or featuring the kinship)
     setGalleryLoading(true);
     fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=2,3&limit=6&sortBy=created_at&order=desc`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -344,6 +418,18 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const handleRemoveMember = async (characterId: number) => {
+    setRemovingMemberId(characterId);
+    try {
+      const response = await fetch(`/api/profiles/${id}/members/${characterId}`, { method: 'DELETE' });
+      if (response.ok) await fetchMembers();
+    } catch (err) {
+      console.error('Failed to remove member:', err);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -401,6 +487,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   });
 
   const isCharacter = profile.profile_type_id === 1;
+  const isKinship = profile.profile_type_id === 3;
   const d = profile.details;
 
   return (
@@ -414,8 +501,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
         {/* Profile Header Card */}
         <Card className="bg-white border-amber-300 mb-6 overflow-hidden">
-          {/* Banner (character only) */}
-          {isCharacter && d?.banner?.url && (
+          {/* Banner (character + kinship) */}
+          {(isCharacter || isKinship) && d?.banner?.url && (
             <div className="relative h-48 w-full bg-amber-100">
               <NextImage
                 fill
@@ -428,13 +515,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          <div className={`p-8 ${isCharacter && d?.banner?.url ? 'pt-6' : ''}`}>
+          <div className={`p-8 ${(isCharacter || isKinship) && d?.banner?.url ? 'pt-6' : ''}`}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-start gap-6">
                 {/* Avatar — overlaps banner bottom-left when banner present */}
                 <div
                   className={`relative flex-shrink-0 ${
-                    isCharacter && d?.banner?.url
+                    (isCharacter || isKinship) && d?.banner?.url
                       ? '-mt-14 w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-amber-100'
                       : 'w-24 h-24 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-100'
                   }`}
@@ -522,7 +609,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
             <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
-            {d && (d.race || d.occupation || d.age || d.kinship || d.residence) ? (
+            {d && (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence) ? (
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 {d?.race && (
                   <div>
@@ -542,10 +629,21 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                     <dd className="text-amber-900">{d.age}</dd>
                   </div>
                 )}
-                {d?.kinship && (
+                {(d?.kinship_profile_id || d?.kinship) && (
                   <div>
                     <dt className="text-amber-600 font-medium">Kinship</dt>
-                    <dd className="text-amber-900">{d.kinship}</dd>
+                    <dd className="text-amber-900">
+                      {d.kinship_profile_id && kinshipProfileName ? (
+                        <Link
+                          href={`/profiles/${d.kinship_profile_id}`}
+                          className="text-amber-700 hover:text-amber-900 hover:underline font-medium"
+                        >
+                          {kinshipProfileName}
+                        </Link>
+                      ) : (
+                        d.kinship || '—'
+                      )}
+                    </dd>
                   </div>
                 )}
                 {d?.residence && (
@@ -558,6 +656,162 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             ) : (
               <p className="text-amber-600 text-sm italic">No character info has been added yet.</p>
             )}
+          </Card>
+        )}
+
+        {/* Kinship info panel (with Recruiters + Relationships embedded) */}
+        {isKinship && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <h2 className="text-lg font-semibold text-amber-900 mb-4">Kinship Info</h2>
+
+            {/* Founded / Type / Status */}
+            {d && (d.founding_date || d.kinship_type || d.status) ? (
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm mb-6">
+                {d.founding_date && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Founded</dt>
+                    <dd className="text-amber-900">{d.founding_date}</dd>
+                  </div>
+                )}
+                {d.kinship_type && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Type</dt>
+                    <dd className="text-amber-900">{d.kinship_type}</dd>
+                  </div>
+                )}
+                {d.status && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Status</dt>
+                    <dd className="text-amber-900">{d.status}</dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="text-amber-600 text-sm italic mb-6">No kinship info has been added yet.</p>
+            )}
+
+            {/* Recruiters */}
+            <div className="border-t border-amber-100 pt-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-amber-700" />
+                <h3 className="text-sm font-semibold text-amber-900">Recruiters</h3>
+              </div>
+              {membersLoading ? (
+                <p className="text-amber-600 text-sm">Loading recruiters…</p>
+              ) : !d?.recruiters || d.recruiters.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No recruiters have been designated yet.</p>
+              ) : (() => {
+                const recruiters = members.filter((m) => d.recruiters!.includes(m.character_id));
+                return recruiters.length === 0 ? (
+                  <p className="text-amber-600 text-sm italic">No recruiters have been designated yet.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {recruiters.map((m) => (
+                      <Link
+                        key={m.character_id}
+                        href={`/profiles/${m.character_id}`}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm text-amber-900 hover:border-amber-500 hover:bg-amber-100 transition-colors"
+                      >
+                        <div className="relative w-5 h-5 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
+                          {m.avatar_url ? (
+                            <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="20px" className="object-cover" />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <User className="w-3 h-3 text-amber-400" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-medium">{m.character_name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Relationships (Friends & Allies / Rivals & Enemies) */}
+            <div className="border-t border-amber-100 pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Swords className="w-4 h-4 text-amber-700" />
+                <h3 className="text-sm font-semibold text-amber-900">Relationships</h3>
+              </div>
+              {relationshipsLoading ? (
+                <p className="text-amber-600 text-sm">Loading relationships…</p>
+              ) : relationships.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {(
+                    [
+                      {
+                        label: 'Friends & Allies',
+                        color: 'text-emerald-600',
+                        filter: (t: string) => t === 'friend' || t === 'ally',
+                      },
+                      {
+                        label: 'Rivals & Enemies',
+                        color: 'text-red-600',
+                        filter: (t: string) => t === 'rival' || t === 'enemy',
+                      },
+                    ] as const
+                  ).map(({ label: groupLabel, color, filter }) => {
+                    const group = relationships.filter((r) => filter(r.type_name));
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={groupLabel}>
+                        <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wide ${color}`}>{groupLabel}</h4>
+                        <ul className="space-y-2">
+                          {group.map((rel) => (
+                            <li
+                              key={rel.relationship_id}
+                              className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                                  {rel.other_profile_avatar_url ? (
+                                    <NextImage
+                                      fill
+                                      src={rel.other_profile_avatar_url}
+                                      alt={rel.other_profile_name}
+                                      sizes="28px"
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full items-center justify-center">
+                                      <User className="w-3.5 h-3.5 text-amber-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col">
+                                  <Link
+                                    href={`/profiles/${rel.other_profile_id}`}
+                                    className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
+                                  >
+                                    {rel.other_profile_name}
+                                  </Link>
+                                  {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
+                                </div>
+                              </div>
+                              {profile.can_edit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveRelationship(rel.relationship_id)}
+                                  disabled={removingRelId === rel.relationship_id}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                                >
+                                  {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
+                                </Button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </Card>
         )}
 
@@ -658,23 +912,31 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         )}
 
         {/* Background / Description */}
-        {d?.description ? (
+        {(isCharacter || isKinship) && (
           <Card className="p-8 bg-white border-amber-300 mb-6">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">{isCharacter ? 'Background' : 'Details'}</h2>
-            {isCharacter ? (
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">
+              {isCharacter ? 'Background' : 'Background / Description'}
+            </h2>
+            {d?.description ? (
               <div
                 className="prose prose-amber max-w-none text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: d.description }}
               />
             ) : (
+              <p className="text-amber-600 italic">No background has been added yet.</p>
+            )}
+          </Card>
+        )}
+        {!isCharacter && !isKinship && (
+          <Card className="p-8 bg-white border-amber-300 mb-6">
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
+            {d?.description ? (
               <div className="prose prose-amber max-w-none">
                 <p className="text-amber-800 whitespace-pre-wrap">{d.description}</p>
               </div>
+            ) : (
+              <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
             )}
-          </Card>
-        ) : (
-          <Card className="p-8 bg-white border-amber-300 mb-6">
-            <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
           </Card>
         )}
 
@@ -756,6 +1018,118 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
                 <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {writingPosts.map((post) => (
+                    <WritingPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+
+        {/* ── Kinship bottom sections ──────────────────────────────────────── */}
+        {isKinship && (
+          <>
+            {/* Members */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-5 h-5 text-amber-800" />
+                <h2 className="text-xl font-bold text-amber-900">Members</h2>
+              </div>
+              {membersLoading ? (
+                <p className="text-amber-600 text-sm">Loading members…</p>
+              ) : members.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No members have joined yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {members.map((m) => (
+                    <li
+                      key={m.character_id}
+                      className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-8 h-8 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                          {m.avatar_url ? (
+                            <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="32px" className="object-cover" />
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <User className="w-4 h-4 text-amber-400" />
+                            </div>
+                          )}
+                        </div>
+                        <Link
+                          href={`/profiles/${m.character_id}`}
+                          className="text-amber-900 hover:underline font-semibold text-sm"
+                        >
+                          {m.character_name}
+                        </Link>
+                      </div>
+                      {profile.can_edit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(m.character_id)}
+                          disabled={removingMemberId === m.character_id}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                        >
+                          {removingMemberId === m.character_id ? '…' : <X className="w-4 h-4" />}
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+
+            {/* Gallery (art + media) */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/gallery`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {galleryLoading ? (
+                <p className="text-amber-600 text-sm">Loading gallery…</p>
+              ) : galleryPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {galleryPosts.map((post) => (
+                    <GalleryPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Writing */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/writing`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {writingLoading ? (
+                <p className="text-amber-600 text-sm">Loading writing…</p>
+              ) : writingPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (

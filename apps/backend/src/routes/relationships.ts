@@ -1,20 +1,22 @@
 /**
- * Character Relationships Routes
+ * Bidirectional Relationships Routes
  *
- * Manages bidirectional relationships between character profiles.
- * Only character profiles (profile_type_id = 1) may have relationships.
+ * Manages bidirectional relationships between character and kinship profiles.
+ * Supported profile types: character (1) and kinship (3).
  *
  * Relationship categories map to bidirectional_relationship_types:
  *   'friend'   → Friends
  *   'relative' → Relatives  (optional label, e.g. "mother", "cousin")
- *   'rival'    → Enemies & Rivals
+ *   'rival'    → Rivals
+ *   'ally'     → Allies
+ *   'enemy'    → Enemies
  *
  * Routes:
  *   GET    /api/profiles/:profileId/relationships        - List all relationships for a profile
  *   POST   /api/profiles/:profileId/relationships        - Add a relationship
  *   DELETE /api/profiles/:profileId/relationships/:relId - Remove a relationship (soft-delete)
  *
- * Requires migration 011_add_relationship_label.sql to be applied.
+ * Requires migrations 011 and 012 to be applied.
  */
 
 import { Router, Response } from 'express';
@@ -107,7 +109,8 @@ router.get('/:profileId/relationships', async (req: AuthRequest, res: Response) 
       return;
     }
 
-    if (profile.profile_type_id !== 1) {
+    // Only characters (1) and kinships (3) support relationships
+    if (profile.profile_type_id !== 1 && profile.profile_type_id !== 3) {
       res.json({ relationships: [] });
       return;
     }
@@ -158,7 +161,7 @@ router.post(
   '/:profileId/relationships',
   authenticateToken,
   [
-    body('type').isIn(['friend', 'relative', 'rival']).withMessage('type must be friend, relative, or rival'),
+    body('type').isIn(['friend', 'relative', 'rival', 'ally', 'enemy']).withMessage('type must be friend, relative, rival, ally, or enemy'),
     body('profile_id_2').isInt({ min: 1 }).withMessage('profile_id_2 must be a positive integer'),
     body('label').optional({ nullable: true }).isString().trim().isLength({ max: 100 }),
   ],
@@ -207,12 +210,12 @@ router.post(
         return;
       }
 
-      if (sourceProfile.profile_type_id !== 1) {
-        res.status(400).json({ error: 'Relationships are only supported for character profiles' });
+      if (sourceProfile.profile_type_id !== 1 && sourceProfile.profile_type_id !== 3) {
+        res.status(400).json({ error: 'Relationships are only supported for character and kinship profiles' });
         return;
       }
 
-      // Verify target profile is a character
+      // Verify target profile is a character or kinship
       const targetProfile = await db.maybeOne(
         sql.type(ProfileCheckSchema)`
           SELECT profile_id, profile_type_id, name, details->'avatar'->>'url' AS avatar_url
@@ -226,8 +229,8 @@ router.post(
         return;
       }
 
-      if (targetProfile.profile_type_id !== 1) {
-        res.status(400).json({ error: 'Relationships are only supported between character profiles' });
+      if (targetProfile.profile_type_id !== 1 && targetProfile.profile_type_id !== 3) {
+        res.status(400).json({ error: 'Relationships are only supported between character and kinship profiles' });
         return;
       }
 
