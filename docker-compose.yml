@@ -1,48 +1,135 @@
+# docker-compose.yml — TheBlueHarvest
+#
+# Development:  docker compose up
+# Production:   docker compose --env-file .env up -d --build
+#
+# First-time setup:
+#   1. cp env.example .env  and fill in real values
+#   2. Generate a strong JWT_SECRET:  openssl rand -base64 48
+#   3. docker compose up -d
+
 services:
+
+  # ──────────────────────────────────────────
+  # PostgreSQL 17
+  # ──────────────────────────────────────────
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: bha-pg
+    restart: unless-stopped
     shm_size: 256mb
     env_file:
       - .env
-    ports:
-      - '5433:5432'
     volumes:
-      - ./db/schema:/docker-entrypoint-initdb.d/
+      # Named volume keeps pgdata across restarts and image rebuilds.
+      # NEVER use a bind-mount for pgdata — file permission issues on Linux hosts.
+      - postgres_data:/var/lib/postgresql/data
+      # Schema files are applied once on first container init (empty pgdata).
+      # For schema changes on a live DB, use the migration runner (see db/migrations/).
+      - ./db/schema:/docker-entrypoint-initdb.d/:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U merry -d bha_db']
-      interval: 5s
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    ports:
+      # Exposed only on localhost for debugging / migrations run from the host.
+      # Remove this in a hardened production environment.
+      - '127.0.0.1:5433:5432'
 
+  # ──────────────────────────────────────────
+  # Express Backend
+  # ──────────────────────────────────────────
   backend:
     build:
       context: .
       dockerfile: ./apps/backend/Dockerfile
     container_name: bha-backend
+    restart: unless-stopped
     env_file:
       - .env
-    ports:
-      - '4000:4000'
     volumes:
-      - ./apps/backend/src:/app/apps/backend/src
-      - ./apps/backend/package.json:/app/apps/backend/package.json
+      # Named volume — all uploaded avatars and images persist here.
+      - uploads_data:/app/apps/backend/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:4000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # Port 4000 is NOT exposed to the host in production.
+    # Nginx proxies to http://backend:4000 over the internal Docker network.
+    # Uncomment the line below only for local debugging:
+    # ports:
+    #   - '127.0.0.1:4000:4000'
 
+  # ──────────────────────────────────────────
+  # Next.js Frontend
+  # ──────────────────────────────────────────
   frontend:
     build:
       context: .
       dockerfile: ./apps/frontend/Dockerfile
+      args:
+        # Baked into the JS bundle at build time — must be the public-facing
+        # hostname (no protocol), e.g. yourdomain.com
+        NEXT_PUBLIC_BACKEND_HOSTNAME: ${NEXT_PUBLIC_BACKEND_HOSTNAME}
     container_name: bha-frontend
+    restart: unless-stopped
     env_file:
       - .env
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./apps/frontend/src:/app/apps/frontend/src
-      - ./apps/frontend/public:/app/apps/frontend/public
-      - ./apps/frontend/package.json:/app/apps/frontend/package.json
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Port 3000 is NOT exposed to the host in production.
+    # Uncomment only for local debugging:
+    # ports:
+    #   - '127.0.0.1:3000:3000'
+
+  # ──────────────────────────────────────────
+  # Nginx — TLS termination & reverse proxy
+  # ──────────────────────────────────────────
+  #
+  # SETUP (on the host, before enabling this service):
+  #   1. sudo apt install certbot
+  #   2. sudo certbot certonly --standalone -d yourdomain.com
+  #      (stop the nginx container first so port 80 is free)
+  #   3. Create nginx/nginx.conf (see docs/nginx.conf.example)
+  #   4. Uncomment this service block
+  #   5. Auto-renew: add to crontab —
+  #      0 3 * * 1 certbot renew --quiet && docker compose restart nginx
+  #
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: bha-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - '80:80'
+  #     - '443:443'
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - /etc/letsencrypt:/etc/letsencrypt:ro
+  #     # Serve uploads directly from nginx (faster than proxying through Express)
+  #     - uploads_data:/var/www/uploads:ro
+  #   depends_on:
+  #     - frontend
+  #     - backend
+
+# ──────────────────────────────────────────
+# Named volumes
+# ──────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
