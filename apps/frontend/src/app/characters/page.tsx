@@ -95,9 +95,7 @@ export default function CharactersPage() {
             key={l}
             onClick={() => handleLetterClick(l)}
             className={`min-w-[2rem] rounded px-2 py-1 text-sm font-semibold transition-colors ${
-              letter === l
-                ? 'bg-amber-800 text-amber-50'
-                : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+              letter === l ? 'bg-amber-800 text-amber-50' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
             }`}
           >
             {l}

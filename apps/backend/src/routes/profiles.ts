@@ -261,6 +261,11 @@ router.get('/public', async (req: Request, res: Response) => {
   const startsWithLetter =
     startsWithParam && /^[a-zA-Z]$/.test(startsWithParam.trim()) ? startsWithParam.trim().toUpperCase() : '';
 
+  // Parse parent_profile_id filter (for owned-items section on character profile pages)
+  const parentProfileIdParam = req.query.parent_profile_id as string;
+  const parentProfileIdFilter = parentProfileIdParam ? parseInt(parentProfileIdParam, 10) : null;
+  const validParentProfileId = parentProfileIdFilter && !isNaN(parentProfileIdFilter) ? parentProfileIdFilter : null;
+
   try {
     const db = await getPool();
 
@@ -301,6 +306,11 @@ router.get('/public', async (req: Request, res: Response) => {
       ? sql.fragment`AND p.name ILIKE ${startsWithLetter + '%'}`
       : sql.fragment``;
 
+    // Build parent_profile_id filter fragment (for items owned by a specific character)
+    const parentProfileFilterFragment = validParentProfileId
+      ? sql.fragment`AND p.parent_profile_id = ${validParentProfileId}`
+      : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -330,6 +340,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${typeFilterFragment}
       ${searchFilterFragment}
       ${startsWithFilterFragment}
+      ${parentProfileFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -346,6 +357,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${typeFilterFragment}
       ${searchFilterFragment}
       ${startsWithFilterFragment}
+      ${parentProfileFilterFragment}
     `,
     );
 
@@ -623,6 +635,213 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     res.status(200).json({ message: 'Profile deleted successfully' });
   } catch (err) {
     console.error('Profile deletion error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── Kinship Members ───────────────────────────────────────────────────────────
+//
+// GET    /api/profiles/:id/members         — list members of a kinship (public)
+// POST   /api/profiles/:id/members         — add caller's character as a member
+// DELETE /api/profiles/:id/members/:charId — remove a member (self or editor/owner)
+
+const KinshipMemberSchema = z.object({
+  character_id: z.number(),
+  character_name: z.string(),
+  avatar_url: z.string().nullable(),
+  joined_at: z.string(),
+});
+
+// GET /api/profiles/:id/members
+router.get('/:id/members', async (req: Request, res: Response) => {
+  const kinshipId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (isNaN(kinshipId)) {
+    res.status(400).json({ error: 'Invalid profile ID' });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+
+    // Verify profile exists and is a kinship
+    const kinship = await db.maybeOne(
+      sql.type(z.object({ profile_id: z.number(), profile_type_id: z.number() }))`
+        SELECT profile_id, profile_type_id FROM profiles
+        WHERE profile_id = ${kinshipId} AND deleted = false
+      `,
+    );
+
+    if (!kinship) {
+      res.status(404).json({ error: 'Profile not found' });
+      return;
+    }
+
+    if (kinship.profile_type_id !== 3) {
+      res.status(400).json({ error: 'Only kinship profiles have members' });
+      return;
+    }
+
+    const members = await db.any(
+      sql.type(KinshipMemberSchema)`
+        SELECT
+          km.character_id,
+          p.name AS character_name,
+          p.details->'avatar'->>'url' AS avatar_url,
+          km.joined_at::text
+        FROM kinship_members km
+        JOIN profiles p ON km.character_id = p.profile_id
+        WHERE km.kinship_id = ${kinshipId}
+          AND p.deleted = false
+          AND p.is_published = true
+        ORDER BY km.joined_at ASC
+      `,
+    );
+
+    res.json({ members });
+  } catch (err) {
+    console.error('Error fetching kinship members:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/profiles/:id/members  — join a kinship (auth required)
+// Body: { character_id: number }  — the character profile to add as member
+router.post('/:id/members', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const kinshipId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const userId = req.userId!;
+
+  if (isNaN(kinshipId)) {
+    res.status(400).json({ error: 'Invalid profile ID' });
+    return;
+  }
+
+  const characterId = parseInt(req.body.character_id);
+  if (isNaN(characterId)) {
+    res.status(400).json({ error: 'character_id must be a valid integer' });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+
+    // Verify the kinship exists and is type 3
+    const kinship = await db.maybeOne(
+      sql.type(z.object({ profile_id: z.number(), profile_type_id: z.number() }))`
+        SELECT profile_id, profile_type_id FROM profiles
+        WHERE profile_id = ${kinshipId} AND deleted = false
+      `,
+    );
+
+    if (!kinship) {
+      res.status(404).json({ error: 'Kinship not found' });
+      return;
+    }
+
+    if (kinship.profile_type_id !== 3) {
+      res.status(400).json({ error: 'Target profile is not a kinship' });
+      return;
+    }
+
+    // Verify the character exists, is type 1, and is owned by caller
+    const character = await db.maybeOne(
+      sql.type(z.object({ profile_id: z.number(), account_id: z.number() }))`
+        SELECT profile_id, account_id FROM profiles
+        WHERE profile_id = ${characterId}
+          AND profile_type_id = 1
+          AND deleted = false
+      `,
+    );
+
+    if (!character) {
+      res.status(404).json({ error: 'Character not found' });
+      return;
+    }
+
+    if (character.account_id !== userId) {
+      res.status(403).json({ error: 'You can only add your own characters to a kinship' });
+      return;
+    }
+
+    // Upsert membership (idempotent)
+    await db.query(
+      sql.type(z.object({}))`
+        INSERT INTO kinship_members (kinship_id, character_id)
+        VALUES (${kinshipId}, ${characterId})
+        ON CONFLICT (kinship_id, character_id) DO NOTHING
+      `,
+    );
+
+    res.status(201).json({ message: 'Joined kinship successfully' });
+  } catch (err) {
+    console.error('Error adding kinship member:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/profiles/:id/members/:charId
+router.delete('/:id/members/:charId', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const kinshipId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const characterId = parseInt(req.params.charId);
+  const userId = req.userId!;
+
+  if (isNaN(kinshipId) || isNaN(characterId)) {
+    res.status(400).json({ error: 'Invalid profile ID or character ID' });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+
+    // Membership must exist
+    const membership = await db.maybeOne(
+      sql.type(z.object({ kinship_id: z.number(), character_id: z.number() }))`
+        SELECT kinship_id, character_id FROM kinship_members
+        WHERE kinship_id = ${kinshipId} AND character_id = ${characterId}
+      `,
+    );
+
+    if (!membership) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    // Caller must be: owner of the character, OR can_edit the kinship
+    const character = await db.maybeOne(
+      sql.type(z.object({ account_id: z.number() }))`
+        SELECT account_id FROM profiles WHERE profile_id = ${characterId} AND deleted = false
+      `,
+    );
+
+    const isCharacterOwner = character?.account_id === userId;
+    const canEditKinship = await canEditProfile(db, kinshipId, userId);
+
+    if (!isCharacterOwner && !canEditKinship) {
+      res.status(403).json({ error: 'You do not have permission to remove this member' });
+      return;
+    }
+
+    // Remove membership
+    await db.query(
+      sql.type(z.object({}))`
+        DELETE FROM kinship_members
+        WHERE kinship_id = ${kinshipId} AND character_id = ${characterId}
+      `,
+    );
+
+    // Also clear kinship_profile_id from the character's details JSON if it matches
+    await db.query(
+      sql.type(z.object({}))`
+        UPDATE profiles
+        SET details = details - 'kinship_profile_id',
+            updated_at = NOW()
+        WHERE profile_id = ${characterId}
+          AND details->>'kinship_profile_id' = ${kinshipId.toString()}
+      `,
+    );
+
+    res.status(200).json({ message: 'Member removed successfully' });
+  } catch (err) {
+    console.error('Error removing kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

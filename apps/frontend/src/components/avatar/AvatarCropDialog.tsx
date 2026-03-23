@@ -13,6 +13,12 @@ interface AvatarCropDialogProps {
   imageSrc: string | null;
   onCropComplete: (croppedBlob: Blob) => void;
   isUploading?: boolean;
+  /** Crop aspect ratio. Defaults to 1 (square avatar). Pass 3 for banner (3:1). */
+  aspect?: number;
+  /** Whether to show a circular crop overlay. Defaults to true for avatars. */
+  circularCrop?: boolean;
+  /** Dialog title override. Defaults to "Adjust Avatar". */
+  title?: string;
 }
 
 // Helper to create a centered square crop
@@ -92,18 +98,23 @@ export function AvatarCropDialog({
   imageSrc,
   onCropComplete,
   isUploading = false,
+  aspect = 1,
+  circularCrop = true,
+  title = 'Adjust Avatar',
 }: AvatarCropDialogProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Initialize crop when image loads
-  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    // Create a centered square crop
-    const initialCrop = centerAspectCrop(width, height, 1);
-    setCrop(initialCrop);
-  }, []);
+  const onImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const { width, height } = e.currentTarget;
+      const initialCrop = centerAspectCrop(width, height, aspect);
+      setCrop(initialCrop);
+    },
+    [aspect],
+  );
 
   const handleSave = useCallback(async () => {
     if (!imgRef.current || !completedCrop) return;
@@ -129,7 +140,7 @@ export function AvatarCropDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-lg bg-amber-50 border-amber-200">
         <DialogHeader>
-          <DialogTitle className="text-amber-900">Adjust Avatar</DialogTitle>
+          <DialogTitle className="text-amber-900">{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex justify-center py-4">
@@ -137,8 +148,8 @@ export function AvatarCropDialog({
             crop={crop}
             onChange={(_, percentCrop) => setCrop(percentCrop)}
             onComplete={(c) => setCompletedCrop(c)}
-            aspect={1}
-            circularCrop
+            aspect={aspect}
+            circularCrop={circularCrop}
             className="max-h-[400px]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -175,8 +186,10 @@ export function AvatarCropDialog({
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Uploading...
               </>
-            ) : (
+            ) : title === 'Adjust Avatar' ? (
               'Save Avatar'
+            ) : (
+              'Save Image'
             )}
           </Button>
         </DialogFooter>
