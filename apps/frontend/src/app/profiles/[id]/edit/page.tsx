@@ -16,6 +16,7 @@ import { AvatarUploader } from '@/components/avatar/AvatarUploader';
 import { AvatarCropDialog } from '@/components/avatar/AvatarCropDialog';
 import { Avatar } from '@/hooks/useAvatarUpload';
 import { useBannerUpload, BannerImage } from '@/hooks/useBannerUpload';
+import { useImageUpload, UploadedImage } from '@/hooks/useImageUpload';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { RelationshipsPicker, PendingRelationship } from '@/components/profiles/RelationshipsPicker';
 
@@ -26,6 +27,7 @@ interface ProfileDetails {
   appearance?: string;
   avatar?: Avatar;
   banner?: BannerImage;
+  images?: UploadedImage[];
   race?: string;
   occupation?: string;
   age?: string;
@@ -36,6 +38,12 @@ interface ProfileDetails {
   kinship_type?: string;
   status?: string;
   recruiters?: number[];
+  // Location-specific
+  location_type?: string;
+  region?: string;
+  // Organization-specific
+  org_type?: string;
+  area_of_operation?: string;
 }
 
 interface LiveRelationship {
@@ -236,6 +244,17 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [removingKinshipRelId, setRemovingKinshipRelId] = useState<number | null>(null);
   const [kinshipRelationshipError, setKinshipRelationshipError] = useState<string | null>(null);
 
+  // ── Location-only fields ───────────────────────────────────────────────────
+  const [locationType, setLocationType] = useState('');
+  const [locationRegion, setLocationRegion] = useState('');
+  const [locationStatus, setLocationStatus] = useState('');
+
+  // ── Organization-only fields ───────────────────────────────────────────────
+  const [orgFoundingDate, setOrgFoundingDate] = useState('');
+  const [orgType, setOrgType] = useState('');
+  const [orgStatus, setOrgStatus] = useState('');
+  const [orgAreaOfOperation, setOrgAreaOfOperation] = useState('');
+
   // ── Originals for dirty checking ──────────────────────────────────────────
   const [originalName, setOriginalName] = useState('');
   const [originalDescription, setOriginalDescription] = useState('');
@@ -253,6 +272,17 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [originalKinshipStatus, setOriginalKinshipStatus] = useState('Recruiting');
   const [originalRecruiterIds, setOriginalRecruiterIds] = useState<number[]>([]);
 
+  // Location originals
+  const [originalLocationType, setOriginalLocationType] = useState('');
+  const [originalLocationRegion, setOriginalLocationRegion] = useState('');
+  const [originalLocationStatus, setOriginalLocationStatus] = useState('');
+
+  // Organization originals
+  const [originalOrgFoundingDate, setOriginalOrgFoundingDate] = useState('');
+  const [originalOrgType, setOriginalOrgType] = useState('');
+  const [originalOrgStatus, setOriginalOrgStatus] = useState('');
+  const [originalOrgAreaOfOperation, setOriginalOrgAreaOfOperation] = useState('');
+
   // Banner upload hook
   const {
     banner, setBanner, isUploading: isBannerUploading, uploadError: bannerUploadError,
@@ -262,8 +292,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     handleRemoveBanner, triggerFileSelect: triggerBannerFileSelect,
   } = useBannerUpload({ initialBanner: null });
 
+  // Image upload hook (item + location)
+  const {
+    uploadedImages, setUploadedImages, isUploading: isImageUploading,
+    uploadError: imageUploadError, fileInputRef: imageFileInputRef,
+    handleFileSelect: handleImageFileSelect, handleRemoveImage,
+  } = useImageUpload({ maxImages: 1 });
+
   const isCharacter = profile?.profile_type_id === 1;
   const isKinship = profile?.profile_type_id === 3;
+  const isItem = profile?.profile_type_id === 2;
+  const isLocation = profile?.profile_type_id === 5;
+  const isOrganization = profile?.profile_type_id === 4;
 
   // ── Dirty check ───────────────────────────────────────────────────────────
   const isDirty =
@@ -281,7 +321,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     foundingDate !== originalFoundingDate ||
     kinshipType !== originalKinshipType ||
     kinshipStatus !== originalKinshipStatus ||
-    JSON.stringify(recruiterIds) !== JSON.stringify(originalRecruiterIds);
+    JSON.stringify(recruiterIds) !== JSON.stringify(originalRecruiterIds) ||
+    locationType !== originalLocationType ||
+    locationRegion !== originalLocationRegion ||
+    locationStatus !== originalLocationStatus ||
+    orgFoundingDate !== originalOrgFoundingDate ||
+    orgType !== originalOrgType ||
+    orgStatus !== originalOrgStatus ||
+    orgAreaOfOperation !== originalOrgAreaOfOperation;
 
   const { navigateWithWarning } = useUnsavedChanges(isDirty);
 
@@ -313,6 +360,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         setIsPublished(initialIsPublished);
         setAvatar(initialAvatar);
         if (initialBanner) setBanner(initialBanner);
+        if (d?.images?.length) setUploadedImages(d.images);
 
         setOriginalName(initialName);
         setOriginalDescription(initialDescription);
@@ -366,6 +414,37 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           setOriginalKinshipType(initialKinshipType);
           setOriginalKinshipStatus(initialKinshipStatus);
           setOriginalRecruiterIds(initialRecruiterIds);
+        }
+
+        if (data.profile_type_id === 5) {
+          const initialLocationType = d?.location_type || '';
+          const initialLocationRegion = d?.region || '';
+          const initialLocationStatus = d?.status || '';
+
+          setLocationType(initialLocationType);
+          setLocationRegion(initialLocationRegion);
+          setLocationStatus(initialLocationStatus);
+
+          setOriginalLocationType(initialLocationType);
+          setOriginalLocationRegion(initialLocationRegion);
+          setOriginalLocationStatus(initialLocationStatus);
+        }
+
+        if (data.profile_type_id === 4) {
+          const initialOrgFoundingDate = d?.founding_date || '';
+          const initialOrgType = d?.org_type || '';
+          const initialOrgStatus = d?.status || '';
+          const initialOrgAreaOfOperation = d?.area_of_operation || '';
+
+          setOrgFoundingDate(initialOrgFoundingDate);
+          setOrgType(initialOrgType);
+          setOrgStatus(initialOrgStatus);
+          setOrgAreaOfOperation(initialOrgAreaOfOperation);
+
+          setOriginalOrgFoundingDate(initialOrgFoundingDate);
+          setOriginalOrgType(initialOrgType);
+          setOriginalOrgStatus(initialOrgStatus);
+          setOriginalOrgAreaOfOperation(initialOrgAreaOfOperation);
         }
       } catch {
         setError('An error occurred while loading the profile');
@@ -442,11 +521,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   }, []);
 
   // ── Relationship helpers ───────────────────────────────────────────────────
-  const handleSaveRelationships = async (isKinshipForm: boolean) => {
-    const pending = isKinshipForm ? kinshipPendingRelationships : pendingRelationships;
+  const handleSaveRelationships = async (form: 'character' | 'kinship') => {
+    const pending = form === 'kinship' ? kinshipPendingRelationships : pendingRelationships;
     if (pending.length === 0) return;
-    if (isKinshipForm) setIsSavingKinshipRelationships(true); else setIsSavingRelationships(true);
-    if (isKinshipForm) setKinshipRelationshipError(null); else setRelationshipError(null);
+    if (form === 'kinship') setIsSavingKinshipRelationships(true);
+    else setIsSavingRelationships(true);
+    if (form === 'kinship') setKinshipRelationshipError(null);
+    else setRelationshipError(null);
     const results = await Promise.allSettled(
       pending.map((rel) =>
         fetch(`/api/profiles/${id}/relationships`, {
@@ -459,29 +540,36 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
     if (failed.length > 0) {
       const msg = `${failed.length} relationship(s) failed to save.`;
-      if (isKinshipForm) setKinshipRelationshipError(msg); else setRelationshipError(msg);
+      if (form === 'kinship') setKinshipRelationshipError(msg);
+      else setRelationshipError(msg);
     }
-    if (isKinshipForm) setKinshipPendingRelationships([]); else setPendingRelationships([]);
+    if (form === 'kinship') setKinshipPendingRelationships([]);
+    else setPendingRelationships([]);
     await fetchRelationships();
-    if (isKinshipForm) setIsSavingKinshipRelationships(false); else setIsSavingRelationships(false);
+    if (form === 'kinship') setIsSavingKinshipRelationships(false);
+    else setIsSavingRelationships(false);
   };
 
-  const handleRemoveRelationship = async (relId: number, isKinshipForm: boolean) => {
-    if (isKinshipForm) setRemovingKinshipRelId(relId); else setRemovingRelId(relId);
+  const handleRemoveRelationship = async (relId: number, form: 'character' | 'kinship') => {
+    if (form === 'kinship') setRemovingKinshipRelId(relId);
+    else setRemovingRelId(relId);
     try {
       const res = await fetch(`/api/profiles/${id}/relationships/${relId}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json();
         const msg = data.message || 'Failed to remove relationship';
-        if (isKinshipForm) setKinshipRelationshipError(msg); else setRelationshipError(msg);
+        if (form === 'kinship') setKinshipRelationshipError(msg);
+        else setRelationshipError(msg);
       } else {
         await fetchRelationships();
       }
     } catch {
       const msg = 'Failed to remove relationship';
-      if (isKinshipForm) setKinshipRelationshipError(msg); else setRelationshipError(msg);
+      if (form === 'kinship') setKinshipRelationshipError(msg);
+      else setRelationshipError(msg);
     } finally {
-      if (isKinshipForm) setRemovingKinshipRelId(null); else setRemovingRelId(null);
+      if (form === 'kinship') setRemovingKinshipRelId(null);
+      else setRemovingRelId(null);
     }
   };
 
@@ -504,7 +592,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       const details: ProfileDetails = {
         description: description.trim() || undefined,
         avatar: avatar || undefined,
-        banner: banner || undefined,
+        ...(!isLocation && { banner: banner || undefined }),
       };
 
       if (isCharacter) {
@@ -521,6 +609,24 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         details.kinship_type = kinshipType;
         details.status = kinshipStatus;
         if (recruiterIds.length > 0) details.recruiters = recruiterIds;
+      }
+
+      if (isLocation) {
+        if (locationType.trim()) details.location_type = locationType.trim();
+        if (locationRegion.trim()) details.region = locationRegion.trim();
+        if (locationStatus.trim()) details.status = locationStatus.trim();
+        if (uploadedImages.length > 0) details.images = uploadedImages;
+      }
+
+      if (isItem) {
+        if (uploadedImages.length > 0) details.images = uploadedImages;
+      }
+
+      if (isOrganization) {
+        if (orgFoundingDate.trim()) details.founding_date = orgFoundingDate.trim();
+        if (orgType.trim()) details.org_type = orgType.trim();
+        if (orgStatus.trim()) details.status = orgStatus.trim();
+        if (orgAreaOfOperation.trim()) details.area_of_operation = orgAreaOfOperation.trim();
       }
 
       const response = await fetch(`/api/profiles/${id}`, {
@@ -571,6 +677,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalKinshipType(kinshipType);
       setOriginalKinshipStatus(kinshipStatus);
       setOriginalRecruiterIds(recruiterIds);
+      setOriginalLocationType(locationType.trim());
+      setOriginalLocationRegion(locationRegion.trim());
+      setOriginalLocationStatus(locationStatus.trim());
+      setOriginalOrgFoundingDate(orgFoundingDate.trim());
+      setOriginalOrgType(orgType.trim());
+      setOriginalOrgStatus(orgStatus.trim());
+      setOriginalOrgAreaOfOperation(orgAreaOfOperation.trim());
 
       router.push(`/profiles/${id}`);
     } catch {
@@ -747,20 +860,12 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                     <Label htmlFor="residence" className="text-amber-900 font-medium">Residence</Label>
                     <Input id="residence" value={residence} onChange={(e) => setResidence(e.target.value)} placeholder="Where does this character live?" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
                   </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="appearance" className="text-amber-900 font-medium">Appearance</Label>
+                    <Textarea id="appearance" value={appearance} onChange={(e) => setAppearance(e.target.value)} placeholder="Describe your character's physical appearance…" rows={4} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none bg-white" disabled={isSaving} />
+                  </div>
                 </div>
-              </div>
-
-              {/* Appearance */}
-              <div className="space-y-2">
-                <Label htmlFor="appearance" className="text-amber-900 font-semibold">Appearance</Label>
-                <Textarea id="appearance" value={appearance} onChange={(e) => setAppearance(e.target.value)} placeholder="Describe your character's physical appearance…" rows={4} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none" disabled={isSaving} />
-              </div>
-
-              {/* Background */}
-              <div className="space-y-2">
-                <Label className="text-amber-900 font-semibold">Background</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Add your character's backstory, history, or any other background information…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
               </div>
 
               {/* Relationships */}
@@ -773,7 +878,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                         <span className="font-medium text-amber-900 flex-1">{rel.other_profile_name}</span>
                         {rel.label && <span className="text-xs text-amber-600">· {rel.label}</span>}
                         <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">{rel.type_name}</span>
-                        <Button type="button" variant="ghost" size="sm" disabled={removingRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, false)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                        <Button type="button" variant="ghost" size="sm" disabled={removingRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, 'character')} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
                           {removingRelId === rel.relationship_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                         </Button>
                       </div>
@@ -788,11 +893,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   allowedProfileTypes={[1, 3]}
                 />
                 {pendingRelationships.length > 0 && (
-                  <Button type="button" onClick={() => handleSaveRelationships(false)} disabled={isSavingRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
+                  <Button type="button" onClick={() => handleSaveRelationships('character')} disabled={isSavingRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
                     {isSavingRelationships ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : `Save ${pendingRelationships.length} relationship${pendingRelationships.length !== 1 ? 's' : ''}`}
                   </Button>
                 )}
                 {relationshipError && <p className="text-sm text-red-600">{relationshipError}</p>}
+              </div>
+
+              {/* Background */}
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Background</Label>
+                <RichTextEditor value={description} onChange={setDescription} placeholder="Add your character's backstory, history, or any other background information…" disabled={isSaving} />
+                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
               </div>
 
               {/* Publish */}
@@ -883,7 +995,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                         <span className="font-medium text-amber-900 flex-1">{rel.other_profile_name}</span>
                         {rel.label && <span className="text-xs text-amber-600">· {rel.label}</span>}
                         <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">{rel.type_name}</span>
-                        <Button type="button" variant="ghost" size="sm" disabled={removingKinshipRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, true)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                        <Button type="button" variant="ghost" size="sm" disabled={removingKinshipRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, 'kinship')} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
                           {removingKinshipRelId === rel.relationship_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                         </Button>
                       </div>
@@ -898,11 +1010,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   allowedProfileTypes={[1, 3]}
                 />
                 {kinshipPendingRelationships.length > 0 && (
-                  <Button type="button" onClick={() => handleSaveRelationships(true)} disabled={isSavingKinshipRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
+                  <Button type="button" onClick={() => handleSaveRelationships('kinship')} disabled={isSavingKinshipRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
                     {isSavingKinshipRelationships ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : `Save ${kinshipPendingRelationships.length} relationship${kinshipPendingRelationships.length !== 1 ? 's' : ''}`}
                   </Button>
                 )}
                 {kinshipRelationshipError && <p className="text-sm text-red-600">{kinshipRelationshipError}</p>}
+              </div>
+
+              {/* Description / Background */}
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Background / Description</Label>
+                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this kinship's history, culture, and lore…" disabled={isSaving} />
+                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
               </div>
 
               {/* Recruiters (members only) */}
@@ -937,13 +1056,6 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                     })}
                   </div>
                 )}
-              </div>
-
-              {/* Description / Background */}
-              <div className="space-y-2">
-                <Label className="text-amber-900 font-semibold">Background / Description</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this kinship's history, culture, and lore…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
               </div>
 
               {/* Members (read-only list with remove) */}
@@ -992,8 +1104,185 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             </form>
           )}
 
-          {/* ── GENERIC FORM (non-character, non-kinship) ──────────────────── */}
-          {!isCharacter && !isKinship && (
+          {/* ── ITEM FORM ──────────────────────────────────────────────────── */}
+          {isItem && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter item name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <p className="text-sm text-amber-600">{name.length}/100 characters</p>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Image</Label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isImageUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'}`}
+                  onClick={() => uploadedImages.length === 0 && imageFileInputRef.current?.click()}
+                >
+                  <input ref={imageFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageFileSelect} className="hidden" disabled={isImageUploading || isSaving} />
+                  {isImageUploading ? (
+                    <div className="flex flex-col items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div><p className="text-amber-700">Uploading…</p></div>
+                  ) : uploadedImages.length > 0 ? (
+                    <div className="relative group w-full aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                      <NextImage fill src={uploadedImages[0].url} alt={uploadedImages[0].originalName} sizes="(max-width: 768px) 100vw, 600px" className="object-contain" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveImage(uploadedImages[0].filename); }} disabled={isSaving} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center"><Upload className="w-10 h-10 text-amber-600 mb-2" /><p className="text-amber-800 font-medium">Click to upload an image</p><p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p></div>
+                  )}
+                </div>
+                {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Description</Label>
+                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this item — its appearance, properties, history…" disabled={isSaving} />
+                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+              </div>
+
+              <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
+              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
+            </form>
+          )}
+
+          {/* ── LOCATION FORM ──────────────────────────────────────────────── */}
+          {isLocation && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter location name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <p className="text-sm text-amber-600">{name.length}/100 characters</p>
+              </div>
+
+              {/* Location Info */}
+              <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Location Info</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location_type" className="text-amber-900 font-medium">Type</Label>
+                    <Input id="location_type" value={locationType} onChange={(e) => setLocationType(e.target.value)} placeholder="e.g. City, Dungeon, Region, Landmark…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location_region" className="text-amber-900 font-medium">Region / Area</Label>
+                    <Input id="location_region" value={locationRegion} onChange={(e) => setLocationRegion(e.target.value)} placeholder="e.g. The Shire, Mirkwood…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="location_status" className="text-amber-900 font-medium">Status</Label>
+                    <Input id="location_status" value={locationStatus} onChange={(e) => setLocationStatus(e.target.value)} placeholder="e.g. Thriving, Ruined, Abandoned, Unknown…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Image</Label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isImageUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'}`}
+                  onClick={() => uploadedImages.length === 0 && imageFileInputRef.current?.click()}
+                >
+                  <input ref={imageFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageFileSelect} className="hidden" disabled={isImageUploading || isSaving} />
+                  {isImageUploading ? (
+                    <div className="flex flex-col items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div><p className="text-amber-700">Uploading…</p></div>
+                  ) : uploadedImages.length > 0 ? (
+                    <div className="relative group w-full aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
+                      <NextImage fill src={uploadedImages[0].url} alt={uploadedImages[0].originalName} sizes="(max-width: 768px) 100vw, 600px" className="object-cover" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveImage(uploadedImages[0].filename); }} disabled={isSaving} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center"><Upload className="w-10 h-10 text-amber-600 mb-2" /><p className="text-amber-800 font-medium">Click to upload an image</p><p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p></div>
+                  )}
+                </div>
+                {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Description</Label>
+                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this location — its history, atmosphere, notable features…" disabled={isSaving} />
+                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+              </div>
+
+              <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
+              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
+            </form>
+          )}
+
+          {/* ── ORGANIZATION FORM ──────────────────────────────────────────── */}
+          {isOrganization && (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Avatar */}
+              <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
+
+              {/* Banner */}
+              <BannerUploadSection
+                banner={banner}
+                isBannerUploading={isBannerUploading}
+                bannerUploadError={bannerUploadError}
+                isBannerCropOpen={isBannerCropOpen}
+                bannerPreviewSrc={bannerPreviewSrc}
+                bannerFileInputRef={bannerFileInputRef}
+                handleBannerFileSelect={handleBannerFileSelect}
+                handleBannerCropComplete={handleBannerCropComplete}
+                handleBannerCropCancel={handleBannerCropCancel}
+                handleRemoveBanner={handleRemoveBanner}
+                triggerBannerFileSelect={triggerBannerFileSelect}
+                isSaving={isSaving}
+              />
+
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter organization name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <p className="text-sm text-amber-600">{name.length}/100 characters</p>
+              </div>
+
+              {/* Organization Info */}
+              <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Organization Info</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="org_founding_date" className="text-amber-900 font-medium">Founding Date</Label>
+                    <Input id="org_founding_date" value={orgFoundingDate} onChange={(e) => setOrgFoundingDate(e.target.value)} placeholder="e.g. Third Age 1200, Unknown…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org_type" className="text-amber-900 font-medium">Organization Type</Label>
+                    <Input id="org_type" value={orgType} onChange={(e) => setOrgType(e.target.value)} placeholder="e.g. Guild, Order, Council…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org_status" className="text-amber-900 font-medium">Status</Label>
+                    <Input id="org_status" value={orgStatus} onChange={(e) => setOrgStatus(e.target.value)} placeholder="e.g. Active, Disbanded, Dormant…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="org_area" className="text-amber-900 font-medium">Area of Operation</Label>
+                    <Input id="org_area" value={orgAreaOfOperation} onChange={(e) => setOrgAreaOfOperation(e.target.value)} placeholder="e.g. Bree-land, Eriador, The Shire…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label className="text-amber-900 font-semibold">Background / Description</Label>
+                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this organization's history, purpose, and lore…" disabled={isSaving} />
+                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+              </div>
+
+              {/* Publish */}
+              <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
+
+              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+
+              <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
+            </form>
+          )}
+
+          {/* ── GENERIC FORM (non-character, non-kinship, non-item, non-location) ── */}
+          {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
 

@@ -51,6 +51,14 @@ interface ProfileDetails {
   kinship_type?: string;
   status?: string;
   recruiters?: number[];
+  // Location-specific
+  location_type?: string;
+  region?: string;
+  // Organization-specific
+  org_type?: string;
+  area_of_operation?: string;
+  // Item / Location
+  images?: { url: string; filename: string; originalName?: string }[];
 }
 
 interface KinshipMember {
@@ -217,6 +225,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   // Kinship profile link (for character info panel)
   const [kinshipProfileName, setKinshipProfileName] = useState<string | null>(null);
 
+  // Organization contact (owner's character)
+  const [orgContactName, setOrgContactName] = useState<string | null>(null);
+  const [orgContactId, setOrgContactId] = useState<number | null>(null);
+
   const { id } = use(params);
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
@@ -306,6 +318,21 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       .catch(() => {});
   }, [profile?.profile_id, profile?.details?.kinship_profile_id]);
 
+  // ── Fetch org contact (owner's character) ─────────────────────────────────
+  useEffect(() => {
+    if (!profile || profile.profile_type_id !== 4) return;
+    fetch(`/api/profiles/public?profile_type_id=1&account_id=${profile.account_id}&limit=1`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const char = data?.profiles?.[0];
+        if (char) {
+          setOrgContactName(char.name);
+          setOrgContactId(char.profile_id);
+        }
+      })
+      .catch(() => {});
+  }, [profile?.profile_id, profile?.account_id]);
+
   // ── Fetch character bottom sections ───────────────────────────────────────
   useEffect(() => {
     if (!profile || profile.profile_type_id !== 1) return;
@@ -314,7 +341,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
     // Items (children with parent_profile_id = pid)
     setItemsLoading(true);
-    fetch(`/api/profiles/public?parent_profile_id=${pid}&limit=6`)
+    fetch(`/api/profiles/public?parent_profile_id=${pid}&profile_type_id=2&limit=6`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: ItemsResponse) => setItems(data.profiles || []))
       .catch(() => setItems([]))
@@ -358,6 +385,43 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       .then((data: PublicPostsResponse) => setWritingPosts(data.posts || []))
       .catch(() => setWritingPosts([]))
       .finally(() => setWritingLoading(false));
+  }, [profile?.profile_id, profile?.profile_type_id]);
+
+  // ── Fetch organization bottom sections ────────────────────────────────────
+  useEffect(() => {
+    if (!profile || profile.profile_type_id !== 4) return;
+
+    const pid = profile.profile_id;
+
+    // Gallery (art + media)
+    setGalleryLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=2,3&limit=6&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setGalleryPosts(data.posts || []))
+      .catch(() => setGalleryPosts([]))
+      .finally(() => setGalleryLoading(false));
+
+    // Writing
+    setWritingLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=1&limit=4&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setWritingPosts(data.posts || []))
+      .catch(() => setWritingPosts([]))
+      .finally(() => setWritingLoading(false));
+  }, [profile?.profile_id, profile?.profile_type_id]);
+
+  // ── Fetch item / location gallery ─────────────────────────────────────────
+  useEffect(() => {
+    if (!profile || (profile.profile_type_id !== 2 && profile.profile_type_id !== 5)) return;
+
+    const pid = profile.profile_id;
+
+    setGalleryLoading(true);
+    fetch(`/api/posts/public?profile_id=${pid}&attribution=both&post_type_id=2,3&limit=12&sortBy=created_at&order=desc`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: PublicPostsResponse) => setGalleryPosts(data.posts || []))
+      .catch(() => setGalleryPosts([]))
+      .finally(() => setGalleryLoading(false));
   }, [profile?.profile_id, profile?.profile_type_id]);
 
   // ── Editor actions ─────────────────────────────────────────────────────────
@@ -488,6 +552,9 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   const isCharacter = profile.profile_type_id === 1;
   const isKinship = profile.profile_type_id === 3;
+  const isItem = profile.profile_type_id === 2;
+  const isLocation = profile.profile_type_id === 5;
+  const isOrganization = profile.profile_type_id === 4;
   const d = profile.details;
 
   return (
@@ -501,8 +568,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
         {/* Profile Header Card */}
         <Card className="bg-white border-amber-300 mb-6 overflow-hidden">
-          {/* Banner (character + kinship) */}
-          {(isCharacter || isKinship) && d?.banner?.url && (
+          {/* Banner (character + kinship + organization) */}
+          {(isCharacter || isKinship || isOrganization) && d?.banner?.url && (
             <div className="relative h-48 w-full bg-amber-100">
               <NextImage
                 fill
@@ -515,13 +582,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          <div className={`p-8 ${(isCharacter || isKinship) && d?.banner?.url ? 'pt-6' : ''}`}>
+          <div className={`p-8 ${(isCharacter || isKinship || isOrganization) && d?.banner?.url ? 'pt-6' : ''}`}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-start gap-6">
                 {/* Avatar — overlaps banner bottom-left when banner present */}
                 <div
                   className={`relative flex-shrink-0 ${
-                    (isCharacter || isKinship) && d?.banner?.url
+                    (isCharacter || isKinship || isOrganization) && d?.banner?.url
                       ? '-mt-14 w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-amber-100'
                       : 'w-24 h-24 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-100'
                   }`}
@@ -605,6 +672,20 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </div>
         </Card>
 
+        {/* Item image */}
+        {isItem && d?.images?.[0]?.url && (
+          <Card className="overflow-hidden border-amber-300 mb-6">
+            <div className="relative w-full aspect-video bg-amber-50">
+              <NextImage
+                src={d.images[0].url}
+                alt={profile.name}
+                fill
+                className="object-contain"
+              />
+            </div>
+          </Card>
+        )}
+
         {/* Character info panel */}
         {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
@@ -655,6 +736,12 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </dl>
             ) : (
               <p className="text-amber-600 text-sm italic">No character info has been added yet.</p>
+            )}
+            {d?.appearance && (
+              <div className="border-t border-amber-100 mt-4 pt-4">
+                <h3 className="text-sm font-semibold text-amber-900 mb-2">Appearance</h3>
+                <p className="text-amber-800 whitespace-pre-wrap text-sm">{d.appearance}</p>
+              </div>
             )}
           </Card>
         )}
@@ -815,6 +902,117 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </Card>
         )}
 
+        {/* Location info panel */}
+        {isLocation && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <h2 className="text-lg font-semibold text-amber-900 mb-4">Location Info</h2>
+            {d && (d.location_type || d.region || d.status) ? (
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                {d.location_type && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Type</dt>
+                    <dd className="text-amber-900">{d.location_type}</dd>
+                  </div>
+                )}
+                {d.region && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Region / Area</dt>
+                    <dd className="text-amber-900">{d.region}</dd>
+                  </div>
+                )}
+                {d.status && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Status</dt>
+                    <dd className="text-amber-900">{d.status}</dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="text-amber-600 text-sm italic">No location info has been added yet.</p>
+            )}
+          </Card>
+        )}
+
+        {/* Location image */}
+        {isLocation && d?.images?.[0]?.url && (
+          <Card className="overflow-hidden border-amber-300 mb-6">
+            <div className="relative w-full aspect-video bg-amber-50">
+              <NextImage
+                src={d.images[0].url}
+                alt={profile.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+          </Card>
+        )}
+
+        {/* Organization info panel */}
+        {isOrganization && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <h2 className="text-lg font-semibold text-amber-900 mb-4">Organization Info</h2>
+            {d && (d.founding_date || d.org_type || d.status || d.area_of_operation) ? (
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                {d.founding_date && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Founded</dt>
+                    <dd className="text-amber-900">{d.founding_date}</dd>
+                  </div>
+                )}
+                {d.org_type && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Organization Type</dt>
+                    <dd className="text-amber-900">{d.org_type}</dd>
+                  </div>
+                )}
+                {d.status && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Status</dt>
+                    <dd className="text-amber-900">{d.status}</dd>
+                  </div>
+                )}
+                {d.area_of_operation && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Area of Operation</dt>
+                    <dd className="text-amber-900">{d.area_of_operation}</dd>
+                  </div>
+                )}
+                {orgContactName && (
+                  <div>
+                    <dt className="text-amber-600 font-medium">Contact</dt>
+                    <dd className="text-amber-900">
+                      {orgContactId ? (
+                        <Link href={`/profiles/${orgContactId}`} className="hover:underline">
+                          {orgContactName}
+                        </Link>
+                      ) : (
+                        orgContactName
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            ) : orgContactName ? (
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                <div>
+                  <dt className="text-amber-600 font-medium">Contact</dt>
+                  <dd className="text-amber-900">
+                    {orgContactId ? (
+                      <Link href={`/profiles/${orgContactId}`} className="hover:underline">
+                        {orgContactName}
+                      </Link>
+                    ) : (
+                      orgContactName
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-amber-600 text-sm italic">No organization info has been added yet.</p>
+            )}
+          </Card>
+        )}
+
         {/* Relationships (character only) */}
         {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
@@ -899,23 +1097,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </Card>
         )}
 
-        {/* Appearance (character only) */}
-        {isCharacter && (
-          <Card className="p-8 bg-white border-amber-300 mb-6">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">Appearance</h2>
-            {d?.appearance ? (
-              <p className="text-amber-800 whitespace-pre-wrap">{d.appearance}</p>
-            ) : (
-              <p className="text-amber-600 italic">No appearance description has been added yet.</p>
-            )}
-          </Card>
-        )}
-
         {/* Background / Description */}
-        {(isCharacter || isKinship) && (
+        {(isCharacter || isKinship || isItem || isLocation || isOrganization) && (
           <Card className="p-8 bg-white border-amber-300 mb-6">
             <h2 className="text-2xl font-bold text-amber-900 mb-4">
-              {isCharacter ? 'Background' : 'Background / Description'}
+              {isCharacter ? 'Background' : (isKinship || isOrganization) ? 'Background / Description' : 'Description'}
             </h2>
             {d?.description ? (
               <div
@@ -923,11 +1109,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 dangerouslySetInnerHTML={{ __html: d.description }}
               />
             ) : (
-              <p className="text-amber-600 italic">No background has been added yet.</p>
+              <p className="text-amber-600 italic">No description has been added yet.</p>
             )}
           </Card>
         )}
-        {!isCharacter && !isKinship && (
+        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && (
           <Card className="p-8 bg-white border-amber-300 mb-6">
             <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
             {d?.description ? (
@@ -1139,6 +1325,91 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               )}
             </Card>
           </>
+        )}
+
+        {/* ── Organization bottom sections ─────────────────────────────────── */}
+        {isOrganization && (
+          <>
+            {/* Gallery */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
+                </div>
+                <Link href={`/profiles/${id}/gallery`} className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors">
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+              {galleryLoading ? (
+                <p className="text-amber-600 text-sm">Loading gallery…</p>
+              ) : galleryPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {galleryPosts.map((post) => (
+                    <GalleryPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Writing */}
+            <Card className="p-6 bg-white border-amber-300 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
+                </div>
+                <Link href={`/profiles/${id}/writing`} className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors">
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+              {writingLoading ? (
+                <p className="text-amber-600 text-sm">Loading writing…</p>
+              ) : writingPosts.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {writingPosts.map((post) => (
+                    <WritingPostCard key={post.post_id} post={post} />
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+
+        {/* ── Item / Location gallery ──────────────────────────────────────── */}
+        {(isItem || isLocation) && (
+          <Card className="p-6 bg-white border-amber-300 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-amber-800" />
+                <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
+              </div>
+              <Link
+                href={`/profiles/${id}/gallery`}
+                className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+              >
+                View all <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+
+            {galleryLoading ? (
+              <p className="text-amber-600 text-sm">Loading gallery…</p>
+            ) : galleryPosts.length === 0 ? (
+              <p className="text-amber-600 text-sm italic">
+                {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {galleryPosts.map((post) => (
+                  <GalleryPostCard key={post.post_id} post={post} />
+                ))}
+              </div>
+            )}
+          </Card>
         )}
 
         {/* Editors Section */}
