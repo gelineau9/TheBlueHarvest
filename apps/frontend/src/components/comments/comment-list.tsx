@@ -9,6 +9,8 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { CommentItem, Comment } from './comment-item';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
+const PAGE_SIZE = 50;
+
 interface CommentListProps {
   postId: number;
 }
@@ -16,7 +18,11 @@ interface CommentListProps {
 export function CommentList({ postId }: CommentListProps) {
   const { isLoggedIn, accountId } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // New comment form state
@@ -28,19 +34,42 @@ export function CommentList({ postId }: CommentListProps) {
   // User's characters for attribution (only fetch when logged in)
   const { characters } = useCharacterProfiles({ enabled: isLoggedIn });
 
-  // Fetch comments
+  // Fetch initial page of comments
   const fetchComments = async () => {
+    setIsLoading(true);
+    setOffset(0);
     try {
-      const response = await fetch(`/api/posts/${postId}/comments`);
+      const response = await fetch(`/api/posts/${postId}/comments?limit=${PAGE_SIZE}&offset=0`);
       if (!response.ok) {
         throw new Error('Failed to fetch comments');
       }
       const data = await response.json();
-      setComments(data);
+      setComments(data.comments ?? []);
+      setTotal(data.pagination?.total ?? 0);
+      setHasMore(data.pagination?.hasMore ?? false);
+      setOffset(data.comments?.length ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load comments');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load next page
+  const loadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments?limit=${PAGE_SIZE}&offset=${offset}`);
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      const data = await response.json();
+      const newComments = data.comments ?? [];
+      setComments((prev) => [...prev, ...newComments]);
+      setHasMore(data.pagination?.hasMore ?? false);
+      setOffset((prev) => prev + newComments.length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more comments');
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -74,7 +103,7 @@ export function CommentList({ postId }: CommentListProps) {
         throw new Error(data.error || 'Failed to post comment');
       }
 
-      // Clear form and refresh comments
+      // Clear form and refresh comments from the start
       setNewComment('');
       setSelectedCharacterId(null);
       fetchComments();
@@ -90,7 +119,7 @@ export function CommentList({ postId }: CommentListProps) {
       <div className="flex items-center gap-2 mb-4">
         <MessageSquare className="w-5 h-5 text-amber-700" />
         <h2 className="text-lg font-semibold text-amber-900">
-          Comments {comments.length > 0 && `(${comments.length})`}
+          Comments {total > 0 && `(${total})`}
         </h2>
       </div>
 
@@ -104,6 +133,7 @@ export function CommentList({ postId }: CommentListProps) {
               onChange={(e) => setNewComment(e.target.value)}
               className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[80px] resize-none"
               disabled={isSubmitting}
+              maxLength={10000}
             />
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -156,6 +186,18 @@ export function CommentList({ postId }: CommentListProps) {
               onCommentUpdated={fetchComments}
             />
           ))}
+          {hasMore && (
+            <div className="pt-2 text-center">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="border-amber-300 text-amber-800 hover:bg-amber-50"
+              >
+                {isLoadingMore ? 'Loading...' : 'Load more comments'}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </Card>

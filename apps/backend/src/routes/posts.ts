@@ -615,7 +615,7 @@ router.put(
       // Handle primary author update
       if (primary_author_profile_id !== undefined) {
         // First, remove existing primary author
-        await db.query(sql.unsafe`
+        await db.query(sql.type(z.object({}))`
           DELETE FROM authors
           WHERE post_id = ${postId} AND is_primary = true
         `);
@@ -633,7 +633,7 @@ router.put(
           );
 
           if (profile) {
-            await db.query(sql.unsafe`
+            await db.query(sql.type(z.object({}))`
               INSERT INTO authors (post_id, profile_id, is_primary)
               VALUES (${postId}, ${primary_author_profile_id}, true)
             `);

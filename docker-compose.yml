@@ -7,6 +7,12 @@
 #   1. cp env.example .env  and fill in real values
 #   2. Generate a strong JWT_SECRET:  openssl rand -base64 48
 #   3. docker compose up -d
+#
+# Schema / migrations:
+#   Fresh database  — schema is applied automatically via docker-entrypoint-initdb.d
+#                     on first postgres container start (empty postgres_data volume).
+#   Existing database — run pending migrations before deploying:
+#                     docker compose run --rm migrate
 
 services:
 
@@ -25,7 +31,7 @@ services:
       # NEVER use a bind-mount for pgdata — file permission issues on Linux hosts.
       - postgres_data:/var/lib/postgresql/data
       # Schema files are applied once on first container init (empty pgdata).
-      # For schema changes on a live DB, use the migration runner (see db/migrations/).
+      # For schema changes on a live DB, use: docker compose run --rm migrate
       - ./db/schema:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
@@ -37,6 +43,34 @@ services:
       # Exposed only on localhost for debugging / migrations run from the host.
       # Remove this in a hardened production environment.
       - '127.0.0.1:5433:5432'
+
+  # ──────────────────────────────────────────
+  # Migration runner (one-shot)
+  # ──────────────────────────────────────────
+  # Run manually before deploying schema changes to a live database:
+  #   docker compose run --rm migrate
+  #
+  # On a fresh database (empty postgres_data volume), skip this — the schema
+  # files in db/schema/ are applied automatically by postgres on first boot.
+  # After that first boot, mark the baseline migration as already run so the
+  # runner doesn't re-apply it:
+  #   docker compose run --rm migrate mark-as-run 0001
+  migrate:
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
+    container_name: bha-migrate
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL so node-pg-migrate connects over the internal
+      # Docker network (postgres:5432) rather than the host-exposed 5433.
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}
+    command: ['node', 'node_modules/.bin/node-pg-migrate', '--migrations-dir', '../../db/migrations', '--migrations-table', 'schema_migrations', 'up']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
 
   # ──────────────────────────────────────────
   # Express Backend

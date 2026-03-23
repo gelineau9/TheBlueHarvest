@@ -28,8 +28,8 @@ beforeAll(async () => {
   // Setup test database connection (Slonik 48+ returns Promise)
   // Use localhost for tests running outside Docker (container port 5433 maps to container's 5432)
   const { DB_USER, DB_PASSWORD, DB_NAME } = process.env;
-  const DB_HOST = 'localhost';
-  const DB_PORT = '5433'; // Host port mapped from container's 5432
+  const DB_HOST = process.env.DB_HOST || 'localhost';
+  const DB_PORT = process.env.DB_PORT || '5433'; // Host port mapped from container's 5432
 
   pool = await createPool(`postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`);
 

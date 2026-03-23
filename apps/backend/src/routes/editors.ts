@@ -69,7 +69,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
   const editorIdIdent = sql.identifier([editorIdColumn]);
 
   // GET /:entityId/editors - List all editors
-  router.get(`/:${paramName}/editors`, async (req: AuthRequest, res: Response) => {
+  router.get(`/:${paramName}/editors`, authenticateToken, async (req: AuthRequest, res: Response) => {
     const entityId = parseParam(req.params[paramName]);
 
     if (isNaN(entityId)) {

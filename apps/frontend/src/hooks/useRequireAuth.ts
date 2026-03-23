@@ -14,8 +14,6 @@ interface UseRequireAuthReturn {
   isAuthorized: boolean;
   /** True while checking authentication status */
   isLoading: boolean;
-  /** The current user object (if authenticated) */
-  user: ReturnType<typeof useAuth>['user'];
 }
 
 /**
@@ -42,7 +40,7 @@ interface UseRequireAuthReturn {
 export function useRequireAuth(options: UseRequireAuthOptions = {}): UseRequireAuthReturn {
   const { redirectTo = '/' } = options;
   const router = useRouter();
-  const { isLoggedIn, isLoading, user } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -53,6 +51,5 @@ export function useRequireAuth(options: UseRequireAuthOptions = {}): UseRequireA
   return {
     isAuthorized: !isLoading && isLoggedIn,
     isLoading,
-    user,
   };
 }

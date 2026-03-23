@@ -4,7 +4,10 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
-import { authenticateToken } from '../middleware/auth.js';
+import { sql } from 'slonik';
+import { z } from 'zod';
+import { getPool } from '../config/database.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -113,14 +116,13 @@ router.post(
 );
 
 // DELETE /api/uploads/images/:filename - Delete an uploaded image
-router.delete('/images/:filename', authenticateToken, (req: Request, res: Response): void => {
+router.delete('/images/:filename', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const filename = req.params.filename as string;
     if (!filename || Array.isArray(filename)) {
       res.status(400).json({ error: 'Invalid filename' });
       return;
     }
-    const filePath = path.join(imagesDir, filename);
 
     // Security: Ensure filename doesn't contain path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -128,6 +130,33 @@ router.delete('/images/:filename', authenticateToken, (req: Request, res: Respon
       return;
     }
 
+    const userId = req.userId!;
+    const fileUrl = `${BACKEND_URL}/uploads/images/${filename}`;
+
+    // Ownership check: verify this file belongs to the requesting user
+    // Check post_media → posts.account_id, and profile_media → profiles.account_id
+    const db = await getPool();
+    const owned = await db.maybeOne(
+      sql.type(z.object({ media_id: z.number() }))`
+        SELECT pm.media_id
+        FROM post_media pm
+        JOIN posts p ON pm.post_id = p.post_id
+        WHERE pm.url = ${fileUrl} AND p.account_id = ${userId}
+        UNION ALL
+        SELECT prm.media_id
+        FROM profile_media prm
+        JOIN profiles pr ON prm.profile_id = pr.profile_id
+        WHERE prm.url = ${fileUrl} AND pr.account_id = ${userId}
+        LIMIT 1
+      `,
+    );
+
+    if (!owned) {
+      res.status(403).json({ error: 'You do not have permission to delete this file' });
+      return;
+    }
+
+    const filePath = path.join(imagesDir, filename);
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: 'File not found' });
       return;
@@ -204,14 +233,13 @@ router.post(
 );
 
 // DELETE /api/uploads/avatar/:filename - Delete an avatar
-router.delete('/avatar/:filename', authenticateToken, (req: Request, res: Response): void => {
+router.delete('/avatar/:filename', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const filename = req.params.filename as string;
     if (!filename || Array.isArray(filename)) {
       res.status(400).json({ error: 'Invalid filename' });
       return;
     }
-    const filePath = path.join(avatarsDir, filename);
 
     // Security: Ensure filename doesn't contain path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -219,6 +247,31 @@ router.delete('/avatar/:filename', authenticateToken, (req: Request, res: Respon
       return;
     }
 
+    const userId = req.userId!;
+    const fileUrl = `${BACKEND_URL}/uploads/avatars/${filename}`;
+
+    // Ownership check: avatars are stored in account_media (account_id) or profile_media
+    const db = await getPool();
+    const owned = await db.maybeOne(
+      sql.type(z.object({ media_id: z.number() }))`
+        SELECT am.media_id
+        FROM account_media am
+        WHERE am.url = ${fileUrl} AND am.account_id = ${userId}
+        UNION ALL
+        SELECT prm.media_id
+        FROM profile_media prm
+        JOIN profiles pr ON prm.profile_id = pr.profile_id
+        WHERE prm.url = ${fileUrl} AND pr.account_id = ${userId}
+        LIMIT 1
+      `,
+    );
+
+    if (!owned) {
+      res.status(403).json({ error: 'You do not have permission to delete this avatar' });
+      return;
+    }
+
+    const filePath = path.join(avatarsDir, filename);
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: 'File not found' });
       return;
