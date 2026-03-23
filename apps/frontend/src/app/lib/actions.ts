@@ -14,42 +14,41 @@ import {
 } from './validations';
 import { API_CONFIG } from '@/config/api';
 
+// Shared cookie options for clearing an expired/invalid session
+const CLEAR_COOKIE = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/',
+  maxAge: 0,
+};
+
 export async function login(formData: FormData) {
   try {
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // Validate input
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       return {
         success: false,
-        // error: result.error.errors[0].message,
-        // Zod breaking change from upgrade, issue #12
+        // Zod v4 uses .issues — see issue #12
         error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
-    // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/login`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
-    console.log('Backend response status:', response.status);
-
     if (!response.ok) {
-      const data = await response.json();
-      console.log('Backend error:', data);
+      const data = await response.json().catch(() => ({}));
       return { success: false, error: data.message || 'Login failed' };
     }
 
     const data = await response.json();
-    console.log('Backend success data:', data);
 
     const cookieStore = await cookies();
     await cookieStore.set({
@@ -58,10 +57,10 @@ export async function login(formData: FormData) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 days — matches JWT expiry
     });
 
-    console.log('Cookie set successfully');
     return { success: true };
   } catch (error) {
     console.error('Login action error:', error);
@@ -70,15 +69,14 @@ export async function login(formData: FormData) {
 }
 
 export async function logout() {
-  const cookieStore = await cookies();
-  await cookieStore.set('auth_token', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 0, // Expire immediately
-  });
-
-  return { success: true };
+  try {
+    const cookieStore = await cookies();
+    await cookieStore.set('auth_token', '', CLEAR_COOKIE);
+    return { success: true };
+  } catch (error) {
+    console.error('Logout error:', error);
+    return { success: false, error: 'Failed to clear session' };
+  }
 }
 
 export async function register(formData: FormData) {
@@ -86,48 +84,30 @@ export async function register(formData: FormData) {
     const email = formData.get('email');
     const username = formData.get('username');
     const password = formData.get('password');
+    // Read confirmPassword independently so the Zod refine check actually runs
+    const confirmPassword = formData.get('confirmPassword');
 
-    // Validate input
-    const result = registerSchema.safeParse({
-      email,
-      username,
-      password,
-      confirmPassword: password, // For validation, we'll use the same password
-    });
-
+    const result = registerSchema.safeParse({ email, username, password, confirmPassword });
     if (!result.success) {
       return {
         success: false,
-        // error: result.error.errors[0].message,
-        // Zod breaking change from upgrade, issue #12
+        // Zod v4 uses .issues — see issue #12
         error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
-    // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/signup`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/signup`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        username,
-        password,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username, password }),
     });
 
-    console.log('Backend response status:', response.status);
-
     if (!response.ok) {
-      const data = await response.json();
-      console.log('Backend error:', data);
+      const data = await response.json().catch(() => ({}));
       return { success: false, error: data.message || 'Registration failed' };
     }
 
     const data = await response.json();
-    console.log('Backend success data:', data);
 
     const cookieStore = await cookies();
     await cookieStore.set({
@@ -136,10 +116,10 @@ export async function register(formData: FormData) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
     });
 
-    console.log('Cookie set successfully');
     return { success: true };
   } catch (error) {
     console.error('Registration action error:', error);
@@ -153,24 +133,17 @@ export async function updateAccount(formData: FormData) {
     const detailsRaw = formData.get('details');
     const details = detailsRaw ? JSON.parse(detailsRaw as string) : undefined;
 
-    // Validate input
-    const result = accountUpdateSchema.safeParse({
-      username: username || undefined,
-    });
-
+    const result = accountUpdateSchema.safeParse({ username: username || undefined });
     if (!result.success) {
       return {
         success: false,
-        // error: result.error.errors[0].message,
-        // Zod breaking change from upgrade, issue #12
+        // Zod v4 uses .issues — see issue #12
         error: result.error.issues[0]?.message ?? 'Validation failed',
       };
     }
 
-    // Get auth token
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
-
     if (!authToken) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -180,7 +153,6 @@ export async function updateAccount(formData: FormData) {
     if (result.data.username !== undefined) body.username = result.data.username;
     if (details !== undefined) body.details = details;
 
-    // Call backend API
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/account`, {
       method: 'PUT',
       headers: {
@@ -191,19 +163,11 @@ export async function updateAccount(formData: FormData) {
     });
 
     if (!response.ok) {
-      // If unauthorized (401), token is invalid/expired - clean up the cookie
       if (response.status === 401) {
-        console.log('Token invalid/expired during account update, clearing cookie');
-        await cookieStore.set('auth_token', '', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 0,
-        });
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
         return { success: false, error: 'Session expired. Please log in again.' };
       }
-
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       return { success: false, error: data.message || 'Account update failed' };
     }
 
@@ -217,21 +181,17 @@ export async function updateAccount(formData: FormData) {
 
 export async function createProfile(formData: CreateProfileInput) {
   try {
-    // Validate input
     const result = createProfileSchema.safeParse(formData);
-
     if (!result.success) {
-      return {
-        success: false,
-        error: result.error.issues[0]?.message || 'Invalid input',
-      };
+      return { success: false, error: result.error.issues[0]?.message || 'Invalid input' };
     }
+
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
     if (!authToken) {
       return { success: false, error: 'Not authenticated. Please log in.' };
     }
-    // Call backend API
+
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/profiles`, {
       method: 'POST',
       headers: {
@@ -246,29 +206,18 @@ export async function createProfile(formData: CreateProfileInput) {
         is_published: result.data.is_published,
       }),
     });
+
     if (!response.ok) {
-      // If unauthorized (401), token is invalid/expired - clean up the cookie
       if (response.status === 401) {
-        console.log('Token invalid/expired during profile creation, clearing cookie');
-        await cookieStore.set('auth_token', '', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 0,
-        });
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
         return { success: false, error: 'Session expired. Please log in again.' };
       }
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.message || 'Failed to create profile',
-      };
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.message || 'Failed to create profile' };
     }
+
     const data = await response.json();
-    return {
-      success: true,
-      profile: data,
-    };
+    return { success: true, profile: data };
   } catch (error) {
     console.error('Profile creation error:', error);
     return { success: false, error: 'An unexpected error occurred' };
@@ -280,36 +229,21 @@ export async function getSession() {
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
 
-    console.log('Auth token exists:', !!authToken);
-
     if (!authToken) {
       return { isLoggedIn: false };
     }
 
-    // Call backend API
-    console.log('Calling backend at:', `${API_CONFIG.BACKEND_URL}/api/auth/me`);
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${authToken.value}`,
-      },
+      headers: { Authorization: `Bearer ${authToken.value}` },
     });
 
-    console.log('Backend /me response status:', response.status);
-
     if (!response.ok) {
-      // Token is invalid or expired - clean up the cookie
-      console.log('Token invalid/expired, clearing cookie');
-      await cookieStore.set('auth_token', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 0, // Expire immediately
-      });
+      // Token is invalid or expired — clear the stale cookie
+      await cookieStore.set('auth_token', '', CLEAR_COOKIE);
       return { isLoggedIn: false };
     }
 
     const data = await response.json();
-
     return {
       isLoggedIn: true,
       id: data.id,
@@ -325,24 +259,17 @@ export async function getSession() {
 
 export async function createPost(formData: CreatePostInput) {
   try {
-    // Validate input
     const result = createPostSchema.safeParse(formData);
-
     if (!result.success) {
-      return {
-        success: false,
-        error: result.error.issues[0]?.message || 'Invalid input',
-      };
+      return { success: false, error: result.error.issues[0]?.message || 'Invalid input' };
     }
 
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
-
     if (!authToken) {
       return { success: false, error: 'Not authenticated. Please log in.' };
     }
 
-    // Call backend API
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts`, {
       method: 'POST',
       headers: {
@@ -360,53 +287,34 @@ export async function createPost(formData: CreatePostInput) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        await cookieStore.set('auth_token', '', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 0,
-        });
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
         return { success: false, error: 'Session expired. Please log in again.' };
       }
-
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.error || 'Failed to create post',
-      };
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Failed to create post' };
     }
 
     const data = await response.json();
-    return {
-      success: true,
-      post: data,
-    };
+    return { success: true, post: data };
   } catch (error) {
     console.error('Post creation error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 export async function createCollection(formData: CreateCollectionInput) {
   try {
-    // Validate input
     const result = createCollectionSchema.safeParse(formData);
-
     if (!result.success) {
-      return {
-        success: false,
-        error: result.error.issues[0]?.message || 'Invalid input',
-      };
+      return { success: false, error: result.error.issues[0]?.message || 'Invalid input' };
     }
 
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
-
     if (!authToken) {
       return { success: false, error: 'Not authenticated. Please log in.' };
     }
 
-    // Call backend API
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/collections`, {
       method: 'POST',
       headers: {
@@ -424,34 +332,21 @@ export async function createCollection(formData: CreateCollectionInput) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        await cookieStore.set('auth_token', '', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 0,
-        });
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
         return { success: false, error: 'Session expired. Please log in again.' };
       }
-
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.error || 'Failed to create collection',
-      };
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Failed to create collection' };
     }
 
     const data = await response.json();
-    return {
-      success: true,
-      collection: data,
-    };
+    return { success: true, collection: data };
   } catch (error) {
     console.error('Collection creation error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
-// Update collection action
 export async function updateCollection(
   collectionId: number,
   formData: {
@@ -464,7 +359,6 @@ export async function updateCollection(
   try {
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token');
-
     if (!authToken) {
       return { success: false, error: 'Not authenticated. Please log in.' };
     }
@@ -484,33 +378,20 @@ export async function updateCollection(
 
     if (!response.ok) {
       if (response.status === 401) {
-        await cookieStore.set('auth_token', '', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 0,
-        });
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
         return { success: false, error: 'Session expired. Please log in again.' };
       }
-
       if (response.status === 403) {
         return { success: false, error: 'You do not have permission to edit this collection.' };
       }
-
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.error || 'Failed to update collection',
-      };
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Failed to update collection' };
     }
 
     const data = await response.json();
-    return {
-      success: true,
-      collection: data,
-    };
+    return { success: true, collection: data };
   } catch (error) {
     console.error('Collection update error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }

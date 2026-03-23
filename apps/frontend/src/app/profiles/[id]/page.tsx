@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'isomorphic-dompurify';
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -1106,7 +1107,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             {d?.description ? (
               <div
                 className="prose prose-amber max-w-none text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                dangerouslySetInnerHTML={{ __html: d.description }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
               />
             ) : (
               <p className="text-amber-600 italic">No description has been added yet.</p>
