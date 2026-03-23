@@ -144,6 +144,8 @@ router.get('/:profileId/relationships', async (req: AuthRequest, res: Response) 
         JOIN profiles p2 ON br.profile_id_2 = p2.profile_id
         WHERE (br.profile_id_1 = ${profileId} OR br.profile_id_2 = ${profileId})
           AND br.deleted = false
+          AND p1.is_published = true
+          AND p2.is_published = true
         ORDER BY brt.type_name ASC, br.created_at ASC
       `,
     );
@@ -220,7 +222,7 @@ router.post(
         sql.type(ProfileCheckSchema)`
           SELECT profile_id, profile_type_id, name, details->'avatar'->>'url' AS avatar_url
           FROM profiles
-          WHERE profile_id = ${targetId} AND deleted = false
+          WHERE profile_id = ${targetId} AND deleted = false AND is_published = true
         `,
       );
 

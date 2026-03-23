@@ -95,7 +95,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
         });
         if (!response.ok) throw new Error('Upload failed');
         const data = await response.json();
-        const url: string = data?.urls?.[0] ?? data?.url;
+        const url: string = data?.files?.[0]?.url ?? data?.urls?.[0] ?? data?.url;
         if (url) {
           editor.chain().focus().setImage({ src: url, alt: file.name }).run();
         }

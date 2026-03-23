@@ -744,12 +744,18 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
           </div>
 
           {/* Relationships */}
-          <RelationshipsPicker
-            value={pendingRelationships}
-            onChange={setPendingRelationships}
-            disabled={isSubmitting}
-            allowedProfileTypes={[1, 3]}
-          />
+          {isPublished ? (
+            <RelationshipsPicker
+              value={pendingRelationships}
+              onChange={setPendingRelationships}
+              disabled={isSubmitting}
+              allowedProfileTypes={[1, 3]}
+            />
+          ) : (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-600 italic">
+              Relationships are not available for draft profiles. Publish this character to add relationships.
+            </div>
+          )}
         </>
       ) : isKinship ? (
         <>
@@ -818,12 +824,18 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
           </div>
 
           {/* Relationships */}
-          <RelationshipsPicker
-            value={kinshipPendingRelationships}
-            onChange={setKinshipPendingRelationships}
-            disabled={isSubmitting}
-            allowedProfileTypes={[1, 3]}
-          />
+          {isPublished ? (
+            <RelationshipsPicker
+              value={kinshipPendingRelationships}
+              onChange={setKinshipPendingRelationships}
+              disabled={isSubmitting}
+              allowedProfileTypes={[1, 3]}
+            />
+          ) : (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-600 italic">
+              Relationships are not available for draft profiles. Publish this kinship to add relationships.
+            </div>
+          )}
 
           {/* Background / Description */}
           <div className="space-y-2">

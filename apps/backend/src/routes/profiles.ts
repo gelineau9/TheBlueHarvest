@@ -692,6 +692,7 @@ router.get('/:id/members', async (req: Request, res: Response) => {
         JOIN profiles p ON km.character_id = p.profile_id
         WHERE km.kinship_id = ${kinshipId}
           AND p.deleted = false
+          AND p.is_published = true
         ORDER BY km.joined_at ASC
       `,
     );

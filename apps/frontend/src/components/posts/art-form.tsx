@@ -251,7 +251,13 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       </div>
 
       {/* Featured Profiles */}
-      <FeaturedProfilesPicker value={featuredProfiles} onChange={setFeaturedProfiles} disabled={isSubmitting} />
+      {isPublished ? (
+        <FeaturedProfilesPicker value={featuredProfiles} onChange={setFeaturedProfiles} disabled={isSubmitting} />
+      ) : (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-600 italic">
+          Featured profiles are not available for draft posts. Publish this post to feature profiles.
+        </div>
+      )}
 
       {/* Publish Status */}
       <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
