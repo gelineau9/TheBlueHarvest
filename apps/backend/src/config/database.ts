@@ -12,7 +12,8 @@ if (!DB_USER || !DB_PASSWORD || !DB_HOST || !DB_PORT || !DB_NAME) {
 }
 
 // encodeURIComponent handles special characters in passwords
-const connectionString = `postgres://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+// sslmode=require is needed for Supabase (and most managed Postgres providers)
+const connectionString = `postgres://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require`;
 
 const pool = createPool(connectionString);
 
