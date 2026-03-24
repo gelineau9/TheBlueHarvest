@@ -45,12 +45,13 @@ export function RegisterForm() {
           email: validatedData.email,
           username: validatedData.username,
           password: validatedData.password,
+          confirmPassword: validatedData.confirmPassword,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data.error || data.message || 'Registration failed');
       }
 
       setSuccess(true);

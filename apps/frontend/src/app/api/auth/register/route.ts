@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     formData.append('email', data.email);
     formData.append('username', data.username);
     formData.append('password', data.password);
+    formData.append('confirmPassword', data.confirmPassword ?? data.password);
 
     const result = await register(formData);
 
