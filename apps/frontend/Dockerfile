@@ -18,7 +18,6 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules 2>/dev/null || true
 
 COPY package.json package-lock.json ./
 COPY turbo.json ./

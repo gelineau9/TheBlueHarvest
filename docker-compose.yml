@@ -98,8 +98,8 @@ services:
     # Port 4000 is NOT exposed to the host in production.
     # Nginx proxies to http://backend:4000 over the internal Docker network.
     # Uncomment the line below only for local debugging:
-    # ports:
-    #   - '127.0.0.1:4000:4000'
+    ports:
+      - '127.0.0.1:4000:4000'
 
   # ──────────────────────────────────────────
   # Next.js Frontend
@@ -127,8 +127,8 @@ services:
       start_period: 30s
     # Port 3000 is NOT exposed to the host in production.
     # Uncomment only for local debugging:
-    # ports:
-    #   - '127.0.0.1:3000:3000'
+    ports:
+      - '127.0.0.1:3000:3000'
 
   # ──────────────────────────────────────────
   # Nginx — TLS termination & reverse proxy

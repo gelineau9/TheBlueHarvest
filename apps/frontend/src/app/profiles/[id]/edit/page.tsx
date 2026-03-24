@@ -106,7 +106,7 @@ function BannerUploadSection({
   isBannerUploading: boolean;
   bannerUploadError: string | null;
   isBannerCropOpen: boolean;
-  bannerPreviewSrc: string;
+  bannerPreviewSrc: string | null;
   bannerFileInputRef: React.RefObject<HTMLInputElement | null>;
   handleBannerFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBannerCropComplete: (blob: Blob) => Promise<void>;

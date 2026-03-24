@@ -879,7 +879,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveImage(0)}
+                   onClick={() => handleRemoveImage(uploadedImages[0].filename)}
                   className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                   disabled={isSubmitting}
                 >
@@ -988,7 +988,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveImage(0)}
+                   onClick={() => handleRemoveImage(uploadedImages[0].filename)}
                   className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                   disabled={isSubmitting}
                 >

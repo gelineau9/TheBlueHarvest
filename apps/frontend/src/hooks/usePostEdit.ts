@@ -83,7 +83,7 @@ interface UsePostEditReturn {
   // Image upload
   isUploading: boolean;
   uploadImages: (files: FileList, maxImages?: number) => Promise<UploadedImage[]>;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 
   // Characters (for event contact dropdown)
   characters: CharacterProfile[];
