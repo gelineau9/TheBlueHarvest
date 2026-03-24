@@ -10,14 +10,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API_CONFIG } from '@/config/api';
 
-// GET /api/posts/[id]/comments - List all comments for a post
+// GET /api/posts/[id]/comments - List comments for a post (paginated)
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
-    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments`, {
-      cache: 'no-store',
-    });
+    // Forward pagination query params to backend
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit') ?? '50';
+    const offset = searchParams.get('offset') ?? '0';
+
+    const response = await fetch(
+      `${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments?limit=${limit}&offset=${offset}`,
+      { cache: 'no-store' },
+    );
 
     const data = await response.json();
 

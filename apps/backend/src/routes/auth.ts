@@ -5,6 +5,7 @@ import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.post(
 
       // Create JWT
       const token = jwt.sign({ userId: result.account_id }, process.env.JWT_SECRET!, {
-        expiresIn: '1h',
+        expiresIn: '7d',
       });
 
       res.status(201).json({ token });
@@ -124,7 +125,7 @@ router.post(
 
       // Create JWT
       const token = jwt.sign({ userId: user.account_id }, process.env.JWT_SECRET!, {
-        expiresIn: '1h',
+        expiresIn: '7d',
       });
 
       res.json({
@@ -142,19 +143,10 @@ router.post(
 );
 
 // Get current user
-router.get('/me', async (req: Request, res: Response) => {
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-
-    if (!token) {
-      res.status(401).json({ message: 'No token provided' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
     const pool = await getPool();
 
-    // Get current user
     const user = await pool.maybeOne(
       sql.type(
         z.object({
@@ -166,7 +158,7 @@ router.get('/me', async (req: Request, res: Response) => {
       )`
         SELECT account_id, username, email, details
         FROM accounts
-        WHERE account_id = ${decoded.userId}
+        WHERE account_id = ${req.userId!}
       `,
     );
 
@@ -183,24 +175,16 @@ router.get('/me', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    // Distinguish between expired and invalid tokens
-    if (err instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ message: 'Token expired' });
-      return;
-    }
-    if (err instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ message: 'Invalid token' });
-      return;
-    }
-    res.status(401).json({ message: 'Authentication failed' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Update user account
 router.put(
   '/account',
+  authenticateToken,
   [body('username').optional().trim().isLength({ min: 3 }).withMessage('Username must be at least 3 characters long.')],
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
@@ -208,16 +192,7 @@ router.put(
     }
 
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-
-      if (!token) {
-        res.status(401).json({ message: 'No token provided' });
-        return;
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
       const pool = await getPool();
-
       const { username, details } = req.body;
 
       // Check if username is already taken by another user
@@ -225,7 +200,7 @@ router.put(
         const existingUser = await pool.maybeOne(
           sql.type(z.object({ account_id: z.number() }))`
             SELECT account_id FROM accounts
-            WHERE username = ${username} AND account_id != ${decoded.userId}
+            WHERE username = ${username} AND account_id != ${req.userId!}
           `,
         );
 
@@ -243,7 +218,7 @@ router.put(
       }
 
       if (details !== undefined) {
-        updateFragments.push(sql.fragment`details = ${JSON.stringify(details)}`);
+        updateFragments.push(sql.fragment`details = ${sql.jsonb(details)}`);
       }
 
       if (updateFragments.length === 0) {
@@ -251,7 +226,6 @@ router.put(
         return;
       }
 
-      // Update user account
       const result = await pool.one(
         sql.type(
           z.object({
@@ -263,7 +237,7 @@ router.put(
         )`
           UPDATE accounts
           SET ${sql.join(updateFragments, sql.fragment`, `)}
-          WHERE account_id = ${decoded.userId}
+          WHERE account_id = ${req.userId!}
           RETURNING account_id, username, email, details
         `,
       );
@@ -276,15 +250,6 @@ router.put(
       });
     } catch (err) {
       console.error(err);
-      // Distinguish between expired and invalid tokens
-      if (err instanceof jwt.TokenExpiredError) {
-        res.status(401).json({ message: 'Token expired' });
-        return;
-      }
-      if (err instanceof jwt.JsonWebTokenError) {
-        res.status(401).json({ message: 'Invalid token' });
-        return;
-      }
       res.status(500).json({ message: 'Internal server error' });
     }
   },

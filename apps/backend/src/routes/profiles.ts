@@ -781,7 +781,7 @@ router.post('/:id/members', authenticateToken, async (req: AuthRequest, res: Res
 // DELETE /api/profiles/:id/members/:charId
 router.delete('/:id/members/:charId', authenticateToken, async (req: AuthRequest, res: Response) => {
   const kinshipId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const characterId = parseInt(req.params.charId);
+  const characterId = parseInt(Array.isArray(req.params.charId) ? req.params.charId[0] : req.params.charId);
   const userId = req.userId!;
 
   if (isNaN(kinshipId) || isNaN(characterId)) {

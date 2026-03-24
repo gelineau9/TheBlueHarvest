@@ -21,12 +21,12 @@ export async function POST(request: NextRequest) {
       body: formData,
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      const errData = await response.json().catch(() => ({ error: 'Upload failed' }));
+      return NextResponse.json(errData, { status: response.status });
     }
 
+    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('Avatar upload proxy error:', error);

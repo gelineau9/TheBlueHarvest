@@ -62,7 +62,12 @@ router.post(
   '/:postId/comments',
   authenticateToken,
   [
-    body('content').trim().isLength({ min: 1 }).withMessage('Comment content is required'),
+    body('content')
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage('Comment content is required')
+      .isLength({ max: 10000 })
+      .withMessage('Comment must be 10,000 characters or fewer'),
     body('profile_id').optional().isInt({ min: 1 }).withMessage('Profile ID must be a positive integer'),
     body('parent_comment_id').optional().isInt({ min: 1 }).withMessage('Parent comment ID must be a positive integer'),
   ],
@@ -178,13 +183,20 @@ router.post(
   },
 );
 
-// GET /api/posts/:postId/comments - Get all comments for a post
+// GET /api/posts/:postId/comments - Get comments for a post (paginated)
+// Query params: limit (default 50, max 100), offset (default 0)
 router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
   const postId = parseInt(Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId);
   if (isNaN(postId)) {
     res.status(400).json({ error: 'Invalid post ID' });
     return;
   }
+
+  // Parse and clamp pagination params
+  const rawLimit = parseInt((req.query.limit as string) || '50', 10);
+  const rawOffset = parseInt((req.query.offset as string) || '0', 10);
+  const limit = isNaN(rawLimit) || rawLimit < 1 ? 50 : Math.min(rawLimit, 100);
+  const offset = isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
 
   try {
     const db = await getPool();
@@ -201,8 +213,16 @@ router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Get all comments for the post with user info
-    // For deleted comments, return null content
+    // Count total comments for pagination metadata
+    const countResult = await db.one(
+      sql.type(z.object({ total: z.number() }))`
+        SELECT COUNT(*)::int AS total
+        FROM comments
+        WHERE post_id = ${postId}
+      `,
+    );
+
+    // Get paginated comments with user info
     const comments = await db.any(
       sql.type(CommentWithUserSchema)`
         SELECT 
@@ -217,10 +237,19 @@ router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
         LEFT JOIN profiles p ON c.profile_id = p.profile_id
         WHERE c.post_id = ${postId}
         ORDER BY c.created_at ASC
+        LIMIT ${limit} OFFSET ${offset}
       `,
     );
 
-    res.json(comments);
+    res.json({
+      comments,
+      pagination: {
+        total: countResult.total,
+        limit,
+        offset,
+        hasMore: offset + comments.length < countResult.total,
+      },
+    });
   } catch (err) {
     console.error('Error fetching comments:', err);
     res.status(500).json({ error: 'Failed to fetch comments' });
@@ -231,7 +260,14 @@ router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
 router.put(
   '/:postId/comments/:commentId',
   authenticateToken,
-  [body('content').trim().isLength({ min: 1 }).withMessage('Comment content is required')],
+  [
+    body('content')
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage('Comment content is required')
+      .isLength({ max: 10000 })
+      .withMessage('Comment must be 10,000 characters or fewer'),
+  ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -283,7 +319,7 @@ router.put(
 
       // Update the comment
       await db.query(
-        sql.unsafe`
+        sql.type(z.object({}))`
           UPDATE comments
           SET content = ${content}, updated_at = NOW()
           WHERE comment_id = ${commentId}
@@ -359,7 +395,7 @@ router.delete('/:postId/comments/:commentId', authenticateToken, async (req: Aut
 
     // Soft-delete the comment
     await db.query(
-      sql.unsafe`
+      sql.type(z.object({}))`
           UPDATE comments
           SET is_deleted = true, updated_at = NOW()
           WHERE comment_id = ${commentId}

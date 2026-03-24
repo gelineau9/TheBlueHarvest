@@ -66,7 +66,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
     const current = editor.getHTML();
     const incoming = value || '';
     if (current !== incoming) {
-      editor.commands.setContent(incoming, false);
+      editor.commands.setContent(incoming);
     }
   }
 
