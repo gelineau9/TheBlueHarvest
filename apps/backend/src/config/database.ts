@@ -1,4 +1,5 @@
 import { createPool, DatabasePool, sql } from 'slonik';
+import { createPgDriverFactory } from '@slonik/pg-driver';
 
 const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } = process.env;
 
@@ -12,10 +13,12 @@ if (!DB_USER || !DB_PASSWORD || !DB_HOST || !DB_PORT || !DB_NAME) {
 }
 
 // encodeURIComponent handles special characters in passwords
-// sslmode=require is needed for Supabase (and most managed Postgres providers)
+// sslmode=no-verify encrypts traffic but skips cert validation (required for Supabase pooler)
 const connectionString = `postgres://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=no-verify`;
 
-const pool = createPool(connectionString);
+const pool = createPool(connectionString, {
+  driverFactory: createPgDriverFactory(),
+});
 
 /**
  * Get the resolved database pool instance.

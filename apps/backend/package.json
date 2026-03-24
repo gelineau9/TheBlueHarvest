@@ -27,6 +27,7 @@
     "test:watch": "npx vitest"
   },
   "dependencies": {
+    "@slonik/pg-driver": "^48.10.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
