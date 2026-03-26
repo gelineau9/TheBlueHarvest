@@ -20,8 +20,7 @@ A full-stack social platform for collaborative creative writing, character profi
 - [CI/CD](#cicd)
 - [Deployment](#deployment)
 - [Project scripts](#project-scripts)
-- [Known limitations & roadmap](#roadmap)
-- [Developer reference](./DEVELOPER_REFERENCE.md)
+- [Active Development](#active-development)
 
 ---
 
