@@ -130,35 +130,6 @@ services:
     ports:
       - '127.0.0.1:3000:3000'
 
-  # ──────────────────────────────────────────
-  # Nginx — TLS termination & reverse proxy
-  # ──────────────────────────────────────────
-  #
-  # SETUP (on the host, before enabling this service):
-  #   1. sudo apt install certbot
-  #   2. sudo certbot certonly --standalone -d yourdomain.com
-  #      (stop the nginx container first so port 80 is free)
-  #   3. Create nginx/nginx.conf (see docs/nginx.conf.example)
-  #   4. Uncomment this service block
-  #   5. Auto-renew: add to crontab —
-  #      0 3 * * 1 certbot renew --quiet && docker compose restart nginx
-  #
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: bha-nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - '80:80'
-  #     - '443:443'
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - /etc/letsencrypt:/etc/letsencrypt:ro
-  #     # Serve uploads directly from nginx (faster than proxying through Express)
-  #     - uploads_data:/var/www/uploads:ro
-  #   depends_on:
-  #     - frontend
-  #     - backend
-
 # ──────────────────────────────────────────
 # Named volumes
 # ──────────────────────────────────────────
