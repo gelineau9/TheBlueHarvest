@@ -21,8 +21,7 @@ a Next.js frontend, an Express backend, and PostgreSQL.
 - [CI/CD](#cicd)
 - [Deployment](#deployment)
 - [Project scripts](#project-scripts)
-- [Known limitations & roadmap](#roadmap)
-- [Developer reference](./DEVELOPER_REFERENCE.md)
+- [Active Development](#active-development)
 
 ---
 
