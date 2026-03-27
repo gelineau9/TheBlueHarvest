@@ -116,7 +116,7 @@ export default function ProfileWritingPage({ params }: { params: Promise<{ id: s
   };
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Back */}
         <Link

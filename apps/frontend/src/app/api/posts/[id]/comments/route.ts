@@ -20,10 +20,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const limit = searchParams.get('limit') ?? '50';
     const offset = searchParams.get('offset') ?? '0';
 
-    const response = await fetch(
-      `${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments?limit=${limit}&offset=${offset}`,
-      { cache: 'no-store' },
-    );
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments?limit=${limit}&offset=${offset}`, {
+      cache: 'no-store',
+    });
 
     const data = await response.json();
 

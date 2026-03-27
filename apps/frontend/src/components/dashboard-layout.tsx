@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
 import { Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -48,18 +48,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </SheetContent>
           </Sheet>
 
-          <Image
-            src="/placeholder.svg?height=40&width=180"
-            alt="Brandy Hall Archives logo"
-            width={180}
-            height={40}
-            className="h-10 w-auto"
-          />
+          <Link href="/" className="font-fantasy text-lg font-bold tracking-wide text-amber-900">
+            Brandy Hall Archives
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="border-amber-800/30" aria-label="Search">
-            <Search className="h-5 w-5" aria-hidden="true" />
+          <Button variant="outline" size="icon" className="border-amber-800/30" aria-label="Search archive" asChild>
+            <Link href="/archive">
+              <Search className="h-5 w-5" aria-hidden="true" />
+            </Link>
           </Button>
           <ProfileButton />
         </div>

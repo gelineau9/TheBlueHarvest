@@ -118,11 +118,19 @@ function BannerUploadSection({
   return (
     <div className="space-y-2">
       <Label className="text-amber-900 font-semibold">Banner Image</Label>
-      <p className="text-sm text-amber-600">Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.</p>
+      <p className="text-sm text-amber-600">
+        Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.
+      </p>
 
       {banner ? (
         <div className="relative w-full aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-          <Image src={banner.url} alt="Banner preview" fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
+          <Image
+            src={banner.url}
+            alt="Banner preview"
+            fill
+            sizes="(max-width: 768px) 100vw, 800px"
+            className="object-cover"
+          />
           <button
             type="button"
             onClick={handleRemoveBanner}
@@ -143,7 +151,13 @@ function BannerUploadSection({
       )}
 
       <div className="flex gap-2">
-        <input ref={bannerFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleBannerFileSelect} className="hidden" />
+        <input
+          ref={bannerFileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handleBannerFileSelect}
+          className="hidden"
+        />
         <Button
           type="button"
           variant="outline"
@@ -152,9 +166,15 @@ function BannerUploadSection({
           className="border-amber-300 text-amber-800 hover:bg-amber-50"
         >
           {isBannerUploading ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</>
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Uploading...
+            </>
           ) : (
-            <><Upload className="w-4 h-4 mr-2" />{banner ? 'Change Banner' : 'Upload Banner'}</>
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              {banner ? 'Change Banner' : 'Upload Banner'}
+            </>
           )}
         </Button>
         {banner && (
@@ -165,7 +185,8 @@ function BannerUploadSection({
             disabled={isSaving || isBannerUploading}
             className="border-amber-300 text-amber-800 hover:bg-amber-50"
           >
-            <X className="w-4 h-4 mr-2" />Remove
+            <X className="w-4 h-4 mr-2" />
+            Remove
           </Button>
         )}
       </div>
@@ -285,18 +306,29 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   // Banner upload hook
   const {
-    banner, setBanner, isUploading: isBannerUploading, uploadError: bannerUploadError,
-    isCropDialogOpen: isBannerCropOpen, previewImageSrc: bannerPreviewSrc,
-    fileInputRef: bannerFileInputRef, handleFileSelect: handleBannerFileSelect,
-    handleCropComplete: handleBannerCropComplete, handleCropCancel: handleBannerCropCancel,
-    handleRemoveBanner, triggerFileSelect: triggerBannerFileSelect,
+    banner,
+    setBanner,
+    isUploading: isBannerUploading,
+    uploadError: bannerUploadError,
+    isCropDialogOpen: isBannerCropOpen,
+    previewImageSrc: bannerPreviewSrc,
+    fileInputRef: bannerFileInputRef,
+    handleFileSelect: handleBannerFileSelect,
+    handleCropComplete: handleBannerCropComplete,
+    handleCropCancel: handleBannerCropCancel,
+    handleRemoveBanner,
+    triggerFileSelect: triggerBannerFileSelect,
   } = useBannerUpload({ initialBanner: null });
 
   // Image upload hook (item + location)
   const {
-    uploadedImages, setUploadedImages, isUploading: isImageUploading,
-    uploadError: imageUploadError, fileInputRef: imageFileInputRef,
-    handleFileSelect: handleImageFileSelect, handleRemoveImage,
+    uploadedImages,
+    setUploadedImages,
+    isUploading: isImageUploading,
+    uploadError: imageUploadError,
+    fileInputRef: imageFileInputRef,
+    handleFileSelect: handleImageFileSelect,
+    handleRemoveImage,
   } = useImageUpload({ maxImages: 1 });
 
   const isCharacter = profile?.profile_type_id === 1;
@@ -393,8 +425,10 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           // If there's a linked kinship, fetch its name for display
           if (initialKinshipProfileId) {
             fetch(`/api/profiles/${initialKinshipProfileId}`)
-              .then((r) => r.ok ? r.json() : null)
-              .then((k) => { if (k) setSelectedKinship({ profile_id: k.profile_id, name: k.name, details: k.details }); })
+              .then((r) => (r.ok ? r.json() : null))
+              .then((k) => {
+                if (k) setSelectedKinship({ profile_id: k.profile_id, name: k.name, details: k.details });
+              })
               .catch(() => {});
           }
         }
@@ -464,7 +498,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         if (isCharacter) setLiveRelationships(data.relationships || []);
         if (isKinship) setKinshipLiveRelationships(data.relationships || []);
       }
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
   }, [id, isCharacter, isKinship]);
 
   useEffect(() => {
@@ -480,8 +516,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         const data = await res.json();
         setMembers(data.members || []);
       }
-    } catch { /* non-fatal */ }
-    finally { setMembersLoading(false); }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setMembersLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -490,7 +529,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   // ── Kinship search (for character edit form) ───────────────────────────────
   const searchKinships = useCallback(async (term: string) => {
-    if (term.trim().length < 2) { setKinshipResults([]); setIsKinshipOpen(false); return; }
+    if (term.trim().length < 2) {
+      setKinshipResults([]);
+      setIsKinshipOpen(false);
+      return;
+    }
     setIsKinshipSearching(true);
     try {
       const params = new URLSearchParams({ search: term.trim(), limit: '10', profile_type_id: '3' });
@@ -499,22 +542,31 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       const data = await res.json();
       setKinshipResults(data.profiles ?? []);
       setIsKinshipOpen(true);
-    } catch { setKinshipResults([]); }
-    finally { setIsKinshipSearching(false); }
+    } catch {
+      setKinshipResults([]);
+    } finally {
+      setIsKinshipSearching(false);
+    }
   }, []);
 
   useEffect(() => {
     if (kinshipDebounceRef.current) clearTimeout(kinshipDebounceRef.current);
     kinshipDebounceRef.current = setTimeout(() => searchKinships(kinshipQuery), 300);
-    return () => { if (kinshipDebounceRef.current) clearTimeout(kinshipDebounceRef.current); };
+    return () => {
+      if (kinshipDebounceRef.current) clearTimeout(kinshipDebounceRef.current);
+    };
   }, [kinshipQuery, searchKinships]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
-        kinshipDropdownRef.current && !kinshipDropdownRef.current.contains(e.target as Node) &&
-        kinshipInputRef.current && !kinshipInputRef.current.contains(e.target as Node)
-      ) { setIsKinshipOpen(false); }
+        kinshipDropdownRef.current &&
+        !kinshipDropdownRef.current.contains(e.target as Node) &&
+        kinshipInputRef.current &&
+        !kinshipInputRef.current.contains(e.target as Node)
+      ) {
+        setIsKinshipOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -578,8 +630,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     try {
       const res = await fetch(`/api/profiles/${id}/members/${characterId}`, { method: 'DELETE' });
       if (res.ok) await fetchMembers();
-    } catch { /* non-fatal */ }
-    finally { setRemovingMemberId(null); }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setRemovingMemberId(null);
+    }
   };
 
   // ── Save handler ──────────────────────────────────────────────────────────
@@ -696,7 +751,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   // ── Loading / error states ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-amber-900">Loading profile...</div>
       </div>
     );
@@ -704,10 +759,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" />Back to Home
+          <Link
+            href="/"
+            className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
           </Link>
           <Card className="p-8 bg-white border-amber-300">
             <h1 className="text-2xl font-bold text-amber-900 mb-4">{error || 'Profile not found'}</h1>
@@ -727,13 +786,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   // ── Shared page shell ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => navigateWithWarning(`/profiles/${id}`)}
           className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />Back to Profile
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Profile
         </button>
 
         <Card className="p-8 bg-white border-amber-300">
@@ -769,8 +829,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter profile name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter profile name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
@@ -779,16 +849,43 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Info</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="race" className="text-amber-900 font-medium">Race</Label>
-                    <Input id="race" value={race} onChange={(e) => setRace(e.target.value)} placeholder="e.g. Human, Elf, Dwarf…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="race" className="text-amber-900 font-medium">
+                      Race
+                    </Label>
+                    <Input
+                      id="race"
+                      value={race}
+                      onChange={(e) => setRace(e.target.value)}
+                      placeholder="e.g. Human, Elf, Dwarf…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="occupation" className="text-amber-900 font-medium">Occupation</Label>
-                    <Input id="occupation" value={occupation} onChange={(e) => setOccupation(e.target.value)} placeholder="e.g. Blacksmith, Mage…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="occupation" className="text-amber-900 font-medium">
+                      Occupation
+                    </Label>
+                    <Input
+                      id="occupation"
+                      value={occupation}
+                      onChange={(e) => setOccupation(e.target.value)}
+                      placeholder="e.g. Blacksmith, Mage…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="age" className="text-amber-900 font-medium">Age</Label>
-                    <Input id="age" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 32, Ancient, Unknown…" maxLength={50} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="age" className="text-amber-900 font-medium">
+                      Age
+                    </Label>
+                    <Input
+                      id="age"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="e.g. 32, Ancient, Unknown…"
+                      maxLength={50}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
 
                   {/* Kinship picker */}
@@ -798,7 +895,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                       <div className="flex items-center gap-2 px-3 py-2 bg-white border border-amber-300 rounded-md text-sm">
                         <div className="relative w-6 h-6 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
                           {selectedKinship.details?.avatar?.url ? (
-                            <NextImage fill src={selectedKinship.details.avatar.url} alt={selectedKinship.name} sizes="24px" className="object-cover" />
+                            <NextImage
+                              fill
+                              src={selectedKinship.details.avatar.url}
+                              alt={selectedKinship.name}
+                              sizes="24px"
+                              className="object-cover"
+                            />
                           ) : (
                             <User className="w-3 h-3 text-amber-400 m-auto mt-1.5" />
                           )}
@@ -806,11 +909,17 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                         <span className="flex-1 font-medium text-amber-900 truncate">{selectedKinship.name}</span>
                         <button
                           type="button"
-                          onClick={() => { setSelectedKinship(null); setKinshipProfileId(null); setKinshipQuery(''); }}
+                          onClick={() => {
+                            setSelectedKinship(null);
+                            setKinshipProfileId(null);
+                            setKinshipQuery('');
+                          }}
                           disabled={isSaving}
                           className="text-amber-500 hover:text-red-600 transition-colors text-lg leading-none"
                           aria-label="Clear kinship"
-                        >×</button>
+                        >
+                          ×
+                        </button>
                       </div>
                     ) : (
                       <div className="relative">
@@ -819,24 +928,44 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                           type="text"
                           value={kinshipQuery}
                           onChange={(e) => setKinshipQuery(e.target.value)}
-                          onFocus={() => kinshipQuery.trim().length >= 2 && kinshipResults.length > 0 && setIsKinshipOpen(true)}
+                          onFocus={() =>
+                            kinshipQuery.trim().length >= 2 && kinshipResults.length > 0 && setIsKinshipOpen(true)
+                          }
                           placeholder="Search kinship profiles…"
                           disabled={isSaving}
                           className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 disabled:opacity-50"
                         />
-                        {isKinshipSearching && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-600">Searching…</span>}
+                        {isKinshipSearching && (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-amber-600">
+                            Searching…
+                          </span>
+                        )}
                         {isKinshipOpen && kinshipResults.length > 0 && (
-                          <div ref={kinshipDropdownRef} className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+                          <div
+                            ref={kinshipDropdownRef}
+                            className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg max-h-48 overflow-y-auto"
+                          >
                             {kinshipResults.map((k) => (
                               <button
                                 key={k.profile_id}
                                 type="button"
-                                onClick={() => { setSelectedKinship(k); setKinshipProfileId(k.profile_id); setKinshipQuery(''); setIsKinshipOpen(false); }}
+                                onClick={() => {
+                                  setSelectedKinship(k);
+                                  setKinshipProfileId(k.profile_id);
+                                  setKinshipQuery('');
+                                  setIsKinshipOpen(false);
+                                }}
                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-amber-50 text-left"
                               >
                                 <div className="relative w-6 h-6 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
                                   {k.details?.avatar?.url ? (
-                                    <NextImage fill src={k.details.avatar.url} alt={k.name} sizes="24px" className="object-cover" />
+                                    <NextImage
+                                      fill
+                                      src={k.details.avatar.url}
+                                      alt={k.name}
+                                      sizes="24px"
+                                      className="object-cover"
+                                    />
                                   ) : (
                                     <User className="w-3 h-3 text-amber-400 m-auto mt-1.5" />
                                   )}
@@ -846,24 +975,49 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                             ))}
                           </div>
                         )}
-                        {isKinshipOpen && !isKinshipSearching && kinshipQuery.trim().length >= 2 && kinshipResults.length === 0 && (
-                          <div ref={kinshipDropdownRef} className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg px-3 py-2 text-sm text-amber-700">
-                            No kinship profiles found
-                          </div>
-                        )}
+                        {isKinshipOpen &&
+                          !isKinshipSearching &&
+                          kinshipQuery.trim().length >= 2 &&
+                          kinshipResults.length === 0 && (
+                            <div
+                              ref={kinshipDropdownRef}
+                              className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg px-3 py-2 text-sm text-amber-700"
+                            >
+                              No kinship profiles found
+                            </div>
+                          )}
                       </div>
                     )}
                     <p className="text-xs text-amber-600">Type to search existing kinship profiles.</p>
                   </div>
 
                   <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="residence" className="text-amber-900 font-medium">Residence</Label>
-                    <Input id="residence" value={residence} onChange={(e) => setResidence(e.target.value)} placeholder="Where does this character live?" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="residence" className="text-amber-900 font-medium">
+                      Residence
+                    </Label>
+                    <Input
+                      id="residence"
+                      value={residence}
+                      onChange={(e) => setResidence(e.target.value)}
+                      placeholder="Where does this character live?"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
 
                   <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="appearance" className="text-amber-900 font-medium">Appearance</Label>
-                    <Textarea id="appearance" value={appearance} onChange={(e) => setAppearance(e.target.value)} placeholder="Describe your character's physical appearance…" rows={4} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none bg-white" disabled={isSaving} />
+                    <Label htmlFor="appearance" className="text-amber-900 font-medium">
+                      Appearance
+                    </Label>
+                    <Textarea
+                      id="appearance"
+                      value={appearance}
+                      onChange={(e) => setAppearance(e.target.value)}
+                      placeholder="Describe your character's physical appearance…"
+                      rows={4}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none bg-white"
+                      disabled={isSaving}
+                    />
                   </div>
                 </div>
               </div>
@@ -874,12 +1028,28 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   <div className="space-y-2">
                     <Label className="text-amber-900 font-semibold">Current Relationships</Label>
                     {liveRelationships.map((rel) => (
-                      <div key={rel.relationship_id} className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                      <div
+                        key={rel.relationship_id}
+                        className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm"
+                      >
                         <span className="font-medium text-amber-900 flex-1">{rel.other_profile_name}</span>
                         {rel.label && <span className="text-xs text-amber-600">· {rel.label}</span>}
-                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">{rel.type_name}</span>
-                        <Button type="button" variant="ghost" size="sm" disabled={removingRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, 'character')} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
-                          {removingRelId === rel.relationship_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">
+                          {rel.type_name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={removingRelId === rel.relationship_id}
+                          onClick={() => handleRemoveRelationship(rel.relationship_id, 'character')}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                        >
+                          {removingRelId === rel.relationship_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <X className="w-3.5 h-3.5" />
+                          )}
                         </Button>
                       </div>
                     ))}
@@ -893,8 +1063,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   allowedProfileTypes={[1, 3]}
                 />
                 {pendingRelationships.length > 0 && (
-                  <Button type="button" onClick={() => handleSaveRelationships('character')} disabled={isSavingRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
-                    {isSavingRelationships ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : `Save ${pendingRelationships.length} relationship${pendingRelationships.length !== 1 ? 's' : ''}`}
+                  <Button
+                    type="button"
+                    onClick={() => handleSaveRelationships('character')}
+                    disabled={isSavingRelationships}
+                    className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {isSavingRelationships ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      `Save ${pendingRelationships.length} relationship${pendingRelationships.length !== 1 ? 's' : ''}`
+                    )}
                   </Button>
                 )}
                 {relationshipError && <p className="text-sm text-red-600">{relationshipError}</p>}
@@ -903,14 +1085,25 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Background */}
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Background</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Add your character's backstory, history, or any other background information…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Add your character's backstory, history, or any other background information…"
+                  disabled={isSaving}
+                />
+                <p className="text-sm text-amber-700">
+                  Supports rich formatting — headings, lists, links, and inline images.
+                </p>
               </div>
 
               {/* Publish */}
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
 
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
 
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
@@ -940,8 +1133,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter kinship name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter kinship name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
@@ -950,11 +1153,22 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Kinship Info</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="founding_date" className="text-amber-900 font-medium">Founding Date</Label>
-                    <Input id="founding_date" value={foundingDate} onChange={(e) => setFoundingDate(e.target.value)} placeholder="e.g. Third Age 1200, Unknown…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="founding_date" className="text-amber-900 font-medium">
+                      Founding Date
+                    </Label>
+                    <Input
+                      id="founding_date"
+                      value={foundingDate}
+                      onChange={(e) => setFoundingDate(e.target.value)}
+                      placeholder="e.g. Third Age 1200, Unknown…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="kinship_type" className="text-amber-900 font-medium">Type</Label>
+                    <Label htmlFor="kinship_type" className="text-amber-900 font-medium">
+                      Type
+                    </Label>
                     <select
                       id="kinship_type"
                       value={kinshipType}
@@ -963,12 +1177,16 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     >
                       {['Mixed', 'Elf', 'Man', 'Hobbit', 'Dwarf'].map((t) => (
-                        <option key={t} value={t}>{t}</option>
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="kinship_status" className="text-amber-900 font-medium">Status</Label>
+                    <Label htmlFor="kinship_status" className="text-amber-900 font-medium">
+                      Status
+                    </Label>
                     <select
                       id="kinship_status"
                       value={kinshipStatus}
@@ -977,7 +1195,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
                     >
                       {['Recruiting', 'Not Recruiting', 'Dormant'].map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -986,17 +1206,35 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               {/* Relationships */}
               <div className="space-y-4">
-                <Label className="text-amber-900 font-semibold text-base">Friends &amp; Allies / Rivals &amp; Enemies</Label>
+                <Label className="text-amber-900 font-semibold text-base">
+                  Friends &amp; Allies / Rivals &amp; Enemies
+                </Label>
                 {kinshipLiveRelationships.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm text-amber-700 font-medium">Current Relationships</p>
                     {kinshipLiveRelationships.map((rel) => (
-                      <div key={rel.relationship_id} className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                      <div
+                        key={rel.relationship_id}
+                        className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm"
+                      >
                         <span className="font-medium text-amber-900 flex-1">{rel.other_profile_name}</span>
                         {rel.label && <span className="text-xs text-amber-600">· {rel.label}</span>}
-                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">{rel.type_name}</span>
-                        <Button type="button" variant="ghost" size="sm" disabled={removingKinshipRelId === rel.relationship_id} onClick={() => handleRemoveRelationship(rel.relationship_id, 'kinship')} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
-                          {removingKinshipRelId === rel.relationship_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium capitalize">
+                          {rel.type_name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={removingKinshipRelId === rel.relationship_id}
+                          onClick={() => handleRemoveRelationship(rel.relationship_id, 'kinship')}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                        >
+                          {removingKinshipRelId === rel.relationship_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <X className="w-3.5 h-3.5" />
+                          )}
                         </Button>
                       </div>
                     ))}
@@ -1010,8 +1248,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   allowedProfileTypes={[1, 3]}
                 />
                 {kinshipPendingRelationships.length > 0 && (
-                  <Button type="button" onClick={() => handleSaveRelationships('kinship')} disabled={isSavingKinshipRelationships} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
-                    {isSavingKinshipRelationships ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : `Save ${kinshipPendingRelationships.length} relationship${kinshipPendingRelationships.length !== 1 ? 's' : ''}`}
+                  <Button
+                    type="button"
+                    onClick={() => handleSaveRelationships('kinship')}
+                    disabled={isSavingKinshipRelationships}
+                    className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {isSavingKinshipRelationships ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving…
+                      </>
+                    ) : (
+                      `Save ${kinshipPendingRelationships.length} relationship${kinshipPendingRelationships.length !== 1 ? 's' : ''}`
+                    )}
                   </Button>
                 )}
                 {kinshipRelationshipError && <p className="text-sm text-red-600">{kinshipRelationshipError}</p>}
@@ -1020,8 +1270,15 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Description / Background */}
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Background / Description</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this kinship's history, culture, and lore…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Describe this kinship's history, culture, and lore…"
+                  disabled={isSaving}
+                />
+                <p className="text-sm text-amber-700">
+                  Supports rich formatting — headings, lists, links, and inline images.
+                </p>
               </div>
 
               {/* Recruiters (members only) */}
@@ -1031,7 +1288,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 {membersLoading ? (
                   <p className="text-sm text-amber-600">Loading members…</p>
                 ) : members.length === 0 ? (
-                  <p className="text-sm text-amber-600 italic">No members yet. Members can join via their character profile.</p>
+                  <p className="text-sm text-amber-600 italic">
+                    No members yet. Members can join via their character profile.
+                  </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {members.map((m) => {
@@ -1040,9 +1299,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                         <button
                           key={m.character_id}
                           type="button"
-                          onClick={() => setRecruiterIds((prev) =>
-                            isRecruiter ? prev.filter((id) => id !== m.character_id) : [...prev, m.character_id]
-                          )}
+                          onClick={() =>
+                            setRecruiterIds((prev) =>
+                              isRecruiter ? prev.filter((id) => id !== m.character_id) : [...prev, m.character_id],
+                            )
+                          }
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors ${
                             isRecruiter
                               ? 'bg-amber-800 text-amber-50 border-amber-800'
@@ -1068,10 +1329,19 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 ) : (
                   <ul className="space-y-2">
                     {members.map((m) => (
-                      <li key={m.character_id} className="flex items-center gap-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <li
+                        key={m.character_id}
+                        className="flex items-center gap-3 p-2 bg-amber-50 border border-amber-200 rounded-lg"
+                      >
                         <div className="relative w-8 h-8 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
                           {m.avatar_url ? (
-                            <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="32px" className="object-cover" />
+                            <NextImage
+                              fill
+                              src={m.avatar_url}
+                              alt={m.character_name}
+                              sizes="32px"
+                              className="object-cover"
+                            />
                           ) : (
                             <div className="flex h-full items-center justify-center">
                               <User className="w-4 h-4 text-amber-400" />
@@ -1087,7 +1357,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                           onClick={() => handleRemoveMember(m.character_id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
                         >
-                          {removingMemberId === m.character_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                          {removingMemberId === m.character_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <X className="w-3.5 h-3.5" />
+                          )}
                         </Button>
                       </li>
                     ))}
@@ -1098,7 +1372,11 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Publish */}
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
 
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
 
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
@@ -1110,8 +1388,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
 
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter item name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter item name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
@@ -1122,16 +1410,46 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isImageUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'}`}
                   onClick={() => uploadedImages.length === 0 && imageFileInputRef.current?.click()}
                 >
-                  <input ref={imageFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageFileSelect} className="hidden" disabled={isImageUploading || isSaving} />
+                  <input
+                    ref={imageFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageFileSelect}
+                    className="hidden"
+                    disabled={isImageUploading || isSaving}
+                  />
                   {isImageUploading ? (
-                    <div className="flex flex-col items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div><p className="text-amber-700">Uploading…</p></div>
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
+                      <p className="text-amber-700">Uploading…</p>
+                    </div>
                   ) : uploadedImages.length > 0 ? (
                     <div className="relative group w-full aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                      <NextImage fill src={uploadedImages[0].url} alt={uploadedImages[0].originalName} sizes="(max-width: 768px) 100vw, 600px" className="object-contain" />
-                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveImage(uploadedImages[0].filename); }} disabled={isSaving} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                      <NextImage
+                        fill
+                        src={uploadedImages[0].url}
+                        alt={uploadedImages[0].originalName}
+                        sizes="(max-width: 768px) 100vw, 600px"
+                        className="object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImage(uploadedImages[0].filename);
+                        }}
+                        disabled={isSaving}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center"><Upload className="w-10 h-10 text-amber-600 mb-2" /><p className="text-amber-800 font-medium">Click to upload an image</p><p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p></div>
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-10 h-10 text-amber-600 mb-2" />
+                      <p className="text-amber-800 font-medium">Click to upload an image</p>
+                      <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p>
+                    </div>
                   )}
                 </div>
                 {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
@@ -1139,12 +1457,23 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Description</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this item — its appearance, properties, history…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Describe this item — its appearance, properties, history…"
+                  disabled={isSaving}
+                />
+                <p className="text-sm text-amber-700">
+                  Supports rich formatting — headings, lists, links, and inline images.
+                </p>
               </div>
 
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
           )}
@@ -1155,8 +1484,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
 
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter location name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter location name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
@@ -1165,16 +1504,43 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Location Info</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="location_type" className="text-amber-900 font-medium">Type</Label>
-                    <Input id="location_type" value={locationType} onChange={(e) => setLocationType(e.target.value)} placeholder="e.g. City, Dungeon, Region, Landmark…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="location_type" className="text-amber-900 font-medium">
+                      Type
+                    </Label>
+                    <Input
+                      id="location_type"
+                      value={locationType}
+                      onChange={(e) => setLocationType(e.target.value)}
+                      placeholder="e.g. City, Dungeon, Region, Landmark…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location_region" className="text-amber-900 font-medium">Region / Area</Label>
-                    <Input id="location_region" value={locationRegion} onChange={(e) => setLocationRegion(e.target.value)} placeholder="e.g. The Shire, Mirkwood…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="location_region" className="text-amber-900 font-medium">
+                      Region / Area
+                    </Label>
+                    <Input
+                      id="location_region"
+                      value={locationRegion}
+                      onChange={(e) => setLocationRegion(e.target.value)}
+                      placeholder="e.g. The Shire, Mirkwood…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="location_status" className="text-amber-900 font-medium">Status</Label>
-                    <Input id="location_status" value={locationStatus} onChange={(e) => setLocationStatus(e.target.value)} placeholder="e.g. Thriving, Ruined, Abandoned, Unknown…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="location_status" className="text-amber-900 font-medium">
+                      Status
+                    </Label>
+                    <Input
+                      id="location_status"
+                      value={locationStatus}
+                      onChange={(e) => setLocationStatus(e.target.value)}
+                      placeholder="e.g. Thriving, Ruined, Abandoned, Unknown…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -1186,16 +1552,46 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isImageUploading ? 'border-amber-400 bg-amber-50' : 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'}`}
                   onClick={() => uploadedImages.length === 0 && imageFileInputRef.current?.click()}
                 >
-                  <input ref={imageFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageFileSelect} className="hidden" disabled={isImageUploading || isSaving} />
+                  <input
+                    ref={imageFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageFileSelect}
+                    className="hidden"
+                    disabled={isImageUploading || isSaving}
+                  />
                   {isImageUploading ? (
-                    <div className="flex flex-col items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div><p className="text-amber-700">Uploading…</p></div>
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
+                      <p className="text-amber-700">Uploading…</p>
+                    </div>
                   ) : uploadedImages.length > 0 ? (
                     <div className="relative group w-full aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                      <NextImage fill src={uploadedImages[0].url} alt={uploadedImages[0].originalName} sizes="(max-width: 768px) 100vw, 600px" className="object-cover" />
-                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveImage(uploadedImages[0].filename); }} disabled={isSaving} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                      <NextImage
+                        fill
+                        src={uploadedImages[0].url}
+                        alt={uploadedImages[0].originalName}
+                        sizes="(max-width: 768px) 100vw, 600px"
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImage(uploadedImages[0].filename);
+                        }}
+                        disabled={isSaving}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center"><Upload className="w-10 h-10 text-amber-600 mb-2" /><p className="text-amber-800 font-medium">Click to upload an image</p><p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p></div>
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-10 h-10 text-amber-600 mb-2" />
+                      <p className="text-amber-800 font-medium">Click to upload an image</p>
+                      <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p>
+                    </div>
                   )}
                 </div>
                 {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
@@ -1203,12 +1599,23 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Description</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this location — its history, atmosphere, notable features…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Describe this location — its history, atmosphere, notable features…"
+                  disabled={isSaving}
+                />
+                <p className="text-sm text-amber-700">
+                  Supports rich formatting — headings, lists, links, and inline images.
+                </p>
               </div>
 
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
           )}
@@ -1237,8 +1644,18 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter organization name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter organization name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
@@ -1247,20 +1664,56 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Organization Info</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="org_founding_date" className="text-amber-900 font-medium">Founding Date</Label>
-                    <Input id="org_founding_date" value={orgFoundingDate} onChange={(e) => setOrgFoundingDate(e.target.value)} placeholder="e.g. Third Age 1200, Unknown…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="org_founding_date" className="text-amber-900 font-medium">
+                      Founding Date
+                    </Label>
+                    <Input
+                      id="org_founding_date"
+                      value={orgFoundingDate}
+                      onChange={(e) => setOrgFoundingDate(e.target.value)}
+                      placeholder="e.g. Third Age 1200, Unknown…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="org_type" className="text-amber-900 font-medium">Organization Type</Label>
-                    <Input id="org_type" value={orgType} onChange={(e) => setOrgType(e.target.value)} placeholder="e.g. Guild, Order, Council…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="org_type" className="text-amber-900 font-medium">
+                      Organization Type
+                    </Label>
+                    <Input
+                      id="org_type"
+                      value={orgType}
+                      onChange={(e) => setOrgType(e.target.value)}
+                      placeholder="e.g. Guild, Order, Council…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="org_status" className="text-amber-900 font-medium">Status</Label>
-                    <Input id="org_status" value={orgStatus} onChange={(e) => setOrgStatus(e.target.value)} placeholder="e.g. Active, Disbanded, Dormant…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="org_status" className="text-amber-900 font-medium">
+                      Status
+                    </Label>
+                    <Input
+                      id="org_status"
+                      value={orgStatus}
+                      onChange={(e) => setOrgStatus(e.target.value)}
+                      placeholder="e.g. Active, Disbanded, Dormant…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="org_area" className="text-amber-900 font-medium">Area of Operation</Label>
-                    <Input id="org_area" value={orgAreaOfOperation} onChange={(e) => setOrgAreaOfOperation(e.target.value)} placeholder="e.g. Bree-land, Eriador, The Shire…" maxLength={100} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white" />
+                    <Label htmlFor="org_area" className="text-amber-900 font-medium">
+                      Area of Operation
+                    </Label>
+                    <Input
+                      id="org_area"
+                      value={orgAreaOfOperation}
+                      onChange={(e) => setOrgAreaOfOperation(e.target.value)}
+                      placeholder="e.g. Bree-land, Eriador, The Shire…"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -1268,14 +1721,25 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Description */}
               <div className="space-y-2">
                 <Label className="text-amber-900 font-semibold">Background / Description</Label>
-                <RichTextEditor value={description} onChange={setDescription} placeholder="Describe this organization's history, purpose, and lore…" disabled={isSaving} />
-                <p className="text-sm text-amber-700">Supports rich formatting — headings, lists, links, and inline images.</p>
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Describe this organization's history, purpose, and lore…"
+                  disabled={isSaving}
+                />
+                <p className="text-sm text-amber-700">
+                  Supports rich formatting — headings, lists, links, and inline images.
+                </p>
               </div>
 
               {/* Publish */}
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
 
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
 
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
@@ -1287,19 +1751,42 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} disabled={isSaving} />
 
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-amber-900 font-semibold">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter profile name" maxLength={100} required className="border-amber-300 focus:border-amber-500 focus:ring-amber-500" />
+                <Label htmlFor="name" className="text-amber-900 font-semibold">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter profile name"
+                  maxLength={100}
+                  required
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                />
                 <p className="text-sm text-amber-600">{name.length}/100 characters</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-amber-900 font-semibold">Description</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter a description for this profile..." rows={6} className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none" />
+                <Label htmlFor="description" className="text-amber-900 font-semibold">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter a description for this profile..."
+                  rows={6}
+                  className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
+                />
               </div>
 
               <PublishToggle isPublished={isPublished} setIsPublished={setIsPublished} isSaving={isSaving} />
 
-              {saveError && <div className="p-4 bg-red-50 border border-red-200 rounded-md"><p className="text-red-700">{saveError}</p></div>}
+              {saveError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700">{saveError}</p>
+                </div>
+              )}
 
               <FormActions isSaving={isSaving} name={name} onCancel={() => navigateWithWarning(`/profiles/${id}`)} />
             </form>
@@ -1325,7 +1812,9 @@ function PublishToggle({
     <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <div>
         <Label className="text-amber-900 font-semibold">{isPublished ? 'Published' : 'Draft'}</Label>
-        <p className="text-sm text-amber-600">{isPublished ? 'This profile is visible to everyone.' : 'Only you can see this draft.'}</p>
+        <p className="text-sm text-amber-600">
+          {isPublished ? 'This profile is visible to everyone.' : 'Only you can see this draft.'}
+        </p>
       </div>
       <button
         type="button"
@@ -1334,27 +1823,40 @@ function PublishToggle({
         onClick={() => setIsPublished(!isPublished)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublished ? 'bg-emerald-600' : 'bg-gray-300'}`}
       >
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`} />
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'}`}
+        />
       </button>
     </div>
   );
 }
 
-function FormActions({
-  isSaving,
-  name,
-  onCancel,
-}: {
-  isSaving: boolean;
-  name: string;
-  onCancel: () => void;
-}) {
+function FormActions({ isSaving, name, onCancel }: { isSaving: boolean; name: string; onCancel: () => void }) {
   return (
     <div className="flex gap-4">
-      <Button type="submit" disabled={isSaving || !name.trim()} className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50">
-        {isSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
+      <Button
+        type="submit"
+        disabled={isSaving || !name.trim()}
+        className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Save className="w-4 h-4 mr-2" />
+            Save Changes
+          </>
+        )}
       </Button>
-      <Button type="button" variant="outline" onClick={onCancel} className="border-amber-300 text-amber-800 hover:bg-amber-50">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onCancel}
+        className="border-amber-300 text-amber-800 hover:bg-amber-50"
+      >
         Cancel
       </Button>
     </div>

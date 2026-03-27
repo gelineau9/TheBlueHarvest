@@ -81,13 +81,13 @@ export function LeftSidebar() {
       )}
 
       <nav className="flex-1 space-y-1">
-        <NavItem href="#" label="Writing" />
-        <NavItem href="#" label="Art" />
+        <NavItem href="/archive?postTypes=1" label="Writing" />
+        <NavItem href="/archive?postTypes=2" label="Art" />
         <NavItem href="/characters" label="Characters" />
-        <NavItem href="#" label="Kinships" />
+        <NavItem href="/archive?profileTypes=3" label="Kinships" />
         <NavItem href="/archive" label="Archive" />
         <NavItem href="/collections" label="Collections" />
-        <NavItem href="#" label="About And Rules" />
+        <NavItem href="/about" label="About And Rules" />
       </nav>
     </div>
   );

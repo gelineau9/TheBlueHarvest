@@ -267,7 +267,9 @@ export function RelationshipsPicker({
 
       <p className="text-xs text-amber-700">
         Type at least 2 characters to search.{' '}
-        {allowedProfileTypes.includes(3) ? 'Characters and kinships can be linked.' : 'Only character profiles can be linked.'}
+        {allowedProfileTypes.includes(3)
+          ? 'Characters and kinships can be linked.'
+          : 'Only character profiles can be linked.'}
       </p>
 
       {/* Selected relationships chips */}

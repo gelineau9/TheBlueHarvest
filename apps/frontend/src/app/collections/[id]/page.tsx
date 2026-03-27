@@ -244,7 +244,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-amber-900">Loading collection...</div>
       </div>
     );
@@ -252,7 +252,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
   if (error || !collection) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <Link
             href="/"
@@ -290,7 +290,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
   const isEdited = updatedTime - createdTime > 60000;
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">

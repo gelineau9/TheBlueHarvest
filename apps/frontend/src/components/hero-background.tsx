@@ -14,9 +14,6 @@ export function HeroBackground() {
         className="object-cover object-[center_90%]"
         priority
       />
-
-      {/* Optional: Add some decorative elements */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-[url('/placeholder.svg?height=50&width=1200')] bg-repeat-x bg-bottom opacity-60"></div>
     </div>
   );
 }

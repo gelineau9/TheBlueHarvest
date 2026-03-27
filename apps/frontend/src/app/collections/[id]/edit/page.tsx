@@ -85,7 +85,7 @@ export default function EditCollectionPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="flex items-center gap-3 text-amber-700">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span className="text-lg">Loading collection...</span>
@@ -97,7 +97,7 @@ export default function EditCollectionPage() {
   // Error state
   if (error || !collection) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-2xl mx-auto">
           <Card className="border-amber-300 bg-white">
             <CardHeader>

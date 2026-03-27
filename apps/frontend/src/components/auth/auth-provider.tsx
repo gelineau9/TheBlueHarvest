@@ -56,11 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
-  return (
-    <AuthContext.Provider value={{ ...authState, refreshAuth: checkAuth }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ ...authState, refreshAuth: checkAuth }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
