@@ -118,9 +118,7 @@ export function CommentList({ postId }: CommentListProps) {
     <Card className="p-6 bg-white border-amber-300 mt-6">
       <div className="flex items-center gap-2 mb-4">
         <MessageSquare className="w-5 h-5 text-amber-700" />
-        <h2 className="text-lg font-semibold text-amber-900">
-          Comments {total > 0 && `(${total})`}
-        </h2>
+        <h2 className="text-lg font-semibold text-amber-900">Comments {total > 0 && `(${total})`}</h2>
       </div>
 
       {/* Comment Form - only for authenticated users */}

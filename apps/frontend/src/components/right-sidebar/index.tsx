@@ -19,15 +19,29 @@ interface EventPost {
   content: PostContent;
 }
 
+interface RecentPost {
+  post_id: number;
+  post_type_id: number;
+  title: string;
+  type_name: string;
+  username: string;
+  created_at: string;
+}
+
 interface PostsResponse {
   posts: EventPost[];
   total: number;
   hasMore: boolean;
 }
 
+interface RecentPostsResponse {
+  posts: RecentPost[];
+}
+
 export function RightSidebar() {
   const [events, setEvents] = useState<EventPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -46,7 +60,21 @@ export function RightSidebar() {
       }
     };
 
+    const fetchRecentPosts = async () => {
+      try {
+        // Fetch 6 most recent writing (1) and art (2) posts for activity feed
+        const response = await fetch('/api/posts/public?limit=6&sortBy=created_at&order=desc');
+        if (response.ok) {
+          const data: RecentPostsResponse = await response.json();
+          setRecentPosts(data.posts);
+        }
+      } catch {
+        // Silently fail - sidebar is non-critical
+      }
+    };
+
     fetchEvents();
+    fetchRecentPosts();
   }, []);
 
   // Transform posts to calendar/feed format and filter for upcoming events
@@ -108,14 +136,36 @@ export function RightSidebar() {
       <div>
         <h2 className="mb-3 font-fantasy text-xl font-semibold text-amber-900">Recent Activity</h2>
         <div className="space-y-3">
-          <ActivityItem username="Nenenas" action="liked a post by" target="Aranarion" time="2 hours ago" />
-          <ActivityItem username="Aranarion" action="posted a piece of writing" target="'TBD'" time="3 hours ago" />
-          <ActivityItem username="Eldarion" action="posted a piece of art" time="5 hours ago" />
-          <ActivityItem username="Aranarion" action="commented 'LOL' on" target="Elva's post" time="6 hours ago" />
-          <ActivityItem username="Nenenas" action="created a new character profile" time="1 day ago" />
-          <ActivityItem username="Nenenas" action="joined" time="2 days ago" />
+          {recentPosts.length === 0 ? (
+            <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
+          ) : (
+            recentPosts.map((post) => (
+              <ActivityItem
+                key={post.post_id}
+                username={post.username}
+                action={`posted a new ${post.type_name.toLowerCase()}`}
+                target={`"${post.title}"`}
+                time={formatRelativeTime(post.created_at)}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+function formatRelativeTime(isoString: string): string {
+  const now = Date.now();
+  const then = new Date(isoString).getTime();
+  const diffMs = now - then;
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
 }

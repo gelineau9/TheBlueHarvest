@@ -352,7 +352,7 @@ export function CollectionForm({
   };
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Back Button */}
         <Link
@@ -491,7 +491,9 @@ export function CollectionForm({
             ) : (
               <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
                 <p className="text-sm text-amber-700">
-                  At least one post is required. Select a post above to continue.
+                  {isEditMode
+                    ? 'No posts selected. Save will remove all posts from this collection.'
+                    : 'At least one post is required. Select a post above to continue.'}
                 </p>
               </div>
             )}
@@ -511,7 +513,7 @@ export function CollectionForm({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || selectedPosts.length === 0}
+              disabled={isSubmitting || (!isEditMode && selectedPosts.length === 0)}
               className="bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50"
             >
               {isSubmitting

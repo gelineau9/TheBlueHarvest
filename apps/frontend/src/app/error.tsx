@@ -2,13 +2,7 @@
 
 import { useEffect } from 'react';
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -33,9 +27,7 @@ export default function Error({
           Go home
         </a>
       </div>
-      {error.digest && (
-        <p className="text-xs text-amber-500">Error ID: {error.digest}</p>
-      )}
+      {error.digest && <p className="text-xs text-amber-500">Error ID: {error.digest}</p>}
     </div>
   );
 }

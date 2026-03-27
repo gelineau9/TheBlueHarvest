@@ -5,13 +5,7 @@ import { useEffect } from 'react';
 // global-error.tsx catches errors thrown in the root layout itself
 // (e.g. ThemeProvider, AuthProvider, Banner).
 // It MUST include its own <html> and <body> tags — the root layout is bypassed.
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -37,9 +31,7 @@ export default function GlobalError({
             Go home
           </a>
         </div>
-        {error.digest && (
-          <p className="text-xs text-amber-500">Error ID: {error.digest}</p>
-        )}
+        {error.digest && <p className="text-xs text-amber-500">Error ID: {error.digest}</p>}
       </body>
     </html>
   );

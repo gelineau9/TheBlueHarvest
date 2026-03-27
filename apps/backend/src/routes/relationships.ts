@@ -163,7 +163,9 @@ router.post(
   '/:profileId/relationships',
   authenticateToken,
   [
-    body('type').isIn(['friend', 'relative', 'rival', 'ally', 'enemy']).withMessage('type must be friend, relative, rival, ally, or enemy'),
+    body('type')
+      .isIn(['friend', 'relative', 'rival', 'ally', 'enemy'])
+      .withMessage('type must be friend, relative, rival, ally, or enemy'),
     body('profile_id_2').isInt({ min: 1 }).withMessage('profile_id_2 must be a positive integer'),
     body('label').optional({ nullable: true }).isString().trim().isLength({ max: 100 }),
   ],

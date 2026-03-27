@@ -23,7 +23,7 @@ export default function CreateCollectionTypePage({ params }: CreateCollectionTyp
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-amber-900">Loading...</div>
       </div>
     );

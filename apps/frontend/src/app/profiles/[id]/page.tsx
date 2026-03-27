@@ -226,10 +226,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   // Kinship profile link (for character info panel)
   const [kinshipProfileName, setKinshipProfileName] = useState<string | null>(null);
 
-  // Organization contact (owner's character)
-  const [orgContactName, setOrgContactName] = useState<string | null>(null);
-  const [orgContactId, setOrgContactId] = useState<number | null>(null);
-
   const { id } = use(params);
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
@@ -314,25 +310,12 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     const kid = profile?.details?.kinship_profile_id;
     if (!kid) return;
     fetch(`/api/profiles/${kid}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((k) => { if (k) setKinshipProfileName(k.name); })
-      .catch(() => {});
-  }, [profile?.profile_id, profile?.details?.kinship_profile_id]);
-
-  // ── Fetch org contact (owner's character) ─────────────────────────────────
-  useEffect(() => {
-    if (!profile || profile.profile_type_id !== 4) return;
-    fetch(`/api/profiles/public?profile_type_id=1&account_id=${profile.account_id}&limit=1`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        const char = data?.profiles?.[0];
-        if (char) {
-          setOrgContactName(char.name);
-          setOrgContactId(char.profile_id);
-        }
+      .then((r) => (r.ok ? r.json() : null))
+      .then((k) => {
+        if (k) setKinshipProfileName(k.name);
       })
       .catch(() => {});
-  }, [profile?.profile_id, profile?.account_id]);
+  }, [profile?.profile_id, profile?.details?.kinship_profile_id]);
 
   // ── Fetch character bottom sections ───────────────────────────────────────
   useEffect(() => {
@@ -516,7 +499,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="text-amber-900">Loading profile...</div>
       </div>
     );
@@ -524,7 +507,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <Link
             href="/"
@@ -559,7 +542,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const d = profile.details;
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
@@ -677,12 +660,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {isItem && d?.images?.[0]?.url && (
           <Card className="overflow-hidden border-amber-300 mb-6">
             <div className="relative w-full aspect-video bg-amber-50">
-              <NextImage
-                src={d.images[0].url}
-                alt={profile.name}
-                fill
-                className="object-contain"
-              />
+              <NextImage src={d.images[0].url} alt={profile.name} fill className="object-contain" />
             </div>
           </Card>
         )}
@@ -788,33 +766,41 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <p className="text-amber-600 text-sm">Loading recruiters…</p>
               ) : !d?.recruiters || d.recruiters.length === 0 ? (
                 <p className="text-amber-600 text-sm italic">No recruiters have been designated yet.</p>
-              ) : (() => {
-                const recruiters = members.filter((m) => d.recruiters!.includes(m.character_id));
-                return recruiters.length === 0 ? (
-                  <p className="text-amber-600 text-sm italic">No recruiters have been designated yet.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {recruiters.map((m) => (
-                      <Link
-                        key={m.character_id}
-                        href={`/profiles/${m.character_id}`}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm text-amber-900 hover:border-amber-500 hover:bg-amber-100 transition-colors"
-                      >
-                        <div className="relative w-5 h-5 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
-                          {m.avatar_url ? (
-                            <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="20px" className="object-cover" />
-                          ) : (
-                            <div className="flex h-full items-center justify-center">
-                              <User className="w-3 h-3 text-amber-400" />
-                            </div>
-                          )}
-                        </div>
-                        <span className="font-medium">{m.character_name}</span>
-                      </Link>
-                    ))}
-                  </div>
-                );
-              })()}
+              ) : (
+                (() => {
+                  const recruiters = members.filter((m) => d.recruiters!.includes(m.character_id));
+                  return recruiters.length === 0 ? (
+                    <p className="text-amber-600 text-sm italic">No recruiters have been designated yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {recruiters.map((m) => (
+                        <Link
+                          key={m.character_id}
+                          href={`/profiles/${m.character_id}`}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm text-amber-900 hover:border-amber-500 hover:bg-amber-100 transition-colors"
+                        >
+                          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
+                            {m.avatar_url ? (
+                              <NextImage
+                                fill
+                                src={m.avatar_url}
+                                alt={m.character_name}
+                                sizes="20px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center">
+                                <User className="w-3 h-3 text-amber-400" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-medium">{m.character_name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
             </div>
 
             {/* Relationships (Friends & Allies / Rivals & Enemies) */}
@@ -938,12 +924,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {isLocation && d?.images?.[0]?.url && (
           <Card className="overflow-hidden border-amber-300 mb-6">
             <div className="relative w-full aspect-video bg-amber-50">
-              <NextImage
-                src={d.images[0].url}
-                alt={profile.name}
-                fill
-                className="object-cover"
-              />
+              <NextImage src={d.images[0].url} alt={profile.name} fill className="object-cover" />
             </div>
           </Card>
         )}
@@ -978,32 +959,32 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                     <dd className="text-amber-900">{d.area_of_operation}</dd>
                   </div>
                 )}
-                {orgContactName && (
+                {profile.parent_name && (
                   <div>
                     <dt className="text-amber-600 font-medium">Contact</dt>
                     <dd className="text-amber-900">
-                      {orgContactId ? (
-                        <Link href={`/profiles/${orgContactId}`} className="hover:underline">
-                          {orgContactName}
+                      {profile.parent_id ? (
+                        <Link href={`/profiles/${profile.parent_id}`} className="hover:underline">
+                          {profile.parent_name}
                         </Link>
                       ) : (
-                        orgContactName
+                        profile.parent_name
                       )}
                     </dd>
                   </div>
                 )}
               </dl>
-            ) : orgContactName ? (
+            ) : profile.parent_name ? (
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-amber-600 font-medium">Contact</dt>
                   <dd className="text-amber-900">
-                    {orgContactId ? (
-                      <Link href={`/profiles/${orgContactId}`} className="hover:underline">
-                        {orgContactName}
+                    {profile.parent_id ? (
+                      <Link href={`/profiles/${profile.parent_id}`} className="hover:underline">
+                        {profile.parent_name}
                       </Link>
                     ) : (
-                      orgContactName
+                      profile.parent_name
                     )}
                   </dd>
                 </div>
@@ -1102,7 +1083,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {(isCharacter || isKinship || isItem || isLocation || isOrganization) && (
           <Card className="p-8 bg-white border-amber-300 mb-6">
             <h2 className="text-2xl font-bold text-amber-900 mb-4">
-              {isCharacter ? 'Background' : (isKinship || isOrganization) ? 'Background / Description' : 'Description'}
+              {isCharacter ? 'Background' : isKinship || isOrganization ? 'Background / Description' : 'Description'}
             </h2>
             {d?.description ? (
               <div
@@ -1239,7 +1220,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       <div className="flex items-center gap-3">
                         <div className="relative w-8 h-8 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
                           {m.avatar_url ? (
-                            <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="32px" className="object-cover" />
+                            <NextImage
+                              fill
+                              src={m.avatar_url}
+                              alt={m.character_name}
+                              sizes="32px"
+                              className="object-cover"
+                            />
                           ) : (
                             <div className="flex h-full items-center justify-center">
                               <User className="w-4 h-4 text-amber-400" />
@@ -1338,7 +1325,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <ImageIcon className="w-5 h-5 text-amber-800" />
                   <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
                 </div>
-                <Link href={`/profiles/${id}/gallery`} className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors">
+                <Link
+                  href={`/profiles/${id}/gallery`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
                   View all <ChevronRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>
@@ -1362,7 +1352,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <BookOpen className="w-5 h-5 text-amber-800" />
                   <h2 className="text-xl font-bold text-amber-900">Writing</h2>
                 </div>
-                <Link href={`/profiles/${id}/writing`} className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors">
+                <Link
+                  href={`/profiles/${id}/writing`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
                   View all <ChevronRight className="w-4 h-4 ml-1" />
                 </Link>
               </div>

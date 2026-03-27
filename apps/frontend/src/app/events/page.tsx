@@ -87,7 +87,7 @@ export default function EventsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <Link
             href="/"
@@ -109,7 +109,7 @@ export default function EventsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <Link
             href="/"
@@ -129,7 +129,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">

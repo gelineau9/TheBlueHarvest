@@ -322,7 +322,7 @@ export default function ArchivePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-7xl mx-auto">
           <Link
             href="/"
@@ -359,7 +359,7 @@ export default function ArchivePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+      <div className="py-8 px-4">
         <div className="max-w-7xl mx-auto">
           <Link
             href="/"
@@ -379,7 +379,7 @@ export default function ArchivePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5e6c8] py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

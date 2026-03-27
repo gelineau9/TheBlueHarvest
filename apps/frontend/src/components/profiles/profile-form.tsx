@@ -69,11 +69,19 @@ function BannerUploadSection({
   return (
     <div className="space-y-2">
       <Label className="text-amber-900 font-semibold">Banner Image</Label>
-      <p className="text-sm text-amber-600">Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.</p>
+      <p className="text-sm text-amber-600">
+        Displayed at the top of your profile (3:1 ratio). JPG, PNG, GIF, or WEBP. Max 5MB.
+      </p>
 
       {banner ? (
         <div className="relative w-full aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-          <Image src={banner.url} alt="Banner preview" fill sizes="(max-width: 768px) 100vw, 800px" className="object-cover" />
+          <Image
+            src={banner.url}
+            alt="Banner preview"
+            fill
+            sizes="(max-width: 768px) 100vw, 800px"
+            className="object-cover"
+          />
           <button
             type="button"
             onClick={handleRemoveBanner}
@@ -94,7 +102,13 @@ function BannerUploadSection({
       )}
 
       <div className="flex gap-2">
-        <input ref={bannerFileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleBannerFileSelect} className="hidden" />
+        <input
+          ref={bannerFileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handleBannerFileSelect}
+          className="hidden"
+        />
         <Button
           type="button"
           variant="outline"
@@ -103,9 +117,15 @@ function BannerUploadSection({
           className="border-amber-300 text-amber-800 hover:bg-amber-50"
         >
           {isBannerUploading ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</>
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Uploading...
+            </>
           ) : (
-            <><Upload className="w-4 h-4 mr-2" />{banner ? 'Change Banner' : 'Upload Banner'}</>
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              {banner ? 'Change Banner' : 'Upload Banner'}
+            </>
           )}
         </Button>
         {banner && (
@@ -116,7 +136,8 @@ function BannerUploadSection({
             disabled={disabled || isBannerUploading}
             className="border-amber-300 text-amber-800 hover:bg-amber-50"
           >
-            <X className="w-4 h-4 mr-2" />Remove
+            <X className="w-4 h-4 mr-2" />
+            Remove
           </Button>
         )}
       </div>
@@ -188,11 +209,17 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
   // Banner upload (used by location and organization)
   const {
-    banner, isUploading: isBannerUploading, uploadError: bannerUploadError,
-    isCropDialogOpen: isBannerCropOpen, previewImageSrc: bannerPreviewSrc,
-    fileInputRef: bannerFileInputRef, handleFileSelect: handleBannerFileSelect,
-    handleCropComplete: handleBannerCropComplete, handleCropCancel: handleBannerCropCancel,
-    handleRemoveBanner, triggerFileSelect: triggerBannerFileSelect,
+    banner,
+    isUploading: isBannerUploading,
+    uploadError: bannerUploadError,
+    isCropDialogOpen: isBannerCropOpen,
+    previewImageSrc: bannerPreviewSrc,
+    fileInputRef: bannerFileInputRef,
+    handleFileSelect: handleBannerFileSelect,
+    handleCropComplete: handleBannerCropComplete,
+    handleCropCancel: handleBannerCropCancel,
+    handleRemoveBanner,
+    triggerFileSelect: triggerBannerFileSelect,
   } = useBannerUpload();
 
   // Single image upload (used by Item and Location)
@@ -507,7 +534,11 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
       {needsParent && (
         <div className="space-y-2">
           <Label htmlFor="parent_profile_id" className="text-amber-900 font-semibold">
-            {isKinship ? 'Kinship Leader (Owner) *' : isOrganization ? 'Organization Owner *' : 'Belongs to Character *'}
+            {isKinship
+              ? 'Kinship Leader (Owner) *'
+              : isOrganization
+                ? 'Organization Owner *'
+                : 'Belongs to Character *'}
           </Label>
           {isLoadingCharacters ? (
             <div className="text-sm text-amber-700">Loading your characters...</div>
@@ -551,8 +582,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 {isKinship
                   ? 'The character who leads and owns this kinship.'
                   : isOrganization
-                  ? 'The character who owns and leads this organization.'
-                  : `This ${getProfileTypeLabel().toLowerCase()} will belong to the selected character.`}
+                    ? 'The character who owns and leads this organization.'
+                    : `This ${getProfileTypeLabel().toLowerCase()} will belong to the selected character.`}
               </p>
               {!selectedParentId && <p className="text-sm text-red-600">Please select a character to continue</p>}
             </>
@@ -628,7 +659,13 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 <div className="flex items-center gap-2 px-3 py-2 bg-white border border-amber-300 rounded-md text-sm">
                   <div className="relative w-6 h-6 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
                     {selectedKinship.details?.avatar?.url ? (
-                      <NextImage fill src={selectedKinship.details.avatar.url} alt={selectedKinship.name} sizes="24px" className="object-cover" />
+                      <NextImage
+                        fill
+                        src={selectedKinship.details.avatar.url}
+                        alt={selectedKinship.name}
+                        sizes="24px"
+                        className="object-cover"
+                      />
                     ) : (
                       <User className="w-3 h-3 text-amber-400 m-auto mt-1.5" />
                     )}
@@ -636,7 +673,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                   <span className="flex-1 font-medium text-amber-900 truncate">{selectedKinship.name}</span>
                   <button
                     type="button"
-                    onClick={() => { setSelectedKinship(null); setKinshipQuery(''); }}
+                    onClick={() => {
+                      setSelectedKinship(null);
+                      setKinshipQuery('');
+                    }}
                     disabled={isSubmitting}
                     className="text-amber-500 hover:text-red-600 transition-colors"
                     aria-label="Clear kinship"
@@ -651,7 +691,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                     type="text"
                     value={kinshipQuery}
                     onChange={(e) => setKinshipQuery(e.target.value)}
-                    onFocus={() => kinshipQuery.trim().length >= 2 && kinshipResults.length > 0 && setIsKinshipOpen(true)}
+                    onFocus={() =>
+                      kinshipQuery.trim().length >= 2 && kinshipResults.length > 0 && setIsKinshipOpen(true)
+                    }
                     placeholder="Search kinship profiles…"
                     disabled={isSubmitting}
                     className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 disabled:opacity-50"
@@ -668,12 +710,22 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                         <button
                           key={k.profile_id}
                           type="button"
-                          onClick={() => { setSelectedKinship(k); setKinshipQuery(''); setIsKinshipOpen(false); }}
+                          onClick={() => {
+                            setSelectedKinship(k);
+                            setKinshipQuery('');
+                            setIsKinshipOpen(false);
+                          }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-amber-50 text-left"
                         >
                           <div className="relative w-6 h-6 rounded-full overflow-hidden bg-amber-100 flex-shrink-0 border border-amber-200">
                             {k.details?.avatar?.url ? (
-                              <NextImage fill src={k.details.avatar.url} alt={k.name} sizes="24px" className="object-cover" />
+                              <NextImage
+                                fill
+                                src={k.details.avatar.url}
+                                alt={k.name}
+                                sizes="24px"
+                                className="object-cover"
+                              />
                             ) : (
                               <User className="w-3 h-3 text-amber-400 m-auto mt-1.5" />
                             )}
@@ -683,14 +735,17 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                       ))}
                     </div>
                   )}
-                  {isKinshipOpen && !isKinshipSearching && kinshipQuery.trim().length >= 2 && kinshipResults.length === 0 && (
-                    <div
-                      ref={kinshipDropdownRef}
-                      className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg px-3 py-2 text-sm text-amber-700"
-                    >
-                      No kinship profiles found
-                    </div>
-                  )}
+                  {isKinshipOpen &&
+                    !isKinshipSearching &&
+                    kinshipQuery.trim().length >= 2 &&
+                    kinshipResults.length === 0 && (
+                      <div
+                        ref={kinshipDropdownRef}
+                        className="absolute z-10 mt-1 w-full rounded-md border border-amber-200 bg-white shadow-lg px-3 py-2 text-sm text-amber-700"
+                      >
+                        No kinship profiles found
+                      </div>
+                    )}
                 </div>
               )}
               <p className="text-xs text-amber-600">Type to search existing kinship profiles.</p>
@@ -780,7 +835,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Kinship Info</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="founding_date" className="text-amber-900 font-medium">Founding Date</Label>
+                <Label htmlFor="founding_date" className="text-amber-900 font-medium">
+                  Founding Date
+                </Label>
                 <Input
                   id="founding_date"
                   type="text"
@@ -793,7 +850,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="kinship_type" className="text-amber-900 font-medium">Type</Label>
+                <Label htmlFor="kinship_type" className="text-amber-900 font-medium">
+                  Type
+                </Label>
                 <select
                   id="kinship_type"
                   value={kinshipType}
@@ -802,12 +861,16 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                   className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
                 >
                   {['Mixed', 'Elf', 'Man', 'Hobbit', 'Dwarf'].map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="kinship_status" className="text-amber-900 font-medium">Status</Label>
+                <Label htmlFor="kinship_status" className="text-amber-900 font-medium">
+                  Status
+                </Label>
                 <select
                   id="kinship_status"
                   value={kinshipStatus}
@@ -816,7 +879,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                   className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
                 >
                   {['Recruiting', 'Not Recruiting', 'Dormant'].map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -852,7 +917,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
           <div className="space-y-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <Label className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Recruiters</Label>
             <p className="text-sm text-amber-600 italic">
-              The kinship leader will be added as the first member and recruiter automatically. Additional recruiters can be designated from the edit page.
+              The kinship leader will be added as the first member and recruiter automatically. Additional recruiters
+              can be designated from the edit page.
             </p>
           </div>
         </>
@@ -871,15 +937,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             />
             {uploadedImages[0] ? (
               <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-amber-300 bg-amber-50">
-                <NextImage
-                  src={uploadedImages[0].url}
-                  alt="Item image"
-                  fill
-                  className="object-contain"
-                />
+                <NextImage src={uploadedImages[0].url} alt="Item image" fill className="object-contain" />
                 <button
                   type="button"
-                   onClick={() => handleRemoveImage(uploadedImages[0].filename)}
+                  onClick={() => handleRemoveImage(uploadedImages[0].filename)}
                   className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                   disabled={isSubmitting}
                 >
@@ -903,9 +964,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 )}
               </button>
             )}
-            {imageUploadError && (
-              <p className="text-sm text-red-600">{imageUploadError}</p>
-            )}
+            {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
           </div>
 
           {/* Description */}
@@ -926,7 +985,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Location Info</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="location_type" className="text-amber-900 font-medium">Type</Label>
+                <Label htmlFor="location_type" className="text-amber-900 font-medium">
+                  Type
+                </Label>
                 <Input
                   id="location_type"
                   type="text"
@@ -939,7 +1000,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location_region" className="text-amber-900 font-medium">Region / Area</Label>
+                <Label htmlFor="location_region" className="text-amber-900 font-medium">
+                  Region / Area
+                </Label>
                 <Input
                   id="location_region"
                   type="text"
@@ -952,7 +1015,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="location_status" className="text-amber-900 font-medium">Status</Label>
+                <Label htmlFor="location_status" className="text-amber-900 font-medium">
+                  Status
+                </Label>
                 <Input
                   id="location_status"
                   type="text"
@@ -980,15 +1045,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             />
             {uploadedImages[0] ? (
               <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-amber-300 bg-amber-50">
-                <NextImage
-                  src={uploadedImages[0].url}
-                  alt="Location image"
-                  fill
-                  className="object-cover"
-                />
+                <NextImage src={uploadedImages[0].url} alt="Location image" fill className="object-cover" />
                 <button
                   type="button"
-                   onClick={() => handleRemoveImage(uploadedImages[0].filename)}
+                  onClick={() => handleRemoveImage(uploadedImages[0].filename)}
                   className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
                   disabled={isSubmitting}
                 >
@@ -1012,9 +1072,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 )}
               </button>
             )}
-            {imageUploadError && (
-              <p className="text-sm text-red-600">{imageUploadError}</p>
-            )}
+            {imageUploadError && <p className="text-sm text-red-600">{imageUploadError}</p>}
           </div>
 
           {/* Description */}
@@ -1051,7 +1109,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Organization Info</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="org_founding_date" className="text-amber-900 font-medium">Founding Date</Label>
+                <Label htmlFor="org_founding_date" className="text-amber-900 font-medium">
+                  Founding Date
+                </Label>
                 <Input
                   id="org_founding_date"
                   type="text"
@@ -1064,7 +1124,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="org_type" className="text-amber-900 font-medium">Organization Type</Label>
+                <Label htmlFor="org_type" className="text-amber-900 font-medium">
+                  Organization Type
+                </Label>
                 <Input
                   id="org_type"
                   type="text"
@@ -1077,7 +1139,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="org_status" className="text-amber-900 font-medium">Status</Label>
+                <Label htmlFor="org_status" className="text-amber-900 font-medium">
+                  Status
+                </Label>
                 <Input
                   id="org_status"
                   type="text"
@@ -1090,7 +1154,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="org_area_of_operation" className="text-amber-900 font-medium">Area of Operation</Label>
+                <Label htmlFor="org_area_of_operation" className="text-amber-900 font-medium">
+                  Area of Operation
+                </Label>
                 <Input
                   id="org_area_of_operation"
                   type="text"
@@ -1184,4 +1250,3 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
     </form>
   );
 }
-
