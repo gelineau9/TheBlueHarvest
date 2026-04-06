@@ -18,7 +18,7 @@
     "start": "node dist/index.js",
     "dev": "nodemon --signal SIGTERM --exec tsx src/index.ts",
     "dev:local": "nodemon --signal SIGTERM --exec tsx --env-file=../../.env src/index.ts",
-    "migrate": "node-pg-migrate --migrations-dir ../../db/migrations --migrations-table schema_migrations up",
+    "migrate": "npx node-pg-migrate --migrations-dir ../../db/migrations --migrations-table schema_migrations up",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/**/*.{ts,js} --fix",
     "check-types": "tsc --noEmit",

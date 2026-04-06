@@ -28,6 +28,10 @@ export function LoginForm() {
 
       if (!response.ok) {
         const data = await response.json();
+        if (data.error === 'account_suspended') {
+          const reason = data.reason ? `: ${data.reason}` : '';
+          throw new Error(`Your account has been suspended${reason}. Please contact a moderator if you believe this is a mistake.`);
+        }
         throw new Error(data.message || 'Login failed');
       }
 
