@@ -15,6 +15,7 @@ import commentsRoutes from './routes/comments.js';
 import usersRoutes from './routes/users.js';
 import featuredProfilesRoutes from './routes/featuredProfiles.js';
 import relationshipsRoutes from './routes/relationships.js';
+import likesRoutes from './routes/likes.js';
 import {
   profileEditorRoutes,
   postEditorRoutes,
@@ -149,6 +150,7 @@ app.use('/api/posts', commentsRoutes);
 app.use('/api/posts', featuredProfilesRoutes);
 app.use('/api/profiles', relationshipsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/likes', likesRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to the BHA Backend!' });

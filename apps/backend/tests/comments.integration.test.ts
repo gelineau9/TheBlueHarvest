@@ -351,20 +351,20 @@ describe('GET /api/posts/:postId/comments - List Comments', () => {
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThanOrEqual(3);
+      expect(Array.isArray(response.body.comments)).toBe(true);
+      expect(response.body.comments.length).toBeGreaterThanOrEqual(3);
 
       // Verify order (oldest first)
-      const firstComment = response.body.find((c: any) => c.comment_id === comment1Id);
-      const secondComment = response.body.find((c: any) => c.comment_id === comment2Id);
-      expect(response.body.indexOf(firstComment)).toBeLessThan(response.body.indexOf(secondComment));
+      const firstComment = response.body.comments.find((c: any) => c.comment_id === comment1Id);
+      const secondComment = response.body.comments.find((c: any) => c.comment_id === comment2Id);
+      expect(response.body.comments.indexOf(firstComment)).toBeLessThan(response.body.comments.indexOf(secondComment));
     });
 
     it('should include username in comment response', async () => {
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      const comment = response.body.find((c: any) => c.comment_id === comment1Id);
+      const comment = response.body.comments.find((c: any) => c.comment_id === comment1Id);
       expect(comment.username).toBe('commenttestuser');
     });
 
@@ -372,7 +372,7 @@ describe('GET /api/posts/:postId/comments - List Comments', () => {
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      const comment = response.body.find((c: any) => c.comment_id === comment2Id);
+      const comment = response.body.comments.find((c: any) => c.comment_id === comment2Id);
       expect(comment.profile_id).toBe(testCharacterId);
       expect(comment.profile_name).toBe('Test Comment Character');
     });
@@ -381,7 +381,7 @@ describe('GET /api/posts/:postId/comments - List Comments', () => {
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      const deletedComment = response.body.find((c: any) => c.comment_id === deletedCommentId);
+      const deletedComment = response.body.comments.find((c: any) => c.comment_id === deletedCommentId);
       expect(deletedComment.is_deleted).toBe(true);
       expect(deletedComment.content).toBeNull();
     });
@@ -398,7 +398,7 @@ describe('GET /api/posts/:postId/comments - List Comments', () => {
       const response = await request(app).get(`/api/posts/${emptyPostId}/comments`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual([]);
+      expect(response.body.comments).toEqual([]);
 
       // Cleanup
       await pool.query(sql.unsafe`DELETE FROM posts WHERE post_id = ${emptyPostId}`);
@@ -444,7 +444,7 @@ describe('GET /api/posts/:postId/comments - List Comments', () => {
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
+      expect(Array.isArray(response.body.comments)).toBe(true);
     });
   });
 });
@@ -678,7 +678,7 @@ describe('DELETE /api/posts/:postId/comments/:commentId - Delete Comment', () =>
       const response = await request(app).get(`/api/posts/${testPostId}/comments`);
 
       expect(response.status).toBe(200);
-      const deletedComment = response.body.find((c: any) => c.comment_id === deletableCommentId);
+      const deletedComment = response.body.comments.find((c: any) => c.comment_id === deletableCommentId);
       expect(deletedComment).toBeDefined();
       expect(deletedComment.is_deleted).toBe(true);
       expect(deletedComment.content).toBeNull();

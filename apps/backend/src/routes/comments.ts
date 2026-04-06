@@ -15,7 +15,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, AuthRequest, optionalAuthenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -44,6 +44,12 @@ const CommentWithUserSchema = z.object({
   updated_at: z.string(),
   username: z.string(),
   profile_name: z.string().nullable(),
+});
+
+// Extended schema used only by GET (includes like data)
+const CommentWithLikesSchema = CommentWithUserSchema.extend({
+  like_count: z.number(),
+  liked_by_me: z.boolean().nullable(),
 });
 
 const PostExistsSchema = z.object({
@@ -185,7 +191,7 @@ router.post(
 
 // GET /api/posts/:postId/comments - Get comments for a post (paginated)
 // Query params: limit (default 50, max 100), offset (default 0)
-router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
+router.get('/:postId/comments', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   const postId = parseInt(Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId);
   if (isNaN(postId)) {
     res.status(400).json({ error: 'Invalid post ID' });
@@ -223,15 +229,25 @@ router.get('/:postId/comments', async (req: AuthRequest, res: Response) => {
     );
 
     // Get paginated comments with user info
+    const commentLikedByMeFragment = req.userId
+      ? sql.fragment`
+          EXISTS (
+            SELECT 1 FROM comment_likes cl
+            WHERE cl.comment_id = c.comment_id AND cl.account_id = ${req.userId}
+          )`
+      : sql.fragment`NULL`;
+
     const comments = await db.any(
-      sql.type(CommentWithUserSchema)`
+      sql.type(CommentWithLikesSchema)`
         SELECT 
           c.comment_id, c.post_id, c.account_id, c.profile_id, c.parent_comment_id,
           CASE WHEN c.is_deleted THEN NULL ELSE c.content END as content,
           c.is_deleted,
           c.created_at::text, c.updated_at::text,
           a.username,
-          p.name as profile_name
+          p.name as profile_name,
+          (SELECT COUNT(*)::int FROM comment_likes cl WHERE cl.comment_id = c.comment_id) AS like_count,
+          ${commentLikedByMeFragment} AS liked_by_me
         FROM comments c
         JOIN accounts a ON c.account_id = a.account_id
         LEFT JOIN profiles p ON c.profile_id = p.profile_id

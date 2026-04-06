@@ -52,15 +52,15 @@ router.post(
 
       // Create user
       const result = await pool.one(
-        sql.type(z.object({ account_id: z.number() }))`
+        sql.type(z.object({ account_id: z.number(), user_role_id: z.number() }))`
           INSERT INTO accounts (email, username, hashed_password, user_role_id)
           VALUES (${email}, ${username}, ${hashedPassword}, 1)
-          RETURNING account_id
+          RETURNING account_id, user_role_id
         `,
       );
 
       // Create JWT
-      const token = jwt.sign({ userId: result.account_id }, process.env.JWT_SECRET!, {
+      const token = jwt.sign({ userId: result.account_id, roleId: result.user_role_id }, process.env.JWT_SECRET!, {
         expiresIn: '7d',
       });
 
@@ -103,9 +103,12 @@ router.post(
             account_id: z.number(),
             hashed_password: z.string(),
             username: z.string(),
+            user_role_id: z.number(),
+            is_banned: z.boolean(),
+            banned_reason: z.string().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username
+          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason
           FROM accounts
           WHERE email = ${email}
         `,
@@ -113,6 +116,12 @@ router.post(
 
       if (!user) {
         res.status(401).json({ message: 'Invalid email or password' });
+        return;
+      }
+
+      // Check if account is banned before verifying password
+      if (user.is_banned) {
+        res.status(403).json({ error: 'account_suspended', reason: user.banned_reason ?? null });
         return;
       }
 
@@ -124,7 +133,7 @@ router.post(
       }
 
       // Create JWT
-      const token = jwt.sign({ userId: user.account_id }, process.env.JWT_SECRET!, {
+      const token = jwt.sign({ userId: user.account_id, roleId: user.user_role_id }, process.env.JWT_SECRET!, {
         expiresIn: '7d',
       });
 
@@ -154,11 +163,13 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
           username: z.string(),
           email: z.string(),
           details: z.any().nullable(),
+          role_name: z.string(),
         }),
       )`
-        SELECT account_id, username, email, details
-        FROM accounts
-        WHERE account_id = ${req.userId!}
+        SELECT a.account_id, a.username, a.email, a.details, ur.role_name
+        FROM accounts a
+        JOIN user_roles ur ON a.user_role_id = ur.role_id
+        WHERE a.account_id = ${req.userId!}
       `,
     );
 
@@ -172,6 +183,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
       username: user.username,
       email: user.email,
       details: user.details,
+      role: user.role_name,
     });
   } catch (err) {
     console.error(err);

@@ -14,13 +14,20 @@ import { API_CONFIG } from '@/config/api';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const authToken = request.cookies.get('auth_token')?.value;
 
     // Forward pagination query params to backend
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit') ?? '50';
     const offset = searchParams.get('offset') ?? '0';
 
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/posts/${id}/comments?limit=${limit}&offset=${offset}`, {
+      headers,
       cache: 'no-store',
     });
 

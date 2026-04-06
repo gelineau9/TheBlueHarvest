@@ -31,7 +31,35 @@ WORKDIR /app/apps/backend
 RUN npm run build
 
 # ============================================================
-# Stage 3: Lean production runtime — no devDependencies
+# Stage 3: Migration runner — needs dev deps + migrations dir
+# ============================================================
+FROM node:24-alpine AS migrate
+
+WORKDIR /app
+
+# Full node_modules (includes node-pg-migrate devDependency)
+COPY --from=deps /app/node_modules ./node_modules
+
+# Workspace manifests
+COPY package.json package-lock.json ./
+COPY apps/backend/package.json apps/backend/
+
+# Migration files
+COPY db/migrations ./db/migrations
+COPY db/schema ./db/schema
+
+WORKDIR /app/apps/backend
+
+ENTRYPOINT [ \
+  "/app/node_modules/.bin/node-pg-migrate", \
+  "--migrations-dir", "/app/db/migrations", \
+  "--migrations-table", "schema_migrations" \
+]
+
+CMD ["up"]
+
+# ============================================================
+# Stage 4: Lean production runtime — no devDependencies
 # ============================================================
 FROM node:24-alpine AS runner
 

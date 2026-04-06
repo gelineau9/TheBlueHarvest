@@ -10,10 +10,98 @@ import { CommentItem, Comment } from './comment-item';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
 const PAGE_SIZE = 50;
+const REPLY_PREVIEW_COUNT = 3;
 
 interface CommentListProps {
   postId: number;
 }
+
+// --- Tree types & utilities ---
+
+type CommentNode = Comment & { replies: CommentNode[] };
+
+function buildCommentTree(comments: Comment[]): CommentNode[] {
+  const map = new Map<number, CommentNode>();
+  const roots: CommentNode[] = [];
+  for (const c of comments) map.set(c.comment_id, { ...c, replies: [] });
+  for (const node of map.values()) {
+    if (node.parent_comment_id !== null && map.has(node.parent_comment_id)) {
+      map.get(node.parent_comment_id)!.replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+// --- CommentThread recursive component ---
+
+interface CommentThreadProps {
+  node: CommentNode;
+  depth: number;
+  currentUserId: number | null;
+  onCommentUpdated: () => void;
+  onReply: (commentId: number) => void;
+  replyingTo: number | null;
+  replyForm: React.ReactNode;
+}
+
+function CommentThread({
+  node,
+  depth,
+  currentUserId,
+  onCommentUpdated,
+  onReply,
+  replyingTo,
+  replyForm,
+}: CommentThreadProps) {
+  const [showAllReplies, setShowAllReplies] = useState(false);
+  const indentPx = Math.min(depth, 4) * 16;
+
+  const visibleReplies =
+    showAllReplies || node.replies.length <= REPLY_PREVIEW_COUNT
+      ? node.replies
+      : node.replies.slice(0, REPLY_PREVIEW_COUNT);
+
+  const hiddenCount = node.replies.length - REPLY_PREVIEW_COUNT;
+
+  return (
+    <div style={{ marginLeft: `${indentPx}px` }}>
+      <CommentItem comment={node} currentUserId={currentUserId} onCommentUpdated={onCommentUpdated} onReply={onReply} />
+
+      {/* Inline reply form */}
+      {replyingTo === node.comment_id && <div className="mt-2 ml-4">{replyForm}</div>}
+
+      {/* Child replies */}
+      {node.replies.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {visibleReplies.map((child) => (
+            <CommentThread
+              key={child.comment_id}
+              node={child}
+              depth={depth + 1}
+              currentUserId={currentUserId}
+              onCommentUpdated={onCommentUpdated}
+              onReply={onReply}
+              replyingTo={replyingTo}
+              replyForm={replyForm}
+            />
+          ))}
+          {!showAllReplies && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowAllReplies(true)}
+              className="text-xs text-amber-700 hover:text-amber-900 ml-4"
+            >
+              Show {hiddenCount} more {hiddenCount === 1 ? 'reply' : 'replies'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- CommentList ---
 
 export function CommentList({ postId }: CommentListProps) {
   const { isLoggedIn, accountId } = useAuth();
@@ -30,6 +118,13 @@ export function CommentList({ postId }: CommentListProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replyCharacterId, setReplyCharacterId] = useState<number | null>(null);
+  const [isReplySubmitting, setIsReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   // User's characters for attribution (only fetch when logged in)
   const { characters } = useCharacterProfiles({ enabled: isLoggedIn });
@@ -103,7 +198,6 @@ export function CommentList({ postId }: CommentListProps) {
         throw new Error(data.error || 'Failed to post comment');
       }
 
-      // Clear form and refresh comments from the start
       setNewComment('');
       setSelectedCharacterId(null);
       fetchComments();
@@ -114,6 +208,107 @@ export function CommentList({ postId }: CommentListProps) {
     }
   };
 
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyContent.trim() || replyingTo === null) return;
+
+    setIsReplySubmitting(true);
+    setReplyError(null);
+
+    try {
+      const body: { content: string; profile_id?: number; parent_comment_id: number } = {
+        content: replyContent.trim(),
+        parent_comment_id: replyingTo,
+      };
+      if (replyCharacterId) {
+        body.profile_id = replyCharacterId;
+      }
+
+      const response = await fetch(`/api/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to post reply');
+      }
+
+      setReplyContent('');
+      setReplyCharacterId(null);
+      setReplyingTo(null);
+      fetchComments();
+    } catch (err) {
+      setReplyError(err instanceof Error ? err.message : 'Failed to post reply');
+    } finally {
+      setIsReplySubmitting(false);
+    }
+  };
+
+  const handleReply = (commentId: number) => {
+    setReplyingTo(commentId);
+    setReplyContent('');
+    setReplyError(null);
+  };
+
+  // Reply form rendered inline beneath the target comment
+  const replyForm =
+    replyingTo !== null ? (
+      <form onSubmit={handleReplySubmit} className="border-l-2 border-amber-300 pl-3 space-y-2">
+        <Textarea
+          placeholder="Write a reply..."
+          value={replyContent}
+          onChange={(e) => setReplyContent(e.target.value)}
+          className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[60px] resize-none text-sm"
+          disabled={isReplySubmitting}
+          maxLength={10000}
+          autoFocus
+        />
+        {replyError && <p className="text-red-600 text-xs">{replyError}</p>}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            {characters.length > 0 && (
+              <select
+                value={replyCharacterId ?? ''}
+                onChange={(e) => setReplyCharacterId(e.target.value ? Number(e.target.value) : null)}
+                className="text-sm border border-amber-300 rounded-md px-2 py-1.5 bg-white text-amber-800 focus:border-amber-500 focus:ring-amber-500"
+                disabled={isReplySubmitting}
+              >
+                <option value="">Reply as account</option>
+                {characters.map((char) => (
+                  <option key={char.profile_id} value={char.profile_id}>
+                    Reply as {char.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setReplyingTo(null)}
+              disabled={isReplySubmitting}
+              className="h-7 border-amber-300 text-amber-700 hover:bg-amber-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isReplySubmitting || !replyContent.trim()}
+              className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
+            >
+              <Send className="w-3 h-3 mr-1" />
+              {isReplySubmitting ? 'Posting...' : 'Reply'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    ) : null;
+
   return (
     <Card className="p-6 bg-white border-amber-300 mt-6">
       <div className="flex items-center gap-2 mb-4">
@@ -121,7 +316,7 @@ export function CommentList({ postId }: CommentListProps) {
         <h2 className="text-lg font-semibold text-amber-900">Comments {total > 0 && `(${total})`}</h2>
       </div>
 
-      {/* Comment Form - only for authenticated users */}
+      {/* Top-level comment form - always visible when logged in */}
       {isLoggedIn && (
         <form onSubmit={handleSubmit} className="mb-6">
           <div className="space-y-3">
@@ -176,12 +371,16 @@ export function CommentList({ postId }: CommentListProps) {
         </p>
       ) : (
         <div className="space-y-3">
-          {comments.map((comment) => (
-            <CommentItem
-              key={comment.comment_id}
-              comment={comment}
+          {buildCommentTree(comments).map((node) => (
+            <CommentThread
+              key={node.comment_id}
+              node={node}
+              depth={0}
               currentUserId={accountId ?? null}
               onCommentUpdated={fetchComments}
+              onReply={handleReply}
+              replyingTo={replyingTo}
+              replyForm={replyForm}
             />
           ))}
           {hasMore && (

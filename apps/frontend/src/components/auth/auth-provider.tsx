@@ -9,6 +9,9 @@ interface AuthState {
   username?: string;
   avatarUrl?: string;
   email?: string;
+  role?: 'user' | 'admin' | 'moderator';
+  isAdmin: boolean;
+  isModerator: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -18,6 +21,8 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   isLoading: true,
+  isAdmin: false,
+  isModerator: false,
   refreshAuth: async () => {},
 });
 
@@ -25,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({
     isLoggedIn: false,
     isLoading: true,
+    isAdmin: false,
+    isModerator: false,
   });
 
   const checkAuth = useCallback(async () => {
@@ -32,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/auth/me');
       if (response.ok) {
         const data = await response.json();
+        const role = data.role as 'user' | 'admin' | 'moderator' | undefined;
         setAuthState({
           isLoggedIn: true,
           isLoading: false,
@@ -39,13 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username: data.username,
           avatarUrl: data.details?.avatar?.url,
           email: data.email,
+          role,
+          isAdmin: role === 'admin',
+          isModerator: role === 'moderator' || role === 'admin',
         });
       } else {
-        setAuthState({ isLoggedIn: false, isLoading: false });
+        setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
       }
     } catch (err) {
       console.error('Auth check error:', err);
-      setAuthState({ isLoggedIn: false, isLoading: false });
+      setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
     }
   }, []);
 

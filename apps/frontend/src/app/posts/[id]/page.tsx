@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { CommentList } from '@/components/comments/comment-list';
+import { LikeButton } from '@/components/likes/LikeButton';
 
 interface Author {
   profile_id: number;
@@ -72,6 +73,8 @@ interface Post {
   updated_at: string;
   can_edit?: boolean;
   is_owner?: boolean;
+  like_count: number;
+  liked_by_me: boolean | null;
 }
 
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -372,8 +375,14 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           )}
 
           {/* Account owner info (smaller, secondary) */}
-          <div className="mt-4 pt-4 border-t border-amber-200 text-xs text-amber-600">
-            Posted by account: {post.username}
+          <div className="mt-4 pt-4 border-t border-amber-200 flex items-center justify-between text-xs text-amber-600">
+            <span>Posted by account: {post.username}</span>
+            <LikeButton
+              type="post"
+              id={post.post_id}
+              initialLikeCount={post.like_count}
+              initialLikedByMe={post.liked_by_me}
+            />
           </div>
         </Card>
 

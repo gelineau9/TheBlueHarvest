@@ -51,13 +51,17 @@ services:
   #
   # On a fresh database (empty postgres_data volume), skip this — the schema
   # files in db/schema/ are applied automatically by postgres on first boot.
-  # After that first boot, mark the baseline migration as already run so the
-  # runner doesn't re-apply it:
-  #   docker compose run --rm migrate mark-as-run 0001
+  # After that first boot, record the baseline migration as already applied so
+  # the runner doesn't re-apply it:
+  #   docker exec -it bha-pg psql -U <DB_USER> -d <DB_NAME> -c "
+  #     CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, name TEXT NOT NULL, run_on TIMESTAMPTZ NOT NULL DEFAULT NOW());
+  #     INSERT INTO schema_migrations (id, name, run_on) VALUES ('1', '0001_initial_schema', NOW()) ON CONFLICT DO NOTHING;
+  #   "
   migrate:
     build:
       context: .
       dockerfile: ./apps/backend/Dockerfile
+      target: migrate
     container_name: bha-migrate
     env_file:
       - .env
@@ -65,16 +69,6 @@ services:
       # Override DATABASE_URL so node-pg-migrate connects over the internal
       # Docker network (postgres:5432) rather than the host-exposed 5433.
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}
-    command:
-      [
-        'node',
-        'node_modules/.bin/node-pg-migrate',
-        '--migrations-dir',
-        '../../db/migrations',
-        '--migrations-table',
-        'schema_migrations',
-        'up',
-      ]
     depends_on:
       postgres:
         condition: service_healthy
