@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NavItem } from '@/components/nav-item';
-import { FileText, FolderOpen, Users, FilePlus, FolderPlus, UserPlus } from 'lucide-react';
+import { FileText, FolderOpen, Users, FilePlus, FolderPlus, UserPlus, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/components/auth/auth-provider';
 
 export function LeftSidebar() {
   const pathname = usePathname();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isAdmin, isModerator } = useAuth();
 
   return (
     <div className="flex h-full flex-col">
@@ -78,7 +78,38 @@ export function LeftSidebar() {
             </Link>
           </div>
         </div>
-      )}
+
+        {(isAdmin || isModerator) && (
+          <div className="mt-4">
+            <Separator className="mb-4 bg-amber-800/20" />
+            <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-amber-700">
+              Administration
+            </h3>
+            <div className="space-y-1">
+              {[
+                { href: '/admin', label: 'Dashboard' },
+                { href: '/admin/users', label: 'Users' },
+                { href: '/admin/moderation', label: 'Moderation' },
+                { href: '/admin/audit-log', label: 'Audit Log' },
+              ].map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                    pathname === href
+                      ? 'bg-amber-800 text-amber-50'
+                      : 'text-amber-900 hover:bg-amber-100/80'
+                  }`}
+                >
+                  <Shield className="h-4 w-4" />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
 
       <nav className="flex-1 space-y-1">
         <NavItem href="/archive?postTypes=1" label="Writing" />
