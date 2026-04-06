@@ -68,7 +68,8 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 
 // Usage: router.get('/admin/users', authenticateToken, requireRole(2), handler)
 // roleIds: 1=user, 2=admin, 3=moderator
-export const requireRole = (...allowedRoleIds: number[]) =>
+export const requireRole =
+  (...allowedRoleIds: number[]) =>
   (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.userRoleId === undefined || !allowedRoleIds.includes(req.userRoleId)) {
       res.status(403).json({ error: 'Forbidden' });

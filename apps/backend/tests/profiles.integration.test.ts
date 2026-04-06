@@ -345,11 +345,14 @@ describe('POST /api/profiles', () => {
     });
 
     it('should accept details as null', async () => {
-      const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
-        profile_type_id: 1,
-        name: 'Gandalf',
-        details: null,
-      });
+      const response = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          profile_type_id: 1,
+          name: `Gandalf-${Date.now()}`,
+          details: null,
+        });
 
       expect(response.status).toBe(201);
       expect(response.body.details).toBeNull();
@@ -358,11 +361,14 @@ describe('POST /api/profiles', () => {
     });
 
     it('should accept details as empty string', async () => {
-      const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken}`).send({
-        profile_type_id: 1,
-        name: 'Legolas',
-        details: '',
-      });
+      const response = await request(app)
+        .post('/api/profiles')
+        .set('Authorization', `Bearer ${validToken}`)
+        .send({
+          profile_type_id: 1,
+          name: `Legolas-${Date.now()}`,
+          details: '',
+        });
 
       expect(response.status).toBe(201);
       expect(response.body.details).toBe('');

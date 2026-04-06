@@ -22,6 +22,21 @@
     "check-types": {
       "dependsOn": ["^check-types"],
       "outputs": []
+    },
+
+    "test": {
+      "cache": false,
+      "env": [
+        "NODE_ENV",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_USER",
+        "DB_PASSWORD",
+        "DB_NAME",
+        "DB_SSLMODE",
+        "DATABASE_URL",
+        "JWT_SECRET"
+      ]
     }
   }
 }

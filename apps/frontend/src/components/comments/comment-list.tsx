@@ -67,17 +67,10 @@ function CommentThread({
 
   return (
     <div style={{ marginLeft: `${indentPx}px` }}>
-      <CommentItem
-        comment={node}
-        currentUserId={currentUserId}
-        onCommentUpdated={onCommentUpdated}
-        onReply={onReply}
-      />
+      <CommentItem comment={node} currentUserId={currentUserId} onCommentUpdated={onCommentUpdated} onReply={onReply} />
 
       {/* Inline reply form */}
-      {replyingTo === node.comment_id && (
-        <div className="mt-2 ml-4">{replyForm}</div>
-      )}
+      {replyingTo === node.comment_id && <div className="mt-2 ml-4">{replyForm}</div>}
 
       {/* Child replies */}
       {node.replies.length > 0 && (
@@ -262,10 +255,7 @@ export function CommentList({ postId }: CommentListProps) {
   // Reply form rendered inline beneath the target comment
   const replyForm =
     replyingTo !== null ? (
-      <form
-        onSubmit={handleReplySubmit}
-        className="border-l-2 border-amber-300 pl-3 space-y-2"
-      >
+      <form onSubmit={handleReplySubmit} className="border-l-2 border-amber-300 pl-3 space-y-2">
         <Textarea
           placeholder="Write a reply..."
           value={replyContent}
@@ -281,9 +271,7 @@ export function CommentList({ postId }: CommentListProps) {
             {characters.length > 0 && (
               <select
                 value={replyCharacterId ?? ''}
-                onChange={(e) =>
-                  setReplyCharacterId(e.target.value ? Number(e.target.value) : null)
-                }
+                onChange={(e) => setReplyCharacterId(e.target.value ? Number(e.target.value) : null)}
                 className="text-sm border border-amber-300 rounded-md px-2 py-1.5 bg-white text-amber-800 focus:border-amber-500 focus:ring-amber-500"
                 disabled={isReplySubmitting}
               >
