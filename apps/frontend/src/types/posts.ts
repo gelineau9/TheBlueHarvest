@@ -13,6 +13,8 @@ export interface PublicPost {
   username: string;
   primary_author_id: number | null;
   primary_author_name: string | null;
+  like_count: number;
+  liked_by_me: boolean | null;
 }
 
 /**

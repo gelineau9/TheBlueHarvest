@@ -15,7 +15,7 @@
  *   DELETE /api/posts/:id/authors/:authorId - Remove an author
  */
 
-import { Router, Response, Request } from 'express';
+import { Router, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
@@ -207,7 +207,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/posts/public - List public posts with pagination
-router.get('/public', async (req: Request, res: Response) => {
+router.get('/public', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   const parsedLimit = parseInt(req.query.limit as string) || 50;
   const limit = Math.min(Math.max(parsedLimit, 1), 100);
   const parsedOffset = parseInt(req.query.offset as string) || 0;
@@ -319,6 +319,14 @@ router.get('/public', async (req: Request, res: Response) => {
     }
 
     // Get posts with primary author info
+    const likedByMeFragment = req.userId
+      ? sql.fragment`
+          EXISTS (
+            SELECT 1 FROM post_likes pl
+            WHERE pl.post_id = p.post_id AND pl.account_id = ${req.userId}
+          )`
+      : sql.fragment`NULL`;
+
     const posts = await db.any(
       sql.type(
         z.object({
@@ -331,6 +339,8 @@ router.get('/public', async (req: Request, res: Response) => {
           username: z.string(),
           primary_author_id: z.number().nullable(),
           primary_author_name: z.string().nullable(),
+          like_count: z.number(),
+          liked_by_me: z.boolean().nullable(),
         }),
       )`
         SELECT 
@@ -342,7 +352,9 @@ router.get('/public', async (req: Request, res: Response) => {
           pt.type_name,
           a.username,
           author_profile.profile_id as primary_author_id,
-          author_profile.name as primary_author_name
+          author_profile.name as primary_author_name,
+          (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count,
+          ${likedByMeFragment} AS liked_by_me
         FROM posts p
         JOIN post_types pt ON p.post_type_id = pt.type_id
         JOIN accounts a ON p.account_id = a.account_id
@@ -397,6 +409,14 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
   try {
     const db = await getPool();
 
+    const postLikedByMeFragment = req.userId
+      ? sql.fragment`
+          EXISTS (
+            SELECT 1 FROM post_likes pl
+            WHERE pl.post_id = p.post_id AND pl.account_id = ${req.userId}
+          )`
+      : sql.fragment`NULL`;
+
     const post = await db.maybeOne(
       sql.type(
         z.object({
@@ -410,12 +430,16 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           updated_at: z.string().nullable(),
           type_name: z.string(),
           username: z.string(),
+          like_count: z.number(),
+          liked_by_me: z.boolean().nullable(),
         }),
       )`
         SELECT 
           p.post_id, p.account_id, p.post_type_id, p.title, p.content, p.is_published,
           p.created_at::text, p.updated_at::text,
-          pt.type_name, a.username
+          pt.type_name, a.username,
+          (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count,
+          ${postLikedByMeFragment} AS liked_by_me
         FROM posts p
         JOIN post_types pt ON p.post_type_id = pt.type_id
         JOIN accounts a ON p.account_id = a.account_id
@@ -504,6 +528,8 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       featured_profiles: featuredProfiles,
       can_edit: canEdit,
       is_owner: isOwner,
+      like_count: post.like_count,
+      liked_by_me: post.liked_by_me,
     });
   } catch (err) {
     console.error('Post fetch error:', err);

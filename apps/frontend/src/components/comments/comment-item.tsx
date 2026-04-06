@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { User, Pencil, X, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { LikeButton } from '@/components/likes/LikeButton';
 
 export interface Comment {
   comment_id: number;
@@ -17,6 +18,8 @@ export interface Comment {
   updated_at: string;
   username: string;
   profile_name: string | null;
+  like_count: number;
+  liked_by_me: boolean | null;
 }
 
 interface CommentItemProps {
@@ -235,7 +238,19 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
               </div>
             </div>
           ) : (
-            !showDeleteConfirm && <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
+            !showDeleteConfirm && (
+              <div>
+                <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
+                <div className="mt-2 flex justify-end">
+                  <LikeButton
+                    type="comment"
+                    id={comment.comment_id}
+                    initialLikeCount={comment.like_count}
+                    initialLikedByMe={comment.liked_by_me}
+                  />
+                </div>
+              </div>
+            )
           )}
         </div>
       </div>

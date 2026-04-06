@@ -6,6 +6,7 @@ import NextImage from 'next/image';
 import { Image as ImageIcon, User, Users, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ContentCarousel } from '@/components/content-carousel';
+import { LikeButton } from '@/components/likes/LikeButton';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
 
 function ArtCard({ post }: { post: PublicPost }) {
@@ -62,6 +63,13 @@ function ArtCard({ post }: { post: PublicPost }) {
             <Calendar className="h-3 w-3" aria-hidden="true" />
             {date}
           </span>
+          <LikeButton
+            type="post"
+            id={post.post_id}
+            initialLikeCount={post.like_count}
+            initialLikedByMe={post.liked_by_me}
+            passive
+          />
         </div>
       </Card>
     </Link>
