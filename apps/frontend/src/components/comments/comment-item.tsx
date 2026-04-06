@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Pencil, X, Check, Trash2 } from 'lucide-react';
+import { User, Pencil, X, Check, Trash2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { LikeButton } from '@/components/likes/LikeButton';
@@ -26,9 +26,10 @@ interface CommentItemProps {
   comment: Comment;
   currentUserId: number | null;
   onCommentUpdated: () => void;
+  onReply: (commentId: number) => void;
 }
 
-export function CommentItem({ comment, currentUserId, onCommentUpdated }: CommentItemProps) {
+export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -241,7 +242,16 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated }: Commen
             !showDeleteConfirm && (
               <div>
                 <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
-                <div className="mt-2 flex justify-end">
+                <div className="mt-2 flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onReply(comment.comment_id)}
+                    className="h-7 px-2 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                  >
+                    <MessageSquare className="w-3 h-3 mr-1" />
+                    Reply
+                  </Button>
                   <LikeButton
                     type="comment"
                     id={comment.comment_id}
