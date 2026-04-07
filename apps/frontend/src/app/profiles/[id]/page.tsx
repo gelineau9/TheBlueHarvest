@@ -657,11 +657,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 profile.account_id !== accountId &&
                 (profile.profile_type_id === 1 || profile.profile_type_id === 3) &&
                 followCheckDone && (
-                  <FollowButton
-                    type="profile"
-                    id={profile.profile_id}
-                    initialFollowing={isFollowing}
-                  />
+                  <FollowButton type="profile" id={profile.profile_id} initialFollowing={isFollowing} />
                 )}
             </div>
 

@@ -104,19 +104,13 @@ export default function AdminDashboardPage() {
               <tbody>
                 {recentEntries.map((entry) => (
                   <tr key={entry.log_id} className="border-b border-amber-100 last:border-0">
-                    <td className="px-4 py-2 text-xs text-amber-600">
-                      {new Date(entry.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2 text-amber-900">
-                      {entry.actor_username ?? 'System'}
-                    </td>
+                    <td className="px-4 py-2 text-xs text-amber-600">{new Date(entry.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-amber-900">{entry.actor_username ?? 'System'}</td>
                     <td className="px-4 py-2">
                       <code className="text-xs bg-amber-100 px-1 rounded">{entry.action_type}</code>
                     </td>
                     <td className="px-4 py-2 text-amber-700 text-xs">
-                      {entry.target_type && entry.target_id
-                        ? `${entry.target_type} #${entry.target_id}`
-                        : '—'}
+                      {entry.target_type && entry.target_id ? `${entry.target_type} #${entry.target_id}` : '—'}
                     </td>
                   </tr>
                 ))}

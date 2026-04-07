@@ -49,10 +49,7 @@ export function useAuthorableProfiles(options: UseAuthorableProfilesOptions = {}
     setError(null);
 
     try {
-      const [charRes, kinRes] = await Promise.all([
-        fetch('/api/profiles?type=1'),
-        fetch('/api/profiles?type=3'),
-      ]);
+      const [charRes, kinRes] = await Promise.all([fetch('/api/profiles?type=1'), fetch('/api/profiles?type=3')]);
 
       if (!charRes.ok || !kinRes.ok) {
         throw new Error('Failed to load profiles');

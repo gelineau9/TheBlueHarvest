@@ -327,9 +327,7 @@ router.get('/public', async (req: Request, res: Response) => {
       : sql.fragment``;
 
     // Build account_id filter fragment
-    const accountFilterFragment = validAccountId
-      ? sql.fragment`AND p.account_id = ${validAccountId}`
-      : sql.fragment``;
+    const accountFilterFragment = validAccountId ? sql.fragment`AND p.account_id = ${validAccountId}` : sql.fragment``;
 
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(

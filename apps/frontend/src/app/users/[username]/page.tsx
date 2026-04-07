@@ -39,11 +39,7 @@ function ProfileCard({ profile }: { profile: PublicProfile }) {
     <Link href={`/profiles/${profile.profile_id}`}>
       <Card className="flex items-center gap-3 border-amber-800/20 bg-amber-50/90 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
         {avatar ? (
-          <img
-            src={avatar}
-            alt={profile.name}
-            className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
-          />
+          <img src={avatar} alt={profile.name} className="h-10 w-10 flex-shrink-0 rounded-full object-cover" />
         ) : (
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-200">
             <User className="h-5 w-5 text-amber-700" />
@@ -134,15 +130,11 @@ export default function UserPage({ params }: { params: Promise<{ username: strin
   }, [account?.account_id, isLoggedIn, accountId]);
 
   if (loading) {
-    return (
-      <div className="py-16 text-center text-amber-700 italic">Loading...</div>
-    );
+    return <div className="py-16 text-center text-amber-700 italic">Loading...</div>;
   }
 
   if (notFound || !account) {
-    return (
-      <div className="py-16 text-center text-amber-700 italic">User not found.</div>
-    );
+    return <div className="py-16 text-center text-amber-700 italic">User not found.</div>;
   }
 
   const joinDate = new Date(account.created_at).toLocaleDateString('en-US', {
@@ -171,9 +163,7 @@ export default function UserPage({ params }: { params: Promise<{ username: strin
 
       {/* Public profiles */}
       <section>
-        <h2 className="mb-4 font-fantasy text-xl font-semibold text-amber-900">
-          {account.username}&apos;s Profiles
-        </h2>
+        <h2 className="mb-4 font-fantasy text-xl font-semibold text-amber-900">{account.username}&apos;s Profiles</h2>
 
         {profiles.length === 0 ? (
           <p className="text-sm text-amber-700 italic">No public profiles yet.</p>

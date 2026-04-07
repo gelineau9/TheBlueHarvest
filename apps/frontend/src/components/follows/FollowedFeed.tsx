@@ -57,9 +57,7 @@ function FeedRow({ post }: { post: FeedPost }) {
       className="group flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-amber-100/60"
     >
       {/* Type badge */}
-      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>
-        {post.type_name}
-      </span>
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>{post.type_name}</span>
 
       {/* Title */}
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-amber-900 group-hover:underline">
@@ -134,9 +132,7 @@ export function FollowedFeed() {
     <section className="mb-10">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-fantasy text-2xl font-semibold text-amber-900">Your Feed</h2>
-        {total !== null && total > posts.length && (
-          <span className="text-xs text-amber-600">{total} total</span>
-        )}
+        {total !== null && total > posts.length && <span className="text-xs text-amber-600">{total} total</span>}
       </div>
 
       {total === 0 ? (

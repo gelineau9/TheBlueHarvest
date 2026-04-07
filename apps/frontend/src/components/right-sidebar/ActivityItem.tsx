@@ -34,10 +34,7 @@ export function ActivityItem(props: ActivityItemProps) {
           <p className="text-sm text-amber-800">
             {props.kind === 'comment' ? (
               <>
-                <Link
-                  href={props.usernameHref}
-                  className="font-medium text-amber-900 hover:underline"
-                >
+                <Link href={props.usernameHref} className="font-medium text-amber-900 hover:underline">
                   {props.username}
                 </Link>{' '}
                 commented on{' '}
@@ -47,12 +44,10 @@ export function ActivityItem(props: ActivityItemProps) {
               </>
             ) : (
               <>
-                <Link
-                  href={props.usernameHref}
-                  className="font-medium text-amber-900 hover:underline"
-                >
+                <Link href={props.usernameHref} className="font-medium text-amber-900 hover:underline">
                   {props.username}
-                </Link>{' '}{props.action}{' '}
+                </Link>{' '}
+                {props.action}{' '}
                 <Link href={props.targetHref} className="font-medium text-amber-900 hover:underline">
                   {props.target}
                 </Link>

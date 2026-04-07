@@ -377,11 +377,11 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           {/* Account owner info (smaller, secondary) */}
           <div className="mt-4 pt-4 border-t border-amber-200 flex items-center justify-between text-xs text-amber-600">
             <span>
-                Posted by account:{' '}
-                <Link href={`/users/${post.username}`} className="hover:underline font-medium">
-                  {post.username}
-                </Link>
-              </span>
+              Posted by account:{' '}
+              <Link href={`/users/${post.username}`} className="hover:underline font-medium">
+                {post.username}
+              </Link>
+            </span>
             <LikeButton
               type="post"
               id={post.post_id}

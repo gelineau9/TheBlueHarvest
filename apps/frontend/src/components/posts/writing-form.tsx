@@ -24,7 +24,11 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
 
-  const { profiles: authorableProfiles, isLoading: isLoadingCharacters, error: charactersError } = useAuthorableProfiles();
+  const {
+    profiles: authorableProfiles,
+    isLoading: isLoadingCharacters,
+    error: charactersError,
+  } = useAuthorableProfiles();
 
   const {
     register,

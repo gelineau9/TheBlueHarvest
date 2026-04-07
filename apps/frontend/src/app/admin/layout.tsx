@@ -40,8 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
       <nav className="flex gap-1 mb-6 border-b border-amber-300 pb-0">
         {tabs.map((tab) => {
-          const isActive =
-            tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
+          const isActive = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
           return (
             <Link
               key={tab.href}

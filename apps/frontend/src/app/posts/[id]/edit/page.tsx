@@ -488,7 +488,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                       </option>
                     ))}
                   </select>
-                  <p className="text-sm text-amber-600">Optionally attribute this writing to one of your characters or kinships.</p>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this writing to one of your characters or kinships.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="body" className="text-amber-900 font-semibold">
@@ -526,7 +528,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                       </option>
                     ))}
                   </select>
-                  <p className="text-sm text-amber-600">Optionally attribute this post to one of your characters or kinships.</p>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this post to one of your characters or kinships.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Images</Label>
@@ -622,7 +626,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                       </option>
                     ))}
                   </select>
-                  <p className="text-sm text-amber-600">Optionally attribute this event to one of your characters or kinships.</p>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this event to one of your characters or kinships.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
