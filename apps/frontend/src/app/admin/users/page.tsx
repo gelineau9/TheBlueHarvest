@@ -42,15 +42,12 @@ export default function AdminUsersPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('token');
         const params = new URLSearchParams({
           limit: '20',
           offset: String(currentOffset),
           ...(currentSearch ? { search: currentSearch } : {}),
         });
-        const res = await fetch(`/api/admin/users?${params}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res = await fetch(`/api/admin/users?${params}`);
         if (res.status === 403) {
           setError('You do not have permission to view this page.');
           return;
@@ -88,14 +85,10 @@ export default function AdminUsersPage() {
 
   async function handleRoleChange(accountId: number, roleId: number) {
     setActionError(null);
-    const token = localStorage.getItem('token');
     try {
       const res = await fetch(`/api/admin/users/${accountId}/role`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role_id: roleId }),
       });
       if (!res.ok) {
@@ -111,14 +104,10 @@ export default function AdminUsersPage() {
 
   async function handleBan(accountId: number) {
     setActionError(null);
-    const token = localStorage.getItem('token');
     try {
       const res = await fetch(`/api/admin/users/${accountId}/ban`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_banned: true, banned_reason: banReason || undefined }),
       });
       if (!res.ok) {
@@ -136,14 +125,10 @@ export default function AdminUsersPage() {
 
   async function handleUnban(accountId: number) {
     setActionError(null);
-    const token = localStorage.getItem('token');
     try {
       const res = await fetch(`/api/admin/users/${accountId}/ban`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_banned: false }),
       });
       if (!res.ok) {

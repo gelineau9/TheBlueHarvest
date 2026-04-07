@@ -250,6 +250,7 @@ export async function getSession() {
       username: data.username,
       email: data.email,
       details: data.details,
+      role: data.role as string | undefined,
     };
   } catch (error) {
     console.error('Get session error:', error);

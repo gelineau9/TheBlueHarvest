@@ -124,7 +124,7 @@ router.put(
       return;
     }
 
-    const targetId = parseInt(req.params.id);
+    const targetId = parseInt(String(req.params.id));
     if (isNaN(targetId)) {
       res.status(400).json({ error: 'Invalid user ID' });
       return;
@@ -191,7 +191,7 @@ router.put(
       return;
     }
 
-    const targetId = parseInt(req.params.id);
+    const targetId = parseInt(String(req.params.id));
     if (isNaN(targetId)) {
       res.status(400).json({ error: 'Invalid user ID' });
       return;
@@ -257,7 +257,7 @@ router.put(
 // 3d. DELETE /api/admin/posts/:id
 // ─────────────────────────────────────────────────────────
 router.delete('/posts/:id', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const postId = parseInt(req.params.id);
+  const postId = parseInt(String(req.params.id));
   if (isNaN(postId)) {
     res.status(400).json({ error: 'Invalid post ID' });
     return;
@@ -314,7 +314,7 @@ router.delete('/posts/:id', authenticateToken, requireRole(2, 3), async (req: Au
 // 3e. DELETE /api/admin/profiles/:id
 // ─────────────────────────────────────────────────────────
 router.delete('/profiles/:id', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const profileId = parseInt(req.params.id);
+  const profileId = parseInt(String(req.params.id));
   if (isNaN(profileId)) {
     res.status(400).json({ error: 'Invalid profile ID' });
     return;

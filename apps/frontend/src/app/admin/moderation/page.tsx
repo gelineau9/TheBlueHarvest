@@ -113,12 +113,8 @@ export default function AdminModerationPage() {
 
   async function handleDeletePost(postId: number) {
     setActionError(null);
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/admin/posts/${postId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(`/api/admin/posts/${postId}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json();
         setActionError(data.error ?? 'Failed to delete post.');
@@ -133,12 +129,8 @@ export default function AdminModerationPage() {
 
   async function handleDeleteProfile(profileId: number) {
     setActionError(null);
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/admin/profiles/${profileId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(`/api/admin/profiles/${profileId}`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json();
         setActionError(data.error ?? 'Failed to delete profile.');

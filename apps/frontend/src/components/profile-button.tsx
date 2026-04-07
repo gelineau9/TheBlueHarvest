@@ -104,30 +104,10 @@ export function ProfileButton() {
             {(isAdmin || isModerator) && (
               <>
                 <DropdownMenuSeparator className="bg-amber-800/20" />
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex items-center gap-1 text-amber-700">
-                    <Shield className="h-3 w-3" />
-                    <span className="text-xs font-semibold uppercase tracking-wider">Admin</span>
-                  </div>
-                </DropdownMenuLabel>
                 <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
                   <Link href="/admin">
-                    <span>Dashboard</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-                  <Link href="/admin/users">
-                    <span>Users</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-                  <Link href="/admin/moderation">
-                    <span>Moderation</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
-                  <Link href="/admin/audit-log">
-                    <span>Audit Log</span>
+                    <Shield className="mr-2 h-4 w-4 text-amber-700" />
+                    <span>Moderation Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
               </>

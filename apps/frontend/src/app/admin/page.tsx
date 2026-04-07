@@ -38,16 +38,13 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!isAdmin && !isModerator) return;
 
-    const token = localStorage.getItem('token');
-    const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
-
     async function loadStats() {
       try {
         const [usersRes, postsRes, profilesRes, auditRes] = await Promise.all([
-          fetch('/api/admin/users?limit=1', { headers: authHeader }),
+          fetch('/api/admin/users?limit=1'),
           fetch('/api/posts/public?limit=1'),
           fetch('/api/profiles/public?limit=1'),
-          fetch('/api/admin/audit-log?limit=5', { headers: authHeader }),
+          fetch('/api/admin/audit-log?limit=5'),
         ]);
 
         if (usersRes.ok) {

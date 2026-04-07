@@ -28,10 +28,7 @@ export default function AdminAuditLogPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/admin/audit-log?limit=20&offset=${currentOffset}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(`/api/admin/audit-log?limit=20&offset=${currentOffset}`);
       if (res.status === 403) {
         setError('You do not have permission to view this page.');
         return;

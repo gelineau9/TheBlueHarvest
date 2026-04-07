@@ -1,4 +1,4 @@
-import { sql } from 'slonik';
+import { sql, type SerializableValue } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 
@@ -7,7 +7,7 @@ interface AuditEntry {
   actionType: string;
   targetType?: string;
   targetId?: number;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, SerializableValue>;
 }
 
 export async function writeAuditLog(entry: AuditEntry): Promise<void> {
