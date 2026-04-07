@@ -10,7 +10,7 @@
  *
  * Execution order mirrors the docker-entrypoint-initdb.d ordering:
  *   001 → 012  (schema files)
- *   then the migration-equivalent DDL for 0002–0005 (already guarded with IF NOT EXISTS)
+ *   then the migration-equivalent DDL for 0002, 0003, 0004, 0005 (IF NOT EXISTS guards)
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -93,9 +93,26 @@ export async function setup(): Promise<void> {
     ALTER TABLE accounts ADD COLUMN IF NOT EXISTS banned_reason TEXT;
   `);
 
-  // Migration 0003: likes / follows — tables defined in schema files above,
-  // but guard here in case schema version doesn't include them.
-  // (nothing extra needed)
+  // Migration 0003: post_likes and comment_likes tables
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS post_likes (
+      account_id  INTEGER NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+      post_id     INTEGER NOT NULL REFERENCES posts(post_id)       ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (account_id, post_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS post_likes_post_id_idx ON post_likes(post_id);
+
+    CREATE TABLE IF NOT EXISTS comment_likes (
+      account_id  INTEGER NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+      comment_id  INTEGER NOT NULL REFERENCES comments(comment_id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (account_id, comment_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS comment_likes_comment_id_idx ON comment_likes(comment_id);
+  `);
 
   // Migration 0004: audit_log table
   await client.query(`
