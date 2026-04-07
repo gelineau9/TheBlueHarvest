@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { writeAuditLog } from '../utils/auditLog.js';
 
 const router = Router();
 
@@ -62,6 +63,15 @@ router.post(
       // Create JWT
       const token = jwt.sign({ userId: result.account_id, roleId: result.user_role_id }, process.env.JWT_SECRET!, {
         expiresIn: '7d',
+      });
+
+      // Fire-and-forget audit log
+      writeAuditLog({
+        actorAccountId: result.account_id,
+        actionType: 'account_created',
+        targetType: 'account',
+        targetId: result.account_id,
+        metadata: { username },
       });
 
       res.status(201).json({ token });

@@ -15,6 +15,7 @@ export async function GET() {
       username: session.username,
       email: session.email,
       details: session.details,
+      role: session.role,
     });
   } catch (err) {
     console.error('Auth check error:', err);
