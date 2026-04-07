@@ -7,9 +7,11 @@ import { ActivityItem } from './ActivityItem';
 import { EventCalendar, CalendarEvent } from '@/components/events/EventCalendar';
 import { EventFeed, EventFeedItem } from '@/components/events/EventFeed';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface PostContent {
   description?: string;
-  eventDateTime?: string; // UTC ISO string
+  eventDateTime?: string;
   location?: string;
 }
 
@@ -19,65 +21,75 @@ interface EventPost {
   content: PostContent;
 }
 
-interface RecentPost {
-  post_id: number;
-  post_type_id: number;
-  title: string;
-  type_name: string;
-  username: string;
-  created_at: string;
-}
-
 interface PostsResponse {
   posts: EventPost[];
   total: number;
   hasMore: boolean;
 }
 
-interface RecentPostsResponse {
-  posts: RecentPost[];
+interface ActivityFeedItem {
+  kind: 'post' | 'profile' | 'comment';
+  id: number;
+  title: string;
+  type_name: string;
+  username: string;
+  account_id: number;
+  post_id: number | null;
+  post_title: string | null;
+  created_at: string;
 }
+
+interface ActivityResponse {
+  items: ActivityFeedItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function RightSidebar() {
   const [events, setEvents] = useState<EventPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [activityItems, setActivityItems] = useState<ActivityFeedItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
 
+  // Fetch upcoming events
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        // Fetch events (post_type_id = 4)
         const response = await fetch('/api/posts/public?post_type_id=4&limit=20&sortBy=created_at&order=desc');
-
         if (response.ok) {
           const data: PostsResponse = await response.json();
           setEvents(data.posts);
         }
       } catch {
-        // Silently fail - sidebar is non-critical
+        // Silently fail — sidebar is non-critical
       } finally {
-        setIsLoading(false);
+        setEventsLoading(false);
       }
     };
-
-    const fetchRecentPosts = async () => {
-      try {
-        // Fetch 6 most recent writing (1) and art (2) posts for activity feed
-        const response = await fetch('/api/posts/public?limit=6&sortBy=created_at&order=desc');
-        if (response.ok) {
-          const data: RecentPostsResponse = await response.json();
-          setRecentPosts(data.posts);
-        }
-      } catch {
-        // Silently fail - sidebar is non-critical
-      }
-    };
-
     fetchEvents();
-    fetchRecentPosts();
   }, []);
 
-  // Transform posts to calendar/feed format and filter for upcoming events
+  // Fetch sitewide activity (no auth)
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const response = await fetch('/api/activity?limit=10');
+        if (response.ok) {
+          const data: ActivityResponse = await response.json();
+          setActivityItems(data.items ?? []);
+        }
+      } catch {
+        // Silently fail
+      } finally {
+        setActivityLoading(false);
+      }
+    };
+    fetchActivity();
+  }, []);
+
+  // Transform events for calendar/feed
   const { calendarEvents, upcomingEvents } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -92,10 +104,6 @@ export function RightSidebar() {
         description: post.content.description,
       }));
 
-    // All events for the calendar (current month)
-    const calendarEvents = transformed;
-
-    // Only upcoming events for the feed (today or later), sorted by date ascending (nearest first)
     const upcomingEvents = transformed
       .filter((event) => {
         const eventDate = new Date(event.eventDateTime);
@@ -104,7 +112,7 @@ export function RightSidebar() {
       })
       .sort((a, b) => new Date(a.eventDateTime).getTime() - new Date(b.eventDateTime).getTime());
 
-    return { calendarEvents, upcomingEvents };
+    return { calendarEvents: transformed, upcomingEvents };
   }, [events]);
 
   return (
@@ -118,7 +126,7 @@ export function RightSidebar() {
           </Link>
         </div>
 
-        {isLoading ? (
+        {eventsLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
           </div>
@@ -132,22 +140,55 @@ export function RightSidebar() {
         )}
       </div>
 
-      {/* Recent Activity */}
+      {/* Sitewide Activity */}
       <div>
         <h2 className="mb-3 font-fantasy text-xl font-semibold text-amber-900">Recent Activity</h2>
         <div className="space-y-3">
-          {recentPosts.length === 0 ? (
+          {activityLoading ? (
+            <p className="text-sm text-amber-600 italic">Loading...</p>
+          ) : activityItems.length === 0 ? (
             <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
           ) : (
-            recentPosts.map((post) => (
-              <ActivityItem
-                key={post.post_id}
-                username={post.username}
-                action={`posted a new ${post.type_name.toLowerCase()}`}
-                target={`"${post.title}"`}
-                time={formatRelativeTime(post.created_at)}
-              />
-            ))
+            activityItems.map((item) => {
+              if (item.kind === 'comment') {
+                return (
+                  <ActivityItem
+                    key={`comment-${item.id}`}
+                    kind="comment"
+                    username={item.username}
+                    usernameHref={`/users/${item.username}`}
+                    postTitle={item.post_title ?? 'a post'}
+                    postHref={`/posts/${item.post_id}`}
+                    time={formatRelativeTime(item.created_at)}
+                  />
+                );
+              }
+              if (item.kind === 'profile') {
+                return (
+                  <ActivityItem
+                    key={`profile-${item.id}`}
+                    kind="profile"
+                    username={item.username}
+                    action={`created a ${item.type_name.toLowerCase()}`}
+                    target={item.title}
+                    targetHref={`/profiles/${item.id}`}
+                    time={formatRelativeTime(item.created_at)}
+                  />
+                );
+              }
+              // post
+              return (
+                <ActivityItem
+                  key={`post-${item.id}`}
+                  kind="post"
+                  username={item.username}
+                  action={`posted a new ${item.type_name.toLowerCase()}`}
+                  target={`"${item.title}"`}
+                  targetHref={`/posts/${item.id}`}
+                  time={formatRelativeTime(item.created_at)}
+                />
+              );
+            })
           )}
         </div>
       </div>

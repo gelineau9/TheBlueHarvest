@@ -16,6 +16,8 @@ import usersRoutes from './routes/users.js';
 import featuredProfilesRoutes from './routes/featuredProfiles.js';
 import relationshipsRoutes from './routes/relationships.js';
 import likesRoutes from './routes/likes.js';
+import followsRouter from './routes/follows.js';
+import activityRouter from './routes/activity.js';
 import adminRouter from './routes/admin.js';
 import {
   profileEditorRoutes,
@@ -152,6 +154,8 @@ app.use('/api/posts', featuredProfilesRoutes);
 app.use('/api/profiles', relationshipsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/likes', likesRoutes);
+app.use('/api/follows', followsRouter);
+app.use('/api/activity', activityRouter);
 app.use('/api/admin', adminRouter);
 
 app.get('/', (_req: Request, res: Response) => {

@@ -33,6 +33,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { useAuth } from '@/components/auth/auth-provider';
+import { FollowButton } from '@/components/follows/FollowButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,11 +193,16 @@ function ItemCard({ item }: { item: ItemProfile }) {
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { isLoggedIn, accountId } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followCheckDone, setFollowCheckDone] = useState(false);
 
   // Editor management
   const [editors, setEditors] = useState<Editor[]>([]);
@@ -247,6 +254,29 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     };
     fetchProfile();
   }, [id]);
+
+  // ── Follow check ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!profile) return;
+    if (!isLoggedIn) return;
+    if (profile.account_id === accountId) return;
+    if (profile.profile_type_id !== 1 && profile.profile_type_id !== 3) return;
+
+    const checkFollow = async () => {
+      try {
+        const res = await fetch(`/api/follows/check?profileIds=${profile.profile_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsFollowing(data.profiles[String(profile.profile_id)] ?? false);
+        }
+      } catch {
+        // silently fail — follow button just won't render
+      } finally {
+        setFollowCheckDone(true);
+      }
+    };
+    checkFollow();
+  }, [profile?.profile_id, isLoggedIn, accountId]);
 
   // ── Fetch editors ──────────────────────────────────────────────────────────
   const fetchEditors = async () => {
@@ -622,6 +652,17 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
               )}
+              {/* Follow button — shown to logged-in users who don't own this profile */}
+              {isLoggedIn &&
+                profile.account_id !== accountId &&
+                (profile.profile_type_id === 1 || profile.profile_type_id === 3) &&
+                followCheckDone && (
+                  <FollowButton
+                    type="profile"
+                    id={profile.profile_id}
+                    initialFollowing={isFollowing}
+                  />
+                )}
             </div>
 
             {/* Created by / date */}
