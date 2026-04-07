@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Left sidebar — fixed-width desktop column, hidden on mobile */}
         <aside
           aria-label="Site navigation"
-          className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-amber-800/20 bg-[#f5e6c8] p-4 lg:block"
+          className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-amber-800/20 bg-[#f5e6c8] p-4 lg:block"
         >
           <LeftSidebar />
         </aside>

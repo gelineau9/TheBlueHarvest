@@ -26,6 +26,9 @@ const ActivityRowSchema = z.object({
   type_name: z.string(),
   username: z.string(),
   account_id: z.number(),
+  // profile-level actor (primary author for posts, commenter's profile for comments)
+  actor_profile_id: z.number().nullable(),
+  actor_profile_name: z.string().nullable(),
   // for comments: post the comment belongs to
   post_id: z.number().nullable(),
   post_title: z.string().nullable(),
@@ -55,18 +58,22 @@ router.get('/', async (req: Request, res: Response) => {
             pt.type_name                   AS type_name,
             a.username                     AS username,
             a.account_id                   AS account_id,
+            ap.profile_id                  AS actor_profile_id,
+            ap.name                        AS actor_profile_name,
             NULL::int                      AS post_id,
             NULL::text                     AS post_title,
             p.created_at::text             AS created_at
           FROM posts p
           JOIN post_types pt ON p.post_type_id = pt.type_id
           JOIN accounts   a  ON p.account_id   = a.account_id
+          LEFT JOIN authors auth ON auth.post_id = p.post_id AND auth.is_primary = true
+          LEFT JOIN profiles ap  ON ap.profile_id = auth.profile_id
           WHERE p.deleted      = false
             AND p.is_published = true
 
           UNION ALL
 
-          -- Profiles
+          -- Profiles (actor is always the account — the profile itself is the target)
           SELECT
             'profile'::text                AS kind,
             pr.profile_id                  AS id,
@@ -74,6 +81,8 @@ router.get('/', async (req: Request, res: Response) => {
             prt.type_name                  AS type_name,
             a.username                     AS username,
             a.account_id                   AS account_id,
+            NULL::int                      AS actor_profile_id,
+            NULL::text                     AS actor_profile_name,
             NULL::int                      AS post_id,
             NULL::text                     AS post_title,
             pr.created_at::text            AS created_at
@@ -93,12 +102,15 @@ router.get('/', async (req: Request, res: Response) => {
             'Comment'                      AS type_name,
             a.username                     AS username,
             a.account_id                   AS account_id,
+            cp.profile_id                  AS actor_profile_id,
+            cp.name                        AS actor_profile_name,
             p.post_id                      AS post_id,
             p.title                        AS post_title,
             c.created_at::text             AS created_at
           FROM comments c
-          JOIN accounts a ON c.account_id = a.account_id
-          JOIN posts    p ON c.post_id    = p.post_id
+          JOIN accounts  a  ON c.account_id = a.account_id
+          JOIN posts     p  ON c.post_id    = p.post_id
+          LEFT JOIN profiles cp ON cp.profile_id = c.profile_id
           WHERE c.is_deleted   = false
             AND p.deleted      = false
             AND p.is_published = true

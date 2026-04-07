@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { ActivityItem } from './ActivityItem';
@@ -34,6 +34,8 @@ interface ActivityFeedItem {
   type_name: string;
   username: string;
   account_id: number;
+  actor_profile_id: number | null;
+  actor_profile_name: string | null;
   post_id: number | null;
   post_title: string | null;
   created_at: string;
@@ -47,11 +49,17 @@ interface ActivityResponse {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const ACTIVITY_LIMIT = 10;
+
 export function RightSidebar() {
   const [events, setEvents] = useState<EventPost[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+
   const [activityItems, setActivityItems] = useState<ActivityFeedItem[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [activityLoadingMore, setActivityLoadingMore] = useState(false);
+  const [activityHasMore, setActivityHasMore] = useState(false);
+  const [activityOffset, setActivityOffset] = useState(0);
 
   // Fetch upcoming events
   useEffect(() => {
@@ -71,14 +79,16 @@ export function RightSidebar() {
     fetchEvents();
   }, []);
 
-  // Fetch sitewide activity (no auth)
+  // Fetch sitewide activity (no auth) — initial load
   useEffect(() => {
     const fetchActivity = async () => {
       try {
-        const response = await fetch('/api/activity?limit=10');
+        const response = await fetch(`/api/activity?limit=${ACTIVITY_LIMIT}&offset=0`);
         if (response.ok) {
           const data: ActivityResponse = await response.json();
           setActivityItems(data.items ?? []);
+          setActivityHasMore(data.hasMore);
+          setActivityOffset(data.items?.length ?? 0);
         }
       } catch {
         // Silently fail
@@ -88,6 +98,24 @@ export function RightSidebar() {
     };
     fetchActivity();
   }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    if (activityLoadingMore || !activityHasMore) return;
+    setActivityLoadingMore(true);
+    try {
+      const response = await fetch(`/api/activity?limit=${ACTIVITY_LIMIT}&offset=${activityOffset}`);
+      if (response.ok) {
+        const data: ActivityResponse = await response.json();
+        setActivityItems((prev) => [...prev, ...(data.items ?? [])]);
+        setActivityHasMore(data.hasMore);
+        setActivityOffset((prev) => prev + (data.items?.length ?? 0));
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setActivityLoadingMore(false);
+    }
+  }, [activityLoadingMore, activityHasMore, activityOffset]);
 
   // Transform events for calendar/feed
   const { calendarEvents, upcomingEvents } = useMemo(() => {
@@ -143,56 +171,82 @@ export function RightSidebar() {
       {/* Sitewide Activity */}
       <div>
         <h2 className="mb-3 font-fantasy text-xl font-semibold text-amber-900">Recent Activity</h2>
-        <div className="space-y-3">
-          {activityLoading ? (
-            <p className="text-sm text-amber-600 italic">Loading...</p>
-          ) : activityItems.length === 0 ? (
-            <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
-          ) : (
-            activityItems.map((item) => {
-              if (item.kind === 'comment') {
+
+        {activityLoading ? (
+          <p className="text-sm text-amber-600 italic">Loading...</p>
+        ) : activityItems.length === 0 ? (
+          <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
+        ) : (
+          <div className="max-h-96 overflow-y-auto rounded-lg border border-amber-800/20 bg-amber-50/50">
+            <div className="space-y-3 p-3">
+              {activityItems.map((item) => {
+                // Resolve the actor link: profile-level if available, else account-level
+                const posterHref = item.actor_profile_id
+                  ? `/profiles/${item.actor_profile_id}`
+                  : `/users/${item.username}`;
+                const posterName = item.actor_profile_name ?? item.username;
+
+                if (item.kind === 'comment') {
+                  return (
+                    <ActivityItem
+                      key={`comment-${item.id}`}
+                      kind="comment"
+                      username={posterName}
+                      usernameHref={posterHref}
+                      postTitle={item.post_title ?? 'a post'}
+                      postHref={`/posts/${item.post_id}`}
+                      time={formatRelativeTime(item.created_at)}
+                    />
+                  );
+                }
+                if (item.kind === 'profile') {
+                  return (
+                    <ActivityItem
+                      key={`profile-${item.id}`}
+                      kind="profile"
+                      username={posterName}
+                      usernameHref={posterHref}
+                      action={`created a ${item.type_name.toLowerCase()}`}
+                      target={item.title}
+                      targetHref={`/profiles/${item.id}`}
+                      time={formatRelativeTime(item.created_at)}
+                    />
+                  );
+                }
                 return (
                   <ActivityItem
-                    key={`comment-${item.id}`}
-                    kind="comment"
-                    username={item.username}
-                    usernameHref={`/users/${item.username}`}
-                    postTitle={item.post_title ?? 'a post'}
-                    postHref={`/posts/${item.post_id}`}
+                    key={`post-${item.id}`}
+                    kind="post"
+                    username={posterName}
+                    usernameHref={posterHref}
+                    action={`posted a new ${item.type_name.toLowerCase()}`}
+                    target={`"${item.title}"`}
+                    targetHref={`/posts/${item.id}`}
                     time={formatRelativeTime(item.created_at)}
                   />
                 );
-              }
-              if (item.kind === 'profile') {
-                return (
-                  <ActivityItem
-                    key={`profile-${item.id}`}
-                    kind="profile"
-                    username={item.username}
-                    usernameHref={`/users/${item.username}`}
-                    action={`created a ${item.type_name.toLowerCase()}`}
-                    target={item.title}
-                    targetHref={`/profiles/${item.id}`}
-                    time={formatRelativeTime(item.created_at)}
-                  />
-                );
-              }
-              // post
-              return (
-                <ActivityItem
-                  key={`post-${item.id}`}
-                  kind="post"
-                  username={item.username}
-                  usernameHref={`/users/${item.username}`}
-                  action={`posted a new ${item.type_name.toLowerCase()}`}
-                  target={`"${item.title}"`}
-                  targetHref={`/posts/${item.id}`}
-                  time={formatRelativeTime(item.created_at)}
-                />
-              );
-            })
-          )}
-        </div>
+              })}
+
+              {/* Load more — inside the scroll container */}
+              {activityHasMore && (
+                <button
+                  onClick={handleLoadMore}
+                  disabled={activityLoadingMore}
+                  className="w-full rounded-md py-2 text-xs text-amber-700 hover:bg-amber-100/80 hover:text-amber-900 disabled:opacity-50 transition-colors"
+                >
+                  {activityLoadingMore ? (
+                    <span className="flex items-center justify-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading…
+                    </span>
+                  ) : (
+                    'Load more'
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

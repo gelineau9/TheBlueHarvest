@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { User, Users, Calendar } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { useAuth } from '@/components/auth/auth-provider';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,53 +24,63 @@ interface FeedResponse {
   hasMore: boolean;
 }
 
-// ─── Mini post card ───────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function FeedCard({ post }: { post: FeedPost }) {
-  const body = typeof post.content?.body === 'string' ? post.content.body : '';
-  const preview = body.replace(/<[^>]*>/g, '').slice(0, 180);
+function relativeTime(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
 
-  const date = new Date(post.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+const typeBadgeColors: Record<string, string> = {
+  Writing: 'bg-amber-100 text-amber-800',
+  Art: 'bg-pink-100 text-pink-800',
+  Media: 'bg-blue-100 text-blue-800',
+  Event: 'bg-green-100 text-green-800',
+};
+
+// ─── List row ─────────────────────────────────────────────────────────────────
+
+function FeedRow({ post }: { post: FeedPost }) {
+  const badgeClass = typeBadgeColors[post.type_name] ?? 'bg-amber-100 text-amber-800';
 
   return (
-    <Link href={`/posts/${post.post_id}`} className="block h-full">
-      <Card className="flex h-full flex-col gap-3 border-amber-800/20 bg-amber-50/90 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
-        <span className="inline-block w-fit rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-          {post.type_name}
-        </span>
-        <h3 className="line-clamp-2 font-fantasy text-base font-semibold text-amber-900 leading-snug">
-          {post.title}
-        </h3>
-        {preview && (
-          <p className="line-clamp-3 flex-1 text-sm text-amber-800/80 leading-relaxed">{preview}</p>
+    <Link
+      href={`/posts/${post.post_id}`}
+      className="group flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-amber-100/60"
+    >
+      {/* Type badge */}
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>
+        {post.type_name}
+      </span>
+
+      {/* Title */}
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-amber-900 group-hover:underline">
+        {post.title}
+      </span>
+
+      {/* Meta: character author (if any) · username · time */}
+      <span className="flex shrink-0 items-center gap-2 text-xs text-amber-600">
+        {post.primary_author_name && (
+          <span className="hidden truncate max-w-[80px] sm:inline">{post.primary_author_name}</span>
         )}
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-600">
-          {post.primary_author_name && (
-            <span className="flex items-center gap-1">
-              <Users className="h-3 w-3" aria-hidden="true" />
-              <span className="max-w-[90px] truncate">{post.primary_author_name}</span>
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <User className="h-3 w-3" aria-hidden="true" />
-            <Link
-              href={`/users/${post.username}`}
-              onClick={(e) => e.stopPropagation()}
-              className="max-w-[80px] truncate hover:underline"
-            >
-              {post.username}
-            </Link>
-          </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" aria-hidden="true" />
-            {date}
-          </span>
-        </div>
-      </Card>
+        <Link
+          href={`/users/${post.username}`}
+          onClick={(e) => e.stopPropagation()}
+          className="truncate max-w-[80px] hover:text-amber-900 hover:underline"
+        >
+          {post.username}
+        </Link>
+        <span className="text-amber-400">·</span>
+        <span className="whitespace-nowrap">{relativeTime(post.created_at)}</span>
+      </span>
     </Link>
   );
 }
@@ -93,7 +101,6 @@ export function FollowedFeed() {
 
     const fetchFeed = async () => {
       try {
-        // Probe total first
         const probeRes = await fetch('/api/follows/feed?limit=1');
         if (!probeRes.ok) {
           setTotal(0);
@@ -120,24 +127,29 @@ export function FollowedFeed() {
     fetchFeed();
   }, [isLoggedIn]);
 
-  // Not logged in — render nothing
   if (!isLoggedIn) return null;
-
-  // Still probing
   if (loading) return null;
 
   return (
     <section className="mb-10">
-      <h2 className="mb-4 font-fantasy text-2xl font-semibold text-amber-900">Your Feed</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-fantasy text-2xl font-semibold text-amber-900">Your Feed</h2>
+        {total !== null && total > posts.length && (
+          <span className="text-xs text-amber-600">{total} total</span>
+        )}
+      </div>
 
       {total === 0 ? (
-        <div className="rounded-lg border border-amber-800/20 bg-amber-50/80 px-5 py-6 text-sm text-amber-700">
+        <p className="text-sm text-amber-700 italic">
           Follow characters, kinships, or users to see their content here.
-        </div>
+        </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <FeedCard key={post.post_id} post={post} />
+        <div className="rounded-lg border border-amber-800/20 bg-amber-50/50 py-1">
+          {posts.map((post, i) => (
+            <div key={post.post_id}>
+              {i > 0 && <div className="mx-3 border-t border-amber-100" />}
+              <FeedRow post={post} />
+            </div>
           ))}
         </div>
       )}
