@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, X } from 'lucide-react';
 import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
+import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 
 interface MediaFormProps {
@@ -34,6 +35,9 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
+  const [authorId, setAuthorId] = useState('');
+
+  const { profiles: authorableProfiles, isLoading: isLoadingProfiles } = useAuthorableProfiles();
 
   const { uploadedImages, isUploading, uploadError, fileInputRef, handleFileSelect, handleRemoveImage } =
     useImageUpload({ maxImages: 10 });
@@ -81,6 +85,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       const postData = {
         post_type_id: 3, // Media
         title: data.title,
+        primary_author_profile_id: authorId ? parseInt(authorId, 10) : undefined,
         content: {
           images: uploadedImages.map((img) => ({
             filename: img.filename,
@@ -131,6 +136,34 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
           <p className="text-sm text-red-800">{displayError}</p>
         </div>
       )}
+
+      {/* Author Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="media_author" className="text-amber-900 font-semibold">
+          Author (Optional)
+        </Label>
+        {isLoadingProfiles ? (
+          <div className="text-sm text-amber-700">Loading your profiles...</div>
+        ) : (
+          <>
+            <select
+              id="media_author"
+              value={authorId}
+              onChange={(e) => setAuthorId(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+            >
+              <option value="">No author</option>
+              {authorableProfiles.map((profile) => (
+                <option key={profile.profile_id} value={profile.profile_id}>
+                  {profile.name} ({profile.type_label})
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-amber-700">Attribute this media to one of your characters or kinships.</p>
+          </>
+        )}
+      </div>
 
       {/* Image Upload */}
       <div className="space-y-2">
