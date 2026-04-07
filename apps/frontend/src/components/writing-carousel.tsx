@@ -41,7 +41,13 @@ function WritingCard({ post }: { post: PublicPost }) {
           )}
           <span className="flex items-center gap-1">
             <User className="h-3 w-3" aria-hidden="true" />
-            <span className="max-w-[80px] truncate">{post.username}</span>
+            <Link
+              href={`/users/${post.username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-[80px] truncate hover:underline"
+            >
+              {post.username}
+            </Link>
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" aria-hidden="true" />

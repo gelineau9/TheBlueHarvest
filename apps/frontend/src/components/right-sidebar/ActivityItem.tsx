@@ -5,6 +5,7 @@ import Link from 'next/link';
 interface PostActivityItemProps {
   kind: 'post' | 'profile';
   username: string;
+  usernameHref: string;
   action: string;
   target: string;
   targetHref: string;
@@ -46,7 +47,12 @@ export function ActivityItem(props: ActivityItemProps) {
               </>
             ) : (
               <>
-                <span className="font-medium text-amber-900">{props.username}</span> {props.action}{' '}
+                <Link
+                  href={props.usernameHref}
+                  className="font-medium text-amber-900 hover:underline"
+                >
+                  {props.username}
+                </Link>{' '}{props.action}{' '}
                 <Link href={props.targetHref} className="font-medium text-amber-900 hover:underline">
                   {props.target}
                 </Link>

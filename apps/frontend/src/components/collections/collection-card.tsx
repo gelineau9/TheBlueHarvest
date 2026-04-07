@@ -92,7 +92,13 @@ export function CollectionCard({
                 {/* Account username */}
                 <div className="flex items-center gap-1">
                   <User className="w-3 h-3" />
-                  <span className="truncate max-w-[80px]">@{username}</span>
+                  <Link
+                    href={`/users/${username}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="truncate max-w-[80px] hover:underline"
+                  >
+                    @{username}
+                  </Link>
                 </div>
 
                 {/* Post count */}

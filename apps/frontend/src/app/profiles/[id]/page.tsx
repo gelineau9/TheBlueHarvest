@@ -669,7 +669,12 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             <div className="flex items-center gap-6 text-sm text-amber-700">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                <span>Created by {profile.username}</span>
+                <span>
+                  Created by{' '}
+                  <Link href={`/users/${profile.username}`} className="hover:underline font-medium">
+                    {profile.username}
+                  </Link>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -1479,9 +1484,17 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
                 >
                   <div>
-                    <span className="font-medium text-amber-900">{editor.username}</span>
+                    <Link href={`/users/${editor.username}`} className="font-medium text-amber-900 hover:underline">
+                      {editor.username}
+                    </Link>
                     {editor.invited_by_username && (
-                      <span className="text-sm text-amber-600 ml-2">(invited by {editor.invited_by_username})</span>
+                      <span className="text-sm text-amber-600 ml-2">
+                        (invited by{' '}
+                        <Link href={`/users/${editor.invited_by_username}`} className="hover:underline">
+                          {editor.invited_by_username}
+                        </Link>
+                        )
+                      </span>
                     )}
                   </div>
                   {(profile.is_owner || profile.can_edit) && (

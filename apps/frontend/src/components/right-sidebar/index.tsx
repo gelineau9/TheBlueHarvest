@@ -169,6 +169,7 @@ export function RightSidebar() {
                     key={`profile-${item.id}`}
                     kind="profile"
                     username={item.username}
+                    usernameHref={`/users/${item.username}`}
                     action={`created a ${item.type_name.toLowerCase()}`}
                     target={item.title}
                     targetHref={`/profiles/${item.id}`}
@@ -182,6 +183,7 @@ export function RightSidebar() {
                   key={`post-${item.id}`}
                   kind="post"
                   username={item.username}
+                  usernameHref={`/users/${item.username}`}
                   action={`posted a new ${item.type_name.toLowerCase()}`}
                   target={`"${item.title}"`}
                   targetHref={`/posts/${item.id}`}

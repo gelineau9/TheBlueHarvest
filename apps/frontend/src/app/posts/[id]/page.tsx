@@ -376,7 +376,12 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
           {/* Account owner info (smaller, secondary) */}
           <div className="mt-4 pt-4 border-t border-amber-200 flex items-center justify-between text-xs text-amber-600">
-            <span>Posted by account: {post.username}</span>
+            <span>
+                Posted by account:{' '}
+                <Link href={`/users/${post.username}`} className="hover:underline font-medium">
+                  {post.username}
+                </Link>
+              </span>
             <LikeButton
               type="post"
               id={post.post_id}
@@ -588,7 +593,9 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                   >
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-amber-700" />
-                      <span className="text-amber-900 font-medium">{editor.username}</span>
+                      <Link href={`/users/${editor.username}`} className="text-amber-900 font-medium hover:underline">
+                        {editor.username}
+                      </Link>
                       {editor.is_owner && (
                         <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">
                           Creator
