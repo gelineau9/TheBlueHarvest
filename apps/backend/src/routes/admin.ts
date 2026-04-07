@@ -128,25 +128,23 @@ router.get(
     try {
       const db = await getPool();
 
-      const searchFilter = search
-        ? sql.fragment`AND a.username ILIKE ${'%' + search + '%'}`
-        : sql.fragment``;
+      const searchFilter = search ? sql.fragment`AND a.username ILIKE ${'%' + search + '%'}` : sql.fragment``;
 
-      const roleFilter = role !== undefined
-        ? sql.fragment`AND a.user_role_id = ${role}`
-        : sql.fragment``;
+      const roleFilter = role !== undefined ? sql.fragment`AND a.user_role_id = ${role}` : sql.fragment``;
 
       const statusFilter =
-        status === 'banned'    ? sql.fragment`AND a.is_banned = true` :
-        status === 'suspended' ? sql.fragment`AND a.suspended_until IS NOT NULL AND a.suspended_until > NOW()` :
-        status === 'deleted'   ? sql.fragment`AND a.deleted = true` :
-        status === 'active'    ? sql.fragment`AND a.is_banned = false AND (a.suspended_until IS NULL OR a.suspended_until <= NOW()) AND a.deleted = false` :
-        sql.fragment``;
+        status === 'banned'
+          ? sql.fragment`AND a.is_banned = true`
+          : status === 'suspended'
+            ? sql.fragment`AND a.suspended_until IS NOT NULL AND a.suspended_until > NOW()`
+            : status === 'deleted'
+              ? sql.fragment`AND a.deleted = true`
+              : status === 'active'
+                ? sql.fragment`AND a.is_banned = false AND (a.suspended_until IS NULL OR a.suspended_until <= NOW()) AND a.deleted = false`
+                : sql.fragment``;
 
       // For deleted filter we need to include deleted rows; otherwise exclude them.
-      const deletedBaseFilter = status === 'deleted'
-        ? sql.fragment``
-        : sql.fragment`AND a.deleted = false`;
+      const deletedBaseFilter = status === 'deleted' ? sql.fragment`` : sql.fragment`AND a.deleted = false`;
 
       const joinedAfterFilter = joinedAfter
         ? sql.fragment`AND a.created_at >= ${joinedAfter}::timestamptz`
@@ -1090,45 +1088,50 @@ router.post(
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/featured-posts/:postId
 // ─────────────────────────────────────────────────────────
-router.delete('/featured-posts/:postId', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const postId = parseInt(String(req.params.postId));
-  if (isNaN(postId)) {
-    res.status(400).json({ error: 'Invalid post ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const FeaturedExistsSchema = z.object({ featured_post_id: z.number() });
-    const existing = await db.maybeOne(
-      sql.type(FeaturedExistsSchema)`
-        SELECT featured_post_id FROM featured_posts WHERE post_id = ${postId}
-      `,
-    );
-
-    if (!existing) {
-      res.status(404).json({ error: 'Post is not currently featured' });
+router.delete(
+  '/featured-posts/:postId',
+  authenticateToken,
+  requireRole(2, 3),
+  async (req: AuthRequest, res: Response) => {
+    const postId = parseInt(String(req.params.postId));
+    if (isNaN(postId)) {
+      res.status(400).json({ error: 'Invalid post ID' });
       return;
     }
 
-    await db.query(sql.type(z.object({}))`
+    try {
+      const db = await getPool();
+
+      const FeaturedExistsSchema = z.object({ featured_post_id: z.number() });
+      const existing = await db.maybeOne(
+        sql.type(FeaturedExistsSchema)`
+        SELECT featured_post_id FROM featured_posts WHERE post_id = ${postId}
+      `,
+      );
+
+      if (!existing) {
+        res.status(404).json({ error: 'Post is not currently featured' });
+        return;
+      }
+
+      await db.query(sql.type(z.object({}))`
       DELETE FROM featured_posts WHERE post_id = ${postId}
     `);
 
-    await writeAuditLog({
-      actorAccountId: req.userId!,
-      actionType: 'unfeature_post',
-      targetType: 'post',
-      targetId: postId,
-    });
+      await writeAuditLog({
+        actorAccountId: req.userId!,
+        actionType: 'unfeature_post',
+        targetType: 'post',
+        targetId: postId,
+      });
 
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error unfeaturing post:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error unfeaturing post:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // GET /api/admin/audit-log
@@ -1156,18 +1159,11 @@ router.get(
     const targetType = req.query.target_type as string | undefined;
 
     // Moderators only see their own entries
-    const actorFilter =
-      req.userRoleId === 3
-        ? sql.fragment`AND al.actor_account_id = ${req.userId!}`
-        : sql.fragment``;
+    const actorFilter = req.userRoleId === 3 ? sql.fragment`AND al.actor_account_id = ${req.userId!}` : sql.fragment``;
 
-    const actionTypeFilter = actionType
-      ? sql.fragment`AND al.action_type = ${actionType}`
-      : sql.fragment``;
+    const actionTypeFilter = actionType ? sql.fragment`AND al.action_type = ${actionType}` : sql.fragment``;
 
-    const targetTypeFilter = targetType
-      ? sql.fragment`AND al.target_type = ${targetType}`
-      : sql.fragment``;
+    const targetTypeFilter = targetType ? sql.fragment`AND al.target_type = ${targetType}` : sql.fragment``;
 
     try {
       const db = await getPool();

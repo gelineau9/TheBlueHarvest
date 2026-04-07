@@ -5,18 +5,55 @@
  * Returns content that the authenticated user owns or can edit.
  *
  * Routes:
- *   GET /api/users/me/posts       - List user's posts (owned or editor)
- *   GET /api/users/me/collections - List user's collections (owned or editor)
- *   GET /api/users/me/profiles    - List user's profiles (owned or editor)
+ *   GET /api/users/public/:username - Public account info (no auth)
+ *   GET /api/users/me/posts         - List user's posts (owned or editor)
+ *   GET /api/users/me/collections   - List user's collections (owned or editor)
+ *   GET /api/users/me/profiles      - List user's profiles (owned or editor)
  */
 
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+// ─── GET /api/users/public/:username ─────────────────────────────────────────
+// Public — no auth required. Returns safe public fields only.
+
+const PublicAccountSchema = z.object({
+  account_id: z.number(),
+  username: z.string(),
+  created_at: z.string(),
+});
+
+router.get('/public/:username', async (req: Request, res: Response) => {
+  const { username } = req.params;
+
+  try {
+    const db = await getPool();
+
+    const account = await db.maybeOne(
+      sql.type(PublicAccountSchema)`
+        SELECT account_id, username, created_at::text
+        FROM accounts
+        WHERE username = ${username}
+          AND is_banned = false
+      `,
+    );
+
+    if (!account) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json(account);
+  } catch (err) {
+    console.error('Public user fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // GET /api/users/me/posts - List user's posts with cursor pagination
 router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Response) => {

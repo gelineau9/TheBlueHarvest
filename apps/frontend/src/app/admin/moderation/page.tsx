@@ -52,9 +52,7 @@ const PROFILE_TYPE_LABELS: Record<number, string> = {
 type ActiveTab = 'posts' | 'profiles' | 'deleted' | 'featured';
 
 function TypeBadge({ label }: { label: string }) {
-  return (
-    <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">{label}</span>
-  );
+  return <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">{label}</span>;
 }
 
 export default function AdminModerationPage() {
@@ -193,7 +191,11 @@ export default function AdminModerationPage() {
         return;
       }
       setPosts((prev) => prev.filter((p) => p.post_id !== postId));
-      setSelectedPosts((prev) => { const n = new Set(prev); n.delete(postId); return n; });
+      setSelectedPosts((prev) => {
+        const n = new Set(prev);
+        n.delete(postId);
+        return n;
+      });
       setConfirmDeletePostId(null);
     } catch {
       setActionError('Failed to delete post.');
@@ -210,7 +212,11 @@ export default function AdminModerationPage() {
         return;
       }
       setProfiles((prev) => prev.filter((p) => p.profile_id !== profileId));
-      setSelectedProfiles((prev) => { const n = new Set(prev); n.delete(profileId); return n; });
+      setSelectedProfiles((prev) => {
+        const n = new Set(prev);
+        n.delete(profileId);
+        return n;
+      });
       setConfirmDeleteProfileId(null);
     } catch {
       setActionError('Failed to delete profile.');
@@ -400,19 +406,14 @@ export default function AdminModerationPage() {
         <div>
           {selectedPosts.size > 0 && (
             <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 border border-amber-200 rounded">
-              <span className="text-sm text-amber-800">
-                {selectedPosts.size} selected
-              </span>
+              <span className="text-sm text-amber-800">{selectedPosts.size} selected</span>
               <button
                 onClick={handleBulkDeletePosts}
                 className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
               >
                 Delete Selected
               </button>
-              <button
-                onClick={() => setSelectedPosts(new Set())}
-                className="text-xs text-amber-700 hover:underline"
-              >
+              <button onClick={() => setSelectedPosts(new Set())} className="text-xs text-amber-700 hover:underline">
                 Clear
               </button>
             </div>
@@ -450,9 +451,7 @@ export default function AdminModerationPage() {
                       </td>
                       <td className="px-4 py-2 text-amber-900 font-medium">{post.title}</td>
                       <td className="px-4 py-2">
-                        <TypeBadge
-                          label={POST_TYPE_LABELS[post.post_type_id] ?? `Type ${post.post_type_id}`}
-                        />
+                        <TypeBadge label={POST_TYPE_LABELS[post.post_type_id] ?? `Type ${post.post_type_id}`} />
                       </td>
                       <td className="px-4 py-2 text-amber-700">{post.username}</td>
                       <td className="px-4 py-2 text-xs text-amber-600">
@@ -514,19 +513,14 @@ export default function AdminModerationPage() {
         <div>
           {selectedProfiles.size > 0 && (
             <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 border border-amber-200 rounded">
-              <span className="text-sm text-amber-800">
-                {selectedProfiles.size} selected
-              </span>
+              <span className="text-sm text-amber-800">{selectedProfiles.size} selected</span>
               <button
                 onClick={handleBulkDeleteProfiles}
                 className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
               >
                 Delete Selected
               </button>
-              <button
-                onClick={() => setSelectedProfiles(new Set())}
-                className="text-xs text-amber-700 hover:underline"
-              >
+              <button onClick={() => setSelectedProfiles(new Set())} className="text-xs text-amber-700 hover:underline">
                 Clear
               </button>
             </div>
@@ -565,10 +559,7 @@ export default function AdminModerationPage() {
                       <td className="px-4 py-2 text-amber-900 font-medium">{profile.name}</td>
                       <td className="px-4 py-2">
                         <TypeBadge
-                          label={
-                            PROFILE_TYPE_LABELS[profile.profile_type_id] ??
-                            `Type ${profile.profile_type_id}`
-                          }
+                          label={PROFILE_TYPE_LABELS[profile.profile_type_id] ?? `Type ${profile.profile_type_id}`}
                         />
                       </td>
                       <td className="px-4 py-2 text-amber-700">{profile.username}</td>
@@ -585,10 +576,7 @@ export default function AdminModerationPage() {
                       </td>
                     </tr>
                     {confirmDeleteProfileId === profile.profile_id && (
-                      <tr
-                        key={`confirm-profile-${profile.profile_id}`}
-                        className="bg-red-50 border-b border-amber-100"
-                      >
+                      <tr key={`confirm-profile-${profile.profile_id}`} className="bg-red-50 border-b border-amber-100">
                         <td colSpan={6} className="px-4 py-3">
                           <p className="text-xs text-red-700 mb-2">
                             {isAdmin
@@ -635,9 +623,7 @@ export default function AdminModerationPage() {
           {deletedLoading && <p className="text-sm text-amber-700">Loading...</p>}
 
           <div>
-            <h3 className="text-sm font-semibold text-amber-800 mb-2">
-              Soft-deleted Posts ({deletedPosts.length})
-            </h3>
+            <h3 className="text-sm font-semibold text-amber-800 mb-2">Soft-deleted Posts ({deletedPosts.length})</h3>
             {deletedPosts.length === 0 && !deletedLoading ? (
               <p className="text-sm text-amber-500">None.</p>
             ) : (
@@ -648,9 +634,7 @@ export default function AdminModerationPage() {
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Title</th>
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Author</th>
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Date</th>
-                      {isAdmin && (
-                        <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
-                      )}
+                      {isAdmin && <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -693,9 +677,7 @@ export default function AdminModerationPage() {
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Name</th>
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Account</th>
                       <th className="text-left px-4 py-2 text-amber-700 font-medium">Date</th>
-                      {isAdmin && (
-                        <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
-                      )}
+                      {isAdmin && <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -774,9 +756,7 @@ export default function AdminModerationPage() {
                     <th className="text-left px-4 py-2 text-amber-700 font-medium">Post ID</th>
                     <th className="text-left px-4 py-2 text-amber-700 font-medium">Title</th>
                     <th className="text-left px-4 py-2 text-amber-700 font-medium">Featured</th>
-                    {isAdmin && (
-                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
-                    )}
+                    {isAdmin && <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>

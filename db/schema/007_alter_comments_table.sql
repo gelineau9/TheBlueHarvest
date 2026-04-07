@@ -2,7 +2,7 @@
 -- Adds account_id, parent_comment_id for threading, and updates column names
 
 -- Drop the existing comments table (it only has seed data)
-DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS comments CASCADE;
 
 -- Recreate with full schema
 CREATE TABLE comments (

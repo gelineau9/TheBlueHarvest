@@ -12,10 +12,9 @@ export async function GET(request: NextRequest) {
   const queryString = searchParams.toString();
 
   try {
-    const response = await fetch(
-      `${API_CONFIG.BACKEND_URL}/api/admin/users${queryString ? `?${queryString}` : ''}`,
-      { headers: { Authorization: `Bearer ${authToken}` } },
-    );
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/admin/users${queryString ? `?${queryString}` : ''}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });

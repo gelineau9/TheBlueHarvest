@@ -124,12 +124,7 @@ export default function AdminUsersPage() {
     }, 300);
   }
 
-  function handleFilterChange(
-    role: string,
-    status: string,
-    after: string,
-    before: string,
-  ) {
+  function handleFilterChange(role: string, status: string, after: string, before: string) {
     setOffset(0);
     fetchUsers(0, search, true, role, status, after, before);
   }
@@ -280,9 +275,7 @@ export default function AdminUsersPage() {
         ...prev,
         [forUserId]: {
           ...prev[forUserId],
-          posts: prev[forUserId].posts.map((p) =>
-            p.post_id === postId ? { ...p, deleted: true } : p,
-          ),
+          posts: prev[forUserId].posts.map((p) => (p.post_id === postId ? { ...p, deleted: true } : p)),
         },
       }));
     } catch {
@@ -303,9 +296,7 @@ export default function AdminUsersPage() {
         ...prev,
         [forUserId]: {
           ...prev[forUserId],
-          profiles: prev[forUserId].profiles.map((p) =>
-            p.profile_id === profileId ? { ...p, deleted: true } : p,
-          ),
+          profiles: prev[forUserId].profiles.map((p) => (p.profile_id === profileId ? { ...p, deleted: true } : p)),
         },
       }));
     } catch {
@@ -326,9 +317,7 @@ export default function AdminUsersPage() {
         ...prev,
         [forUserId]: {
           ...prev[forUserId],
-          comments: prev[forUserId].comments.map((c) =>
-            c.comment_id === commentId ? { ...c, is_deleted: true } : c,
-          ),
+          comments: prev[forUserId].comments.map((c) => (c.comment_id === commentId ? { ...c, is_deleted: true } : c)),
         },
       }));
     } catch {
@@ -434,17 +423,13 @@ export default function AdminUsersPage() {
                 <tr key={user.account_id} className="border-b border-amber-100 last:border-0">
                   <td className="px-4 py-2 text-amber-900 font-medium">
                     {user.username}
-                    {user.deleted && (
-                      <span className="ml-2 text-xs text-amber-500 italic">(deleted)</span>
-                    )}
+                    {user.deleted && <span className="ml-2 text-xs text-amber-500 italic">(deleted)</span>}
                   </td>
                   <td className="px-4 py-2">
                     {isAdmin && !user.deleted ? (
                       <select
                         value={user.user_role_id}
-                        onChange={(e) =>
-                          handleRoleChange(user.account_id, parseInt(e.target.value))
-                        }
+                        onChange={(e) => handleRoleChange(user.account_id, parseInt(e.target.value))}
                         className="text-sm border border-amber-300 rounded px-2 py-1 bg-white text-amber-800"
                       >
                         <option value={1}>User</option>
@@ -457,22 +442,16 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-2 flex flex-wrap gap-1">
                     {user.is_banned && (
-                      <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">
-                        Banned
-                      </span>
+                      <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full">Banned</span>
                     )}
                     {isSuspended(user.suspended_until) && (
-                      <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">
-                        Suspended
-                      </span>
+                      <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full">Suspended</span>
                     )}
                     {!user.is_banned && !isSuspended(user.suspended_until) && !user.deleted && (
                       <span className="text-xs text-amber-500">Active</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-xs text-amber-600">
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </td>
+                  <td className="px-4 py-2 text-xs text-amber-600">{new Date(user.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-2">
                     <button
                       onClick={() => handleViewContent(user.account_id)}
@@ -608,8 +587,8 @@ export default function AdminUsersPage() {
                   <tr key={`delete-${user.account_id}`} className="bg-red-50 border-b border-amber-100">
                     <td colSpan={colSpan} className="px-4 py-3">
                       <p className="text-xs text-red-700 font-medium mb-2">
-                        Soft-delete account <strong>{user.username}</strong> and all their content?
-                        This cannot be undone from the UI.
+                        Soft-delete account <strong>{user.username}</strong> and all their content? This cannot be
+                        undone from the UI.
                       </p>
                       <div className="flex gap-2">
                         <button

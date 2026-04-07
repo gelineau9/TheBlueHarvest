@@ -50,6 +50,13 @@ export interface CharacterProfile {
   name: string;
 }
 
+export interface AuthorableProfile {
+  profile_id: number;
+  name: string;
+  profile_type_id: number;
+  type_label: string;
+}
+
 // Post type constants
 export const POST_TYPES = {
   WRITING: 1,
@@ -85,9 +92,13 @@ interface UsePostEditReturn {
   uploadImages: (files: FileList, maxImages?: number) => Promise<UploadedImage[]>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 
-  // Characters (for event contact dropdown)
+  // Characters (type 1 only — for event contact dropdown)
   characters: CharacterProfile[];
   charactersLoaded: boolean;
+
+  // Authorable profiles (type 1 + 3 — for post author dropdowns)
+  authorableProfiles: AuthorableProfile[];
+  authorableProfilesLoaded: boolean;
 
   // Actions
   savePost: (
@@ -118,7 +129,10 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
   const [characters, setCharacters] = useState<CharacterProfile[]>([]);
   const [charactersLoaded, setCharactersLoaded] = useState(false);
 
-  // Fetch characters for event contact dropdown
+  const [authorableProfiles, setAuthorableProfiles] = useState<AuthorableProfile[]>([]);
+  const [authorableProfilesLoaded, setAuthorableProfilesLoaded] = useState(false);
+
+  // Fetch characters (type 1 only) for event contact dropdown
   useEffect(() => {
     const fetchCharacters = async () => {
       try {
@@ -136,6 +150,32 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
     };
 
     fetchCharacters();
+  }, []);
+
+  // Fetch authorable profiles (type 1 + 3) for post author dropdowns
+  useEffect(() => {
+    const fetchAuthorableProfiles = async () => {
+      try {
+        const [charRes, kinRes] = await Promise.all([fetch('/api/profiles?type=1'), fetch('/api/profiles?type=3')]);
+        if (charRes.ok && kinRes.ok) {
+          const charData = await charRes.json();
+          const kinData = await kinRes.json();
+          const chars: AuthorableProfile[] = (Array.isArray(charData) ? charData : charData.profiles || []).map(
+            (p: CharacterProfile) => ({ ...p, profile_type_id: 1, type_label: 'Character' }),
+          );
+          const kins: AuthorableProfile[] = (Array.isArray(kinData) ? kinData : kinData.profiles || []).map(
+            (p: CharacterProfile) => ({ ...p, profile_type_id: 3, type_label: 'Kinship' }),
+          );
+          setAuthorableProfiles([...chars, ...kins]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch authorable profiles:', err);
+      } finally {
+        setAuthorableProfilesLoaded(true);
+      }
+    };
+
+    fetchAuthorableProfiles();
   }, []);
 
   // Fetch post data
@@ -283,6 +323,8 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
     fileInputRef,
     characters,
     charactersLoaded,
+    authorableProfiles,
+    authorableProfilesLoaded,
     savePost,
     navigateBack,
     router,

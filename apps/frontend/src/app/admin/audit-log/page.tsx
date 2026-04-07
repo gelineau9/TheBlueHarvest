@@ -139,7 +139,9 @@ export default function AdminAuditLogPage() {
         >
           <option value="">All actions</option>
           {ACTION_TYPE_OPTIONS.map((a) => (
-            <option key={a} value={a}>{a}</option>
+            <option key={a} value={a}>
+              {a}
+            </option>
           ))}
         </select>
 
@@ -153,7 +155,9 @@ export default function AdminAuditLogPage() {
         >
           <option value="">All targets</option>
           {TARGET_TYPE_OPTIONS.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t}
+            </option>
           ))}
         </select>
 
@@ -198,13 +202,9 @@ export default function AdminAuditLogPage() {
                     <td className="px-4 py-2 text-xs text-amber-600 whitespace-nowrap">
                       {new Date(entry.created_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2 text-amber-900">
-                      {entry.actor_username ?? 'System'}
-                    </td>
+                    <td className="px-4 py-2 text-amber-900">{entry.actor_username ?? 'System'}</td>
                     <td className="px-4 py-2">
-                      <code className="text-xs bg-amber-100 px-1 py-0.5 rounded">
-                        {entry.action_type}
-                      </code>
+                      <code className="text-xs bg-amber-100 px-1 py-0.5 rounded">{entry.action_type}</code>
                     </td>
                     <td className="px-4 py-2 text-xs text-amber-700">
                       {entry.target_type && entry.target_id ? (

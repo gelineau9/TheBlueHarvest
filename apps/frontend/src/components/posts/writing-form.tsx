@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
+import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 
 interface WritingFormProps {
@@ -24,7 +24,11 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
 
-  const { characters, isLoading: isLoadingCharacters, error: charactersError } = useCharacterProfiles();
+  const {
+    profiles: authorableProfiles,
+    isLoading: isLoadingCharacters,
+    error: charactersError,
+  } = useAuthorableProfiles();
 
   const {
     register,
@@ -105,21 +109,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
           Author (Optional)
         </Label>
         {isLoadingCharacters ? (
-          <div className="text-sm text-amber-700">Loading your characters...</div>
-        ) : characters.length === 0 ? (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-4">
-            <p className="text-sm text-amber-800 mb-2">
-              You need to create a character first before you can write a story.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => (window.location.href = '/profiles/create/character')}
-              className="border-amber-800/30 text-amber-900 hover:bg-amber-100"
-            >
-              Create a Character
-            </Button>
-          </div>
+          <div className="text-sm text-amber-700">Loading your profiles...</div>
         ) : (
           <>
             <select
@@ -135,14 +125,14 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
               disabled={isSubmitting}
               className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
             >
-              <option value="">No character author</option>
-              {characters.map((character) => (
-                <option key={character.profile_id} value={character.profile_id}>
-                  {character.name}
+              <option value="">No author</option>
+              {authorableProfiles.map((profile) => (
+                <option key={profile.profile_id} value={profile.profile_id}>
+                  {profile.name} ({profile.type_label})
                 </option>
               ))}
             </select>
-            <p className="text-sm text-amber-700">This writing will be attributed to the selected character.</p>
+            <p className="text-sm text-amber-700">Attribute this writing to one of your characters or kinships.</p>
             {errors.primary_author_profile_id && (
               <p className="text-sm text-red-600">{errors.primary_author_profile_id.message}</p>
             )}
@@ -253,7 +243,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || characters.length === 0}
+          disabled={isSubmitting}
           className="bg-amber-800 text-amber-50 hover:bg-amber-700 disabled:opacity-50"
         >
           {isSubmitting

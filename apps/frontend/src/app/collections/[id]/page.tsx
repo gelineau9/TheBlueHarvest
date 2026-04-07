@@ -380,7 +380,10 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
 
           {/* Account owner info */}
           <div className="mt-4 pt-4 border-t border-amber-200 text-xs text-amber-600">
-            Created by account: {collection.username}
+            Created by account:{' '}
+            <Link href={`/users/${collection.username}`} className="hover:underline font-medium text-amber-700">
+              {collection.username}
+            </Link>
           </div>
         </Card>
 
@@ -549,7 +552,9 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                         <User className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-medium text-amber-900">{editor.username}</span>
+                        <Link href={`/users/${editor.username}`} className="font-medium text-amber-900 hover:underline">
+                          {editor.username}
+                        </Link>
                         <p className="text-xs text-amber-600">Added {new Date(editor.added_at).toLocaleDateString()}</p>
                       </div>
                     </div>

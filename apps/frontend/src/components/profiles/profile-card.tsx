@@ -65,7 +65,13 @@ export function ProfileCard({
             <div className="space-y-1 text-sm text-amber-700">
               <div className="flex items-center gap-2">
                 <User className="w-3 h-3" />
-                <span className="truncate">{username}</span>
+                <Link
+                  href={`/users/${username}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="truncate hover:underline"
+                >
+                  {username}
+                </Link>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-3 h-3" />

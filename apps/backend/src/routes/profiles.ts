@@ -271,10 +271,15 @@ router.get('/public', async (req: Request, res: Response) => {
   const startsWithLetter =
     startsWithParam && /^[a-zA-Z]$/.test(startsWithParam.trim()) ? startsWithParam.trim().toUpperCase() : '';
 
-  // Parse parent_profile_id filter (for owned-items section on character profile pages)
+  // Parse parent_profile_id filter fragment (for items owned by a specific character)
   const parentProfileIdParam = req.query.parent_profile_id as string;
   const parentProfileIdFilter = parentProfileIdParam ? parseInt(parentProfileIdParam, 10) : null;
   const validParentProfileId = parentProfileIdFilter && !isNaN(parentProfileIdFilter) ? parentProfileIdFilter : null;
+
+  // Parse account_id filter — for listing profiles belonging to a specific account
+  const accountIdParam = req.query.account_id as string;
+  const accountIdFilter = accountIdParam ? parseInt(accountIdParam, 10) : null;
+  const validAccountId = accountIdFilter && !isNaN(accountIdFilter) ? accountIdFilter : null;
 
   try {
     const db = await getPool();
@@ -321,6 +326,9 @@ router.get('/public', async (req: Request, res: Response) => {
       ? sql.fragment`AND p.parent_profile_id = ${validParentProfileId}`
       : sql.fragment``;
 
+    // Build account_id filter fragment
+    const accountFilterFragment = validAccountId ? sql.fragment`AND p.account_id = ${validAccountId}` : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -351,6 +359,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${searchFilterFragment}
       ${startsWithFilterFragment}
       ${parentProfileFilterFragment}
+      ${accountFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -368,6 +377,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${searchFilterFragment}
       ${startsWithFilterFragment}
       ${parentProfileFilterFragment}
+      ${accountFilterFragment}
     `,
     );
 

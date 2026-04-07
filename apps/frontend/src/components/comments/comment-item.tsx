@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { User, Pencil, X, Check, Trash2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -150,8 +151,20 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-amber-900">{displayName}</span>
-              {isCharacterAttributed && <span className="text-xs text-amber-600">({comment.username})</span>}
+              <span className="font-semibold text-amber-900">
+                {isCharacterAttributed ? (
+                  displayName
+                ) : (
+                  <Link href={`/users/${comment.username}`} className="hover:underline">
+                    {displayName}
+                  </Link>
+                )}
+              </span>
+              {isCharacterAttributed && (
+                <Link href={`/users/${comment.username}`} className="text-xs text-amber-600 hover:underline">
+                  ({comment.username})
+                </Link>
+              )}
               <span className="text-xs text-amber-500">{formattedDate}</span>
               {isEdited && <span className="text-xs text-amber-500 italic">(edited)</span>}
             </div>

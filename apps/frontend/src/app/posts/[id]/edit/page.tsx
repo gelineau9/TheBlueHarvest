@@ -48,6 +48,8 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     router,
     characters,
     charactersLoaded,
+    authorableProfiles,
+    authorableProfilesLoaded,
   } = usePostEdit({ postId: id });
 
   // ── Shared fields ──────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
   // ── Populate form when post loads ─────────────────────────────────────────
   useEffect(() => {
-    if (!post || !charactersLoaded) return;
+    if (!post || !charactersLoaded || !authorableProfilesLoaded) return;
 
     const t = post.title || '';
     const pub = post.is_published !== false;
@@ -122,12 +124,14 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     } else if (type === POST_TYPES.ART || type === POST_TYPES.MEDIA) {
       initialImages = (post.content?.images as UploadedImage[]) || [];
       initialDescription = post.content?.description || '';
+      initialAuthorId = primaryAuthor?.profile_id?.toString() || '';
     } else if (type === POST_TYPES.EVENT) {
       initialHeaderImage = (post.content?.headerImage as UploadedImage) || null;
       initialDescription = post.content?.description || '';
       initialLocation = post.content?.location || '';
       initialMaxAttendees = post.content?.maxAttendees?.toString() || '';
       initialContactProfileId = post.content?.contactProfileId?.toString() || '';
+      initialAuthorId = primaryAuthor?.profile_id?.toString() || '';
       if (post.content?.eventDateTime) {
         const utc = new Date(post.content.eventDateTime);
         initialEventDate = utc.toLocaleDateString('en-CA');
@@ -177,7 +181,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       contactProfileId: initialContactProfileId,
       featuredProfiles: initialFeatured,
     });
-  }, [post, charactersLoaded]);
+  }, [post, charactersLoaded, authorableProfilesLoaded]);
 
   const isDirty =
     title !== originalValues.title ||
@@ -239,6 +243,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         return;
       }
       content = { description, images, tags };
+      authorProfileId = authorId ? parseInt(authorId, 10) : null;
     } else if (type === POST_TYPES.EVENT) {
       if (eventDate && eventTime) {
         // Validate combined datetime in local timezone against right now
@@ -273,6 +278,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         maxAttendees: maxAttendees ? parseInt(maxAttendees, 10) : undefined,
         contactProfileId: contactProfileId ? parseInt(contactProfileId, 10) : undefined,
       };
+      authorProfileId = authorId ? parseInt(authorId, 10) : null;
     }
 
     const success = await savePost(title, content, authorProfileId, isPublished);
@@ -467,7 +473,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
               <>
                 <div className="space-y-2">
                   <Label htmlFor="authorId" className="text-amber-900 font-semibold">
-                    Author Character (Optional)
+                    Author (Optional)
                   </Label>
                   <select
                     id="authorId"
@@ -475,14 +481,16 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                     onChange={(e) => setAuthorId(e.target.value)}
                     className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
                   >
-                    <option value="">No character author</option>
-                    {characters.map((c) => (
-                      <option key={c.profile_id} value={String(c.profile_id)}>
-                        {c.name}
+                    <option value="">No author</option>
+                    {authorableProfiles.map((p) => (
+                      <option key={p.profile_id} value={String(p.profile_id)}>
+                        {p.name} ({p.type_label})
                       </option>
                     ))}
                   </select>
-                  <p className="text-sm text-amber-600">Optionally attribute this writing to one of your characters.</p>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this writing to one of your characters or kinships.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="body" className="text-amber-900 font-semibold">
@@ -503,6 +511,27 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             {/* ── Art / Media fields ── */}
             {(type === POST_TYPES.ART || type === POST_TYPES.MEDIA) && (
               <>
+                <div className="space-y-2">
+                  <Label htmlFor="artMediaAuthorId" className="text-amber-900 font-semibold">
+                    Author (Optional)
+                  </Label>
+                  <select
+                    id="artMediaAuthorId"
+                    value={authorId}
+                    onChange={(e) => setAuthorId(e.target.value)}
+                    className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
+                  >
+                    <option value="">No author</option>
+                    {authorableProfiles.map((p) => (
+                      <option key={p.profile_id} value={String(p.profile_id)}>
+                        {p.name} ({p.type_label})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this post to one of your characters or kinships.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Images</Label>
                   <div
@@ -580,6 +609,27 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             {/* ── Event fields ── */}
             {type === POST_TYPES.EVENT && (
               <>
+                <div className="space-y-2">
+                  <Label htmlFor="eventAuthorId" className="text-amber-900 font-semibold">
+                    Author (Optional)
+                  </Label>
+                  <select
+                    id="eventAuthorId"
+                    value={authorId}
+                    onChange={(e) => setAuthorId(e.target.value)}
+                    className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
+                  >
+                    <option value="">No author</option>
+                    {authorableProfiles.map((p) => (
+                      <option key={p.profile_id} value={String(p.profile_id)}>
+                        {p.name} ({p.type_label})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-amber-600">
+                    Optionally attribute this event to one of your characters or kinships.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
                   {headerImage ? (

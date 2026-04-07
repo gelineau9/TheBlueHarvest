@@ -33,6 +33,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { useAuth } from '@/components/auth/auth-provider';
+import { FollowButton } from '@/components/follows/FollowButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,11 +193,16 @@ function ItemCard({ item }: { item: ItemProfile }) {
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const { isLoggedIn, accountId } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followCheckDone, setFollowCheckDone] = useState(false);
 
   // Editor management
   const [editors, setEditors] = useState<Editor[]>([]);
@@ -247,6 +254,29 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     };
     fetchProfile();
   }, [id]);
+
+  // ── Follow check ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!profile) return;
+    if (!isLoggedIn) return;
+    if (profile.account_id === accountId) return;
+    if (profile.profile_type_id !== 1 && profile.profile_type_id !== 3) return;
+
+    const checkFollow = async () => {
+      try {
+        const res = await fetch(`/api/follows/check?profileIds=${profile.profile_id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsFollowing(data.profiles[String(profile.profile_id)] ?? false);
+        }
+      } catch {
+        // silently fail — follow button just won't render
+      } finally {
+        setFollowCheckDone(true);
+      }
+    };
+    checkFollow();
+  }, [profile?.profile_id, isLoggedIn, accountId]);
 
   // ── Fetch editors ──────────────────────────────────────────────────────────
   const fetchEditors = async () => {
@@ -622,13 +652,25 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
               )}
+              {/* Follow button — shown to logged-in users who don't own this profile */}
+              {isLoggedIn &&
+                profile.account_id !== accountId &&
+                (profile.profile_type_id === 1 || profile.profile_type_id === 3) &&
+                followCheckDone && (
+                  <FollowButton type="profile" id={profile.profile_id} initialFollowing={isFollowing} />
+                )}
             </div>
 
             {/* Created by / date */}
             <div className="flex items-center gap-6 text-sm text-amber-700">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                <span>Created by {profile.username}</span>
+                <span>
+                  Created by{' '}
+                  <Link href={`/users/${profile.username}`} className="hover:underline font-medium">
+                    {profile.username}
+                  </Link>
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -1438,9 +1480,17 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
                 >
                   <div>
-                    <span className="font-medium text-amber-900">{editor.username}</span>
+                    <Link href={`/users/${editor.username}`} className="font-medium text-amber-900 hover:underline">
+                      {editor.username}
+                    </Link>
                     {editor.invited_by_username && (
-                      <span className="text-sm text-amber-600 ml-2">(invited by {editor.invited_by_username})</span>
+                      <span className="text-sm text-amber-600 ml-2">
+                        (invited by{' '}
+                        <Link href={`/users/${editor.invited_by_username}`} className="hover:underline">
+                          {editor.invited_by_username}
+                        </Link>
+                        )
+                      </span>
                     )}
                   </div>
                   {(profile.is_owner || profile.can_edit) && (
