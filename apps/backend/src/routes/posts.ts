@@ -23,6 +23,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditPost } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
+import { writeAuditLog } from '../utils/auditLog.js';
 
 const router = Router();
 
@@ -143,6 +144,15 @@ router.post(
           };
         }
       }
+
+      // Fire-and-forget audit log
+      writeAuditLog({
+        actorAccountId: userId,
+        actionType: 'post_created',
+        targetType: 'post',
+        targetId: result.post_id,
+        metadata: { title: result.title, post_type_id: result.post_type_id },
+      });
 
       res.status(201).json(response);
     } catch (err: any) {

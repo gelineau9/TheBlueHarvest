@@ -5,6 +5,7 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditProfile } from './editors.js';
+import { writeAuditLog } from '../utils/auditLog.js';
 
 const router = Router();
 
@@ -114,6 +115,15 @@ router.post(
         RETURNING profile_id, account_id, profile_type_id, name, details, parent_profile_id, is_published, created_at::text
       `,
       );
+
+      // Fire-and-forget audit log
+      writeAuditLog({
+        actorAccountId: userId,
+        actionType: 'profile_created',
+        targetType: 'profile',
+        targetId: result.profile_id,
+        metadata: { name: result.name, profile_type_id: result.profile_type_id },
+      });
 
       res.status(201).json({
         profile_id: result.profile_id,

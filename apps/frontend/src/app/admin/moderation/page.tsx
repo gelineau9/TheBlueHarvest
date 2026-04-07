@@ -11,11 +11,27 @@ interface Post {
   created_at: string;
 }
 
+interface DeletedPost extends Post {
+  deleted: boolean;
+}
+
 interface Profile {
   profile_id: number;
   name: string;
   profile_type_id: number;
   username: string;
+  created_at: string;
+}
+
+interface DeletedProfile extends Profile {
+  deleted: boolean;
+}
+
+interface FeaturedPost {
+  featured_post_id: number;
+  post_id: number;
+  title: string;
+  display_order: number;
   created_at: string;
 }
 
@@ -33,6 +49,8 @@ const PROFILE_TYPE_LABELS: Record<number, string> = {
   5: 'Location',
 };
 
+type ActiveTab = 'posts' | 'profiles' | 'deleted' | 'featured';
+
 function TypeBadge({ label }: { label: string }) {
   return (
     <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">{label}</span>
@@ -41,13 +59,14 @@ function TypeBadge({ label }: { label: string }) {
 
 export default function AdminModerationPage() {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'posts' | 'profiles'>('posts');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('posts');
 
   // Posts state
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsOffset, setPostsOffset] = useState(0);
   const [postsHasMore, setPostsHasMore] = useState(false);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set());
   const [confirmDeletePostId, setConfirmDeletePostId] = useState<number | null>(null);
 
   // Profiles state
@@ -55,7 +74,19 @@ export default function AdminModerationPage() {
   const [profilesOffset, setProfilesOffset] = useState(0);
   const [profilesHasMore, setProfilesHasMore] = useState(false);
   const [profilesLoading, setProfilesLoading] = useState(false);
+  const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
   const [confirmDeleteProfileId, setConfirmDeleteProfileId] = useState<number | null>(null);
+
+  // Deleted content state
+  const [deletedPosts, setDeletedPosts] = useState<DeletedPost[]>([]);
+  const [deletedProfiles, setDeletedProfiles] = useState<DeletedProfile[]>([]);
+  const [deletedLoading, setDeletedLoading] = useState(false);
+
+  // Featured posts state
+  const [featuredPosts, setFeaturedPosts] = useState<FeaturedPost[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const [featurePostId, setFeaturePostId] = useState('');
+  const [featureOrder, setFeatureOrder] = useState('0');
 
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -101,6 +132,39 @@ export default function AdminModerationPage() {
     }
   }, []);
 
+  const fetchDeleted = useCallback(async () => {
+    setDeletedLoading(true);
+    try {
+      const [postsRes, profilesRes] = await Promise.all([
+        fetch('/api/admin/deleted/posts'),
+        fetch('/api/admin/deleted/profiles'),
+      ]);
+      if (postsRes.ok) {
+        const data = await postsRes.json();
+        setDeletedPosts(data.posts ?? []);
+      }
+      if (profilesRes.ok) {
+        const data = await profilesRes.json();
+        setDeletedProfiles(data.profiles ?? []);
+      }
+    } finally {
+      setDeletedLoading(false);
+    }
+  }, []);
+
+  const fetchFeatured = useCallback(async () => {
+    setFeaturedLoading(true);
+    try {
+      const res = await fetch('/api/admin/featured-posts');
+      if (res.ok) {
+        const data = await res.json();
+        setFeaturedPosts(data.featured_posts ?? []);
+      }
+    } finally {
+      setFeaturedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPosts(0, true);
   }, [fetchPosts]);
@@ -109,7 +173,15 @@ export default function AdminModerationPage() {
     if (activeTab === 'profiles' && profiles.length === 0) {
       fetchProfiles(0, true);
     }
-  }, [activeTab, profiles.length, fetchProfiles]);
+    if (activeTab === 'deleted') {
+      fetchDeleted();
+    }
+    if (activeTab === 'featured') {
+      fetchFeatured();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // -- Single delete --
 
   async function handleDeletePost(postId: number) {
     setActionError(null);
@@ -121,6 +193,7 @@ export default function AdminModerationPage() {
         return;
       }
       setPosts((prev) => prev.filter((p) => p.post_id !== postId));
+      setSelectedPosts((prev) => { const n = new Set(prev); n.delete(postId); return n; });
       setConfirmDeletePostId(null);
     } catch {
       setActionError('Failed to delete post.');
@@ -137,38 +210,225 @@ export default function AdminModerationPage() {
         return;
       }
       setProfiles((prev) => prev.filter((p) => p.profile_id !== profileId));
+      setSelectedProfiles((prev) => { const n = new Set(prev); n.delete(profileId); return n; });
       setConfirmDeleteProfileId(null);
     } catch {
       setActionError('Failed to delete profile.');
     }
   }
 
+  // -- Bulk delete --
+
+  async function handleBulkDeletePosts() {
+    if (selectedPosts.size === 0) return;
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/posts/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedPosts) }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Bulk delete failed.');
+        return;
+      }
+      setPosts((prev) => prev.filter((p) => !selectedPosts.has(p.post_id)));
+      setSelectedPosts(new Set());
+    } catch {
+      setActionError('Bulk delete failed.');
+    }
+  }
+
+  async function handleBulkDeleteProfiles() {
+    if (selectedProfiles.size === 0) return;
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/profiles/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedProfiles) }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Bulk delete failed.');
+        return;
+      }
+      setProfiles((prev) => prev.filter((p) => !selectedProfiles.has(p.profile_id)));
+      setSelectedProfiles(new Set());
+    } catch {
+      setActionError('Bulk delete failed.');
+    }
+  }
+
+  // -- Restore --
+
+  async function handleRestorePost(postId: number) {
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/posts/${postId}/restore`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Failed to restore post.');
+        return;
+      }
+      setDeletedPosts((prev) => prev.filter((p) => p.post_id !== postId));
+    } catch {
+      setActionError('Failed to restore post.');
+    }
+  }
+
+  async function handleRestoreProfile(profileId: number) {
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/profiles/${profileId}/restore`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Failed to restore profile.');
+        return;
+      }
+      setDeletedProfiles((prev) => prev.filter((p) => p.profile_id !== profileId));
+    } catch {
+      setActionError('Failed to restore profile.');
+    }
+  }
+
+  // -- Featured posts --
+
+  async function handleFeaturePost(e: React.FormEvent) {
+    e.preventDefault();
+    const postId = parseInt(featurePostId);
+    if (!postId) return;
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/featured-posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: postId, display_order: parseInt(featureOrder) || 0 }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Failed to feature post.');
+        return;
+      }
+      setFeaturePostId('');
+      setFeatureOrder('0');
+      fetchFeatured();
+    } catch {
+      setActionError('Failed to feature post.');
+    }
+  }
+
+  async function handleUnfeaturePost(postId: number) {
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/featured-posts/${postId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error ?? 'Failed to unfeature post.');
+        return;
+      }
+      setFeaturedPosts((prev) => prev.filter((fp) => fp.post_id !== postId));
+    } catch {
+      setActionError('Failed to unfeature post.');
+    }
+  }
+
+  // -- Checkbox helpers --
+
+  function togglePost(id: number) {
+    setSelectedPosts((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  function toggleProfile(id: number) {
+    setSelectedProfiles((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  function toggleAllPosts() {
+    if (selectedPosts.size === posts.length) {
+      setSelectedPosts(new Set());
+    } else {
+      setSelectedPosts(new Set(posts.map((p) => p.post_id)));
+    }
+  }
+
+  function toggleAllProfiles() {
+    if (selectedProfiles.size === profiles.length) {
+      setSelectedProfiles(new Set());
+    } else {
+      setSelectedProfiles(new Set(profiles.map((p) => p.profile_id)));
+    }
+  }
+
+  const tabs: { key: ActiveTab; label: string }[] = [
+    { key: 'posts', label: 'Posts' },
+    { key: 'profiles', label: 'Profiles' },
+    { key: 'deleted', label: 'Deleted Content' },
+    { key: 'featured', label: 'Featured Posts' },
+  ];
+
   return (
     <div>
-      <div className="flex gap-2 mb-6">
-        {(['posts', 'profiles'] as const).map((tab) => (
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {tabs.map(({ key, label }) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={key}
+            onClick={() => setActiveTab(key)}
             className={`px-4 py-1.5 text-sm font-medium rounded-md border transition-colors ${
-              activeTab === tab
+              activeTab === key
                 ? 'bg-amber-800 text-amber-50 border-amber-800'
                 : 'text-amber-800 border-amber-300 hover:bg-amber-100/80'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {label}
           </button>
         ))}
       </div>
 
       {actionError && <p className="text-red-600 text-sm mb-3">{actionError}</p>}
 
+      {/* ── Posts tab ── */}
       {activeTab === 'posts' && (
         <div>
+          {selectedPosts.size > 0 && (
+            <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 border border-amber-200 rounded">
+              <span className="text-sm text-amber-800">
+                {selectedPosts.size} selected
+              </span>
+              <button
+                onClick={handleBulkDeletePosts}
+                className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+              >
+                Delete Selected
+              </button>
+              <button
+                onClick={() => setSelectedPosts(new Set())}
+                className="text-xs text-amber-700 hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto rounded-lg border border-amber-300">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 border-b border-amber-300">
                 <tr>
+                  <th className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={posts.length > 0 && selectedPosts.size === posts.length}
+                      onChange={toggleAllPosts}
+                      className="accent-amber-700"
+                    />
+                  </th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Title</th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Type</th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Author</th>
@@ -180,6 +440,14 @@ export default function AdminModerationPage() {
                 {posts.map((post) => (
                   <>
                     <tr key={post.post_id} className="border-b border-amber-100 last:border-0">
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedPosts.has(post.post_id)}
+                          onChange={() => togglePost(post.post_id)}
+                          className="accent-amber-700"
+                        />
+                      </td>
                       <td className="px-4 py-2 text-amber-900 font-medium">{post.title}</td>
                       <td className="px-4 py-2">
                         <TypeBadge
@@ -201,7 +469,7 @@ export default function AdminModerationPage() {
                     </tr>
                     {confirmDeletePostId === post.post_id && (
                       <tr key={`confirm-post-${post.post_id}`} className="bg-red-50 border-b border-amber-100">
-                        <td colSpan={5} className="px-4 py-3">
+                        <td colSpan={6} className="px-4 py-3">
                           <p className="text-xs text-red-700 mb-2">
                             {isAdmin
                               ? 'This will hard-delete this post permanently. Are you sure?'
@@ -241,12 +509,40 @@ export default function AdminModerationPage() {
         </div>
       )}
 
+      {/* ── Profiles tab ── */}
       {activeTab === 'profiles' && (
         <div>
+          {selectedProfiles.size > 0 && (
+            <div className="flex items-center gap-3 mb-3 p-2 bg-amber-50 border border-amber-200 rounded">
+              <span className="text-sm text-amber-800">
+                {selectedProfiles.size} selected
+              </span>
+              <button
+                onClick={handleBulkDeleteProfiles}
+                className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+              >
+                Delete Selected
+              </button>
+              <button
+                onClick={() => setSelectedProfiles(new Set())}
+                className="text-xs text-amber-700 hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto rounded-lg border border-amber-300">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 border-b border-amber-300">
                 <tr>
+                  <th className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={profiles.length > 0 && selectedProfiles.size === profiles.length}
+                      onChange={toggleAllProfiles}
+                      className="accent-amber-700"
+                    />
+                  </th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Name</th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Type</th>
                   <th className="text-left px-4 py-2 text-amber-700 font-medium">Account</th>
@@ -258,6 +554,14 @@ export default function AdminModerationPage() {
                 {profiles.map((profile) => (
                   <>
                     <tr key={profile.profile_id} className="border-b border-amber-100 last:border-0">
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedProfiles.has(profile.profile_id)}
+                          onChange={() => toggleProfile(profile.profile_id)}
+                          className="accent-amber-700"
+                        />
+                      </td>
                       <td className="px-4 py-2 text-amber-900 font-medium">{profile.name}</td>
                       <td className="px-4 py-2">
                         <TypeBadge
@@ -285,7 +589,7 @@ export default function AdminModerationPage() {
                         key={`confirm-profile-${profile.profile_id}`}
                         className="bg-red-50 border-b border-amber-100"
                       >
-                        <td colSpan={5} className="px-4 py-3">
+                        <td colSpan={6} className="px-4 py-3">
                           <p className="text-xs text-red-700 mb-2">
                             {isAdmin
                               ? 'This will hard-delete this profile permanently. Are you sure?'
@@ -321,6 +625,193 @@ export default function AdminModerationPage() {
             >
               Load more
             </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Deleted Content tab ── */}
+      {activeTab === 'deleted' && (
+        <div className="space-y-6">
+          {deletedLoading && <p className="text-sm text-amber-700">Loading...</p>}
+
+          <div>
+            <h3 className="text-sm font-semibold text-amber-800 mb-2">
+              Soft-deleted Posts ({deletedPosts.length})
+            </h3>
+            {deletedPosts.length === 0 && !deletedLoading ? (
+              <p className="text-sm text-amber-500">None.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-amber-300">
+                <table className="w-full text-sm">
+                  <thead className="bg-amber-50 border-b border-amber-300">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Title</th>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Author</th>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Date</th>
+                      {isAdmin && (
+                        <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deletedPosts.map((post) => (
+                      <tr key={post.post_id} className="border-b border-amber-100 last:border-0">
+                        <td className="px-4 py-2 text-amber-700 line-through">{post.title}</td>
+                        <td className="px-4 py-2 text-amber-600">{post.username}</td>
+                        <td className="px-4 py-2 text-xs text-amber-500">
+                          {new Date(post.created_at).toLocaleDateString()}
+                        </td>
+                        {isAdmin && (
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleRestorePost(post.post_id)}
+                              className="text-xs text-green-700 hover:underline"
+                            >
+                              Restore
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-amber-800 mb-2">
+              Soft-deleted Profiles ({deletedProfiles.length})
+            </h3>
+            {deletedProfiles.length === 0 && !deletedLoading ? (
+              <p className="text-sm text-amber-500">None.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-amber-300">
+                <table className="w-full text-sm">
+                  <thead className="bg-amber-50 border-b border-amber-300">
+                    <tr>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Name</th>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Account</th>
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Date</th>
+                      {isAdmin && (
+                        <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deletedProfiles.map((profile) => (
+                      <tr key={profile.profile_id} className="border-b border-amber-100 last:border-0">
+                        <td className="px-4 py-2 text-amber-700 line-through">{profile.name}</td>
+                        <td className="px-4 py-2 text-amber-600">{profile.username}</td>
+                        <td className="px-4 py-2 text-xs text-amber-500">
+                          {new Date(profile.created_at).toLocaleDateString()}
+                        </td>
+                        {isAdmin && (
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleRestoreProfile(profile.profile_id)}
+                              className="text-xs text-green-700 hover:underline"
+                            >
+                              Restore
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Featured Posts tab ── */}
+      {activeTab === 'featured' && (
+        <div className="space-y-4">
+          {isAdmin && (
+            <form onSubmit={handleFeaturePost} className="flex flex-wrap gap-2 items-end">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-amber-700">Post ID</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={featurePostId}
+                  onChange={(e) => setFeaturePostId(e.target.value)}
+                  placeholder="e.g. 42"
+                  className="border border-amber-300 rounded px-3 py-1.5 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-amber-700">Display Order</label>
+                <input
+                  type="number"
+                  value={featureOrder}
+                  onChange={(e) => setFeatureOrder(e.target.value)}
+                  className="border border-amber-300 rounded px-3 py-1.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-amber-800 text-amber-50 text-sm px-4 py-1.5 rounded hover:bg-amber-900 transition-colors"
+              >
+                Feature Post
+              </button>
+            </form>
+          )}
+
+          {featuredLoading && <p className="text-sm text-amber-700">Loading...</p>}
+
+          {featuredPosts.length === 0 && !featuredLoading ? (
+            <p className="text-sm text-amber-500">No featured posts yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-amber-300">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 border-b border-amber-300">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-amber-700 font-medium">Order</th>
+                    <th className="text-left px-4 py-2 text-amber-700 font-medium">Post ID</th>
+                    <th className="text-left px-4 py-2 text-amber-700 font-medium">Title</th>
+                    <th className="text-left px-4 py-2 text-amber-700 font-medium">Featured</th>
+                    {isAdmin && (
+                      <th className="text-left px-4 py-2 text-amber-700 font-medium">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {featuredPosts.map((fp) => (
+                    <tr key={fp.featured_post_id} className="border-b border-amber-100 last:border-0">
+                      <td className="px-4 py-2 text-amber-700">{fp.display_order}</td>
+                      <td className="px-4 py-2 text-amber-700">
+                        <a
+                          href={`/posts/${fp.post_id}`}
+                          className="text-amber-800 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          #{fp.post_id}
+                        </a>
+                      </td>
+                      <td className="px-4 py-2 text-amber-900 font-medium">{fp.title}</td>
+                      <td className="px-4 py-2 text-xs text-amber-600">
+                        {new Date(fp.created_at).toLocaleDateString()}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-2">
+                          <button
+                            onClick={() => handleUnfeaturePost(fp.post_id)}
+                            className="text-xs text-red-700 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
