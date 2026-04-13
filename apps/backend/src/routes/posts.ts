@@ -442,6 +442,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           username: z.string(),
           like_count: z.number(),
           liked_by_me: z.boolean().nullable(),
+          is_featured: z.boolean(),
         }),
       )`
         SELECT 
@@ -449,7 +450,8 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           p.created_at::text, p.updated_at::text,
           pt.type_name, a.username,
           (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count,
-          ${postLikedByMeFragment} AS liked_by_me
+          ${postLikedByMeFragment} AS liked_by_me,
+          EXISTS (SELECT 1 FROM featured_posts fp WHERE fp.post_id = p.post_id) AS is_featured
         FROM posts p
         JOIN post_types pt ON p.post_type_id = pt.type_id
         JOIN accounts a ON p.account_id = a.account_id
@@ -540,6 +542,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_owner: isOwner,
       like_count: post.like_count,
       liked_by_me: post.liked_by_me,
+      is_featured: post.is_featured,
     });
   } catch (err) {
     console.error('Post fetch error:', err);
