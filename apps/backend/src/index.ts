@@ -19,6 +19,7 @@ import likesRoutes from './routes/likes.js';
 import followsRouter from './routes/follows.js';
 import activityRouter from './routes/activity.js';
 import adminRouter from './routes/admin.js';
+import spotlightRouter from './routes/spotlight.js';
 import {
   profileEditorRoutes,
   postEditorRoutes,
@@ -157,6 +158,7 @@ app.use('/api/likes', likesRoutes);
 app.use('/api/follows', followsRouter);
 app.use('/api/activity', activityRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/spotlight', spotlightRouter);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to the BHA Backend!' });

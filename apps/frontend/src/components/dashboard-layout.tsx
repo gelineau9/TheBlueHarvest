@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { LeftSidebar } from '@/components/left-side-bar';
 import { RightSidebar } from '@/components/right-sidebar';
 import { ProfileButton } from '@/components/profile-button';
+import { SidebarRefreshProvider } from '@/contexts/SidebarRefreshContext';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -29,6 +30,7 @@ interface DashboardLayoutProps {
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
+    <SidebarRefreshProvider>
     <div className="flex min-h-0 flex-1 flex-col bg-[#f5e6c8] font-serif text-[#3a2921]">
       {/* ── Mobile header ──────────────────────────────────────────────── */}
       <header
@@ -85,5 +87,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
       </div>
     </div>
+    </SidebarRefreshProvider>
   );
 }

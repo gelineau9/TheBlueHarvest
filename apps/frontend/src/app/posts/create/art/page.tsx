@@ -5,10 +5,12 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { ArtForm } from '@/components/posts/art-form';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 export default function CreateArtPostPage() {
   const router = useRouter();
   const { isAuthorized, isLoading } = useRequireAuth();
+  const { triggerSidebarRefresh } = useSidebarRefresh();
 
   if (isLoading) {
     return (
@@ -23,6 +25,7 @@ export default function CreateArtPostPage() {
   }
 
   const handleSuccess = (postId: number) => {
+    triggerSidebarRefresh();
     router.push(`/posts/${postId}`);
   };
 

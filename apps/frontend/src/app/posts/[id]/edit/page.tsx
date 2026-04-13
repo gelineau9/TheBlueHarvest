@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 const getMinDate = () => {
   const today = new Date();
@@ -51,6 +52,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     authorableProfiles,
     authorableProfilesLoaded,
   } = usePostEdit({ postId: id });
+  const { triggerSidebarRefresh } = useSidebarRefresh();
 
   // ── Shared fields ──────────────────────────────────────────────────────────
   const [title, setTitle] = useState('');
@@ -320,6 +322,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         contactProfileId,
         featuredProfiles,
       });
+      triggerSidebarRefresh();
       navigateBack();
     }
   };

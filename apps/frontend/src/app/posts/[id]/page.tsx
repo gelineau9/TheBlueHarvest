@@ -4,7 +4,21 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, User, Calendar, Pencil, Trash2, FileText, Clock, MapPin, Users, UserPlus, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  Calendar,
+  Pencil,
+  Trash2,
+  FileText,
+  Clock,
+  MapPin,
+  Users,
+  UserPlus,
+  X,
+  Pin,
+  PinOff,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +34,7 @@ import {
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { CommentList } from '@/components/comments/comment-list';
 import { LikeButton } from '@/components/likes/LikeButton';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 interface Author {
   profile_id: number;
@@ -73,18 +88,21 @@ interface Post {
   updated_at: string;
   can_edit?: boolean;
   is_owner?: boolean;
+  is_featured?: boolean;
   like_count: number;
   liked_by_me: boolean | null;
 }
 
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { username: currentUsername } = useAuth();
+  const { username: currentUsername, isAdmin } = useAuth();
+  const { triggerSidebarRefresh } = useSidebarRefresh();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPinning, setIsPinning] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [contactName, setContactName] = useState<string | null>(null);
@@ -206,6 +224,37 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
     }
   };
 
+  const handlePin = async () => {
+    if (!post) return;
+    setIsPinning(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      if (post.is_featured) {
+        await fetch(`/api/admin/featured-posts/${post.post_id}`, { method: 'DELETE', headers });
+      } else {
+        await fetch('/api/admin/featured-posts', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ post_id: post.post_id }),
+        });
+      }
+
+      // Re-fetch the post to get updated is_featured state
+      const response = await fetch(`/api/posts/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPost(data);
+      }
+    } catch (err) {
+      console.error('Failed to pin/unpin post:', err);
+    } finally {
+      setIsPinning(false);
+    }
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -218,6 +267,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         throw new Error(data.message || 'Failed to delete post');
       }
 
+      triggerSidebarRefresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete post');
@@ -302,6 +352,26 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
+                {isAdmin && (
+                  <Button
+                    onClick={handlePin}
+                    disabled={isPinning}
+                    variant="outline"
+                    className="border-amber-600 text-amber-800 hover:bg-amber-50"
+                  >
+                    {post.is_featured ? (
+                      <>
+                        <PinOff className="w-4 h-4 mr-2" />
+                        Unpin
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="w-4 h-4 mr-2" />
+                        Pin
+                      </>
+                    )}
+                  </Button>
+                )}
                 {post.is_owner && (
                   <Button
                     onClick={() => setShowDeleteDialog(true)}

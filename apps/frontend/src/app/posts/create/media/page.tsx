@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { MediaForm } from '@/components/posts/media-form';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 export default function CreateMediaPostPage() {
   const router = useRouter();
   const { isAuthorized, isLoading } = useRequireAuth();
+  const { triggerSidebarRefresh } = useSidebarRefresh();
 
   if (isLoading) {
     return (
@@ -23,6 +25,7 @@ export default function CreateMediaPostPage() {
   }
 
   const handleSuccess = (postId: number) => {
+    triggerSidebarRefresh();
     router.push(`/posts/${postId}`);
   };
 
