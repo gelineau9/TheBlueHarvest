@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { ActivityItem } from './ActivityItem';
 import { EventCalendar, CalendarEvent } from '@/components/events/EventCalendar';
 import { EventFeed, EventFeedItem } from '@/components/events/EventFeed';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,42 +63,46 @@ export function RightSidebar() {
   const [activityOffset, setActivityOffset] = useState(0);
 
   // Fetch upcoming events
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await fetch('/api/posts/public?post_type_id=4&limit=20&sortBy=created_at&order=desc');
-        if (response.ok) {
-          const data: PostsResponse = await response.json();
-          setEvents(data.posts);
-        }
-      } catch {
-        // Silently fail — sidebar is non-critical
-      } finally {
-        setEventsLoading(false);
+  const fetchEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const response = await fetch('/api/posts/public?post_type_id=4&limit=100&sortBy=created_at&order=asc');
+      if (response.ok) {
+        const data: PostsResponse = await response.json();
+        setEvents(data.posts);
       }
-    };
-    fetchEvents();
+    } catch {
+      // Silently fail — sidebar is non-critical
+    } finally {
+      setEventsLoading(false);
+    }
   }, []);
 
-  // Fetch sitewide activity (no auth) — initial load
-  useEffect(() => {
-    const fetchActivity = async () => {
-      try {
-        const response = await fetch(`/api/activity?limit=${ACTIVITY_LIMIT}&offset=0`);
-        if (response.ok) {
-          const data: ActivityResponse = await response.json();
-          setActivityItems(data.items ?? []);
-          setActivityHasMore(data.hasMore);
-          setActivityOffset(data.items?.length ?? 0);
-        }
-      } catch {
-        // Silently fail
-      } finally {
-        setActivityLoading(false);
+  // Fetch sitewide activity (no auth) — resets to page 1
+  const fetchActivity = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      const response = await fetch(`/api/activity?limit=${ACTIVITY_LIMIT}&offset=0`);
+      if (response.ok) {
+        const data: ActivityResponse = await response.json();
+        setActivityItems(data.items ?? []);
+        setActivityHasMore(data.hasMore);
+        setActivityOffset(data.items?.length ?? 0);
       }
-    };
-    fetchActivity();
+    } catch {
+      // Silently fail
+    } finally {
+      setActivityLoading(false);
+    }
   }, []);
+
+  const { refreshKey } = useSidebarRefresh();
+
+  // Initial load + re-fetch whenever refreshKey increments (create / edit / delete)
+  useEffect(() => {
+    fetchEvents();
+    fetchActivity();
+  }, [fetchEvents, fetchActivity, refreshKey]);
 
   const handleLoadMore = useCallback(async () => {
     if (activityLoadingMore || !activityHasMore) return;
@@ -130,15 +135,23 @@ export function RightSidebar() {
         eventDateTime: post.content.eventDateTime!,
         location: post.content.location,
         description: post.content.description,
-      }));
+      }))
+      .sort((a, b) => {
+        const ta = new Date(a.eventDateTime).getTime();
+        const tb = new Date(b.eventDateTime).getTime();
+        // Push invalid dates to the end
+        if (isNaN(ta) && isNaN(tb)) return 0;
+        if (isNaN(ta)) return 1;
+        if (isNaN(tb)) return -1;
+        return ta - tb;
+      });
 
     const upcomingEvents = transformed
       .filter((event) => {
         const eventDate = new Date(event.eventDateTime);
         eventDate.setHours(0, 0, 0, 0);
         return eventDate >= today;
-      })
-      .sort((a, b) => new Date(a.eventDateTime).getTime() - new Date(b.eventDateTime).getTime());
+      });
 
     return { calendarEvents: transformed, upcomingEvents };
   }, [events]);

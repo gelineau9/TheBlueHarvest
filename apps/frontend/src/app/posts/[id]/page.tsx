@@ -34,6 +34,7 @@ import {
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { CommentList } from '@/components/comments/comment-list';
 import { LikeButton } from '@/components/likes/LikeButton';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 interface Author {
   profile_id: number;
@@ -95,6 +96,7 @@ interface Post {
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { username: currentUsername, isAdmin } = useAuth();
+  const { triggerSidebarRefresh } = useSidebarRefresh();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -265,6 +267,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         throw new Error(data.message || 'Failed to delete post');
       }
 
+      triggerSidebarRefresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete post');

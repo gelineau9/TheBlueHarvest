@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { WritingForm } from '@/components/posts/writing-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 export default function CreateWritingPage() {
   const router = useRouter();
   const { isAuthorized, isLoading } = useRequireAuth();
+  const { triggerSidebarRefresh } = useSidebarRefresh();
 
   if (isLoading) {
     return (
@@ -22,6 +24,7 @@ export default function CreateWritingPage() {
   }
 
   const handleSuccess = (postId: number) => {
+    triggerSidebarRefresh();
     router.push(`/posts/${postId}`);
   };
 
