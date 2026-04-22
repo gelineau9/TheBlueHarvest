@@ -61,9 +61,11 @@ router.post(
       );
 
       // Create JWT
-      const token = jwt.sign({ userId: result.account_id, roleId: result.user_role_id }, process.env.JWT_SECRET!, {
-        expiresIn: '7d',
-      });
+      const token = jwt.sign(
+        { userId: result.account_id, roleId: result.user_role_id, jti: crypto.randomUUID() },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' },
+      );
 
       // Fire-and-forget audit log
       writeAuditLog({
@@ -143,9 +145,11 @@ router.post(
       }
 
       // Create JWT
-      const token = jwt.sign({ userId: user.account_id, roleId: user.user_role_id }, process.env.JWT_SECRET!, {
-        expiresIn: '7d',
-      });
+      const token = jwt.sign(
+        { userId: user.account_id, roleId: user.user_role_id, jti: crypto.randomUUID() },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' },
+      );
 
       res.json({
         token,
@@ -276,5 +280,36 @@ router.put(
     }
   },
 );
+
+// Logout route — revokes the token's jti so it cannot be reused
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.json({ success: true });
+      return;
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.decode(token) as { jti?: string; exp?: number } | null;
+
+    if (!decoded?.jti || !decoded?.exp) {
+      res.json({ success: true });
+      return;
+    }
+
+    const pool = await getPool();
+    await pool.query(sql.unsafe`
+      INSERT INTO revoked_tokens (jti, expires_at)
+      VALUES (${decoded.jti}, to_timestamp(${decoded.exp}))
+      ON CONFLICT DO NOTHING
+    `);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 export default router;

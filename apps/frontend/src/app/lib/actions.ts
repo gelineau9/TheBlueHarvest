@@ -71,6 +71,13 @@ export async function login(formData: FormData) {
 export async function logout() {
   try {
     const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token');
+    if (authToken?.value) {
+      await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken.value}` },
+      }).catch(() => {});
+    }
     await cookieStore.set('auth_token', '', CLEAR_COOKIE);
     return { success: true };
   } catch (error) {
