@@ -390,6 +390,77 @@ router.put(
   },
 );
 
+// Forgot password route — sends a reset link; always returns the same response to prevent email enumeration
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().withMessage('Please enter a valid email address.')],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { email } = req.body;
+
+    // Generic response used in all paths to prevent email enumeration
+    const genericResponse = {
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    };
+
+    try {
+      const pool = await getPool();
+
+      const account = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            username: z.string(),
+            is_banned: z.boolean(),
+          }),
+        )`
+          SELECT account_id, username, is_banned
+          FROM accounts
+          WHERE email = ${email}
+            AND deleted = false
+        `,
+      );
+
+      // Unknown email or banned account — return generic response, do nothing else
+      if (!account || account.is_banned) {
+        res.status(200).json(genericResponse);
+        return;
+      }
+
+      // Generate and store the reset token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await pool.query(
+        sql.unsafe`
+          INSERT INTO password_reset_tokens (token_hash, account_id, expires_at)
+          VALUES (${tokenHash}, ${account.account_id}, NOW() + INTERVAL '1 hour')
+        `,
+      );
+
+      // Best-effort email send — log failures but never leak them to the caller
+      try {
+        await sendPasswordResetEmail(email, account.username, rawToken);
+      } catch (emailErr) {
+        logger.error('[forgot-password] Failed to send password reset email', {
+          emailErr,
+          accountId: account.account_id,
+        });
+      }
+
+      res.status(200).json(genericResponse);
+    } catch (err) {
+      logger.error('[forgot-password] Unexpected error', { err });
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
 // Logout route — revokes the token's jti so it cannot be reused
 router.post('/logout', async (req: Request, res: Response) => {
   try {
