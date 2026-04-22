@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
@@ -7,6 +8,12 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+} from '../utils/email.js';
 
 const router = Router();
 
@@ -60,13 +67,6 @@ router.post(
         `,
       );
 
-      // Create JWT
-      const token = jwt.sign(
-        { userId: result.account_id, roleId: result.user_role_id, jti: crypto.randomUUID() },
-        process.env.JWT_SECRET!,
-        { expiresIn: '7d' },
-      );
-
       // Fire-and-forget audit log
       writeAuditLog({
         actorAccountId: result.account_id,
@@ -76,9 +76,33 @@ router.post(
         metadata: { username },
       });
 
-      res.status(201).json({ token });
+      // Generate email verification token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await pool.query(
+        sql.unsafe`
+          INSERT INTO email_verification_tokens (token_hash, account_id, expires_at)
+          VALUES (${tokenHash}, ${result.account_id}, NOW() + INTERVAL '24 hours')
+        `,
+      );
+
+      // Send verification email — on failure, roll back the account
+      try {
+        await sendVerificationEmail(email, username, rawToken);
+      } catch (emailErr) {
+        logger.error('[signup] Failed to send verification email — rolling back account creation', {
+          emailErr,
+          accountId: result.account_id,
+        });
+        await pool.query(sql.unsafe`DELETE FROM accounts WHERE account_id = ${result.account_id}`);
+        res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
+        return;
+      }
+
+      res.status(201).json({ message: 'Account created. Please check your email to verify your account.' });
     } catch (err) {
-      console.error(err);
+      logger.error('[signup] Unexpected error during account creation', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
