@@ -108,6 +108,81 @@ router.post(
   },
 );
 
+// Verify email route
+router.get('/verify-email', async (req: Request, res: Response) => {
+  const { token } = req.query;
+
+  if (!token || typeof token !== 'string') {
+    res.status(400).json({ error: 'Invalid or expired verification token' });
+    return;
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  try {
+    const pool = await getPool();
+
+    // Look up the token — must be unused and not expired
+    const tokenRow = await pool.maybeOne(
+      sql.type(
+        z.object({
+          account_id: z.number(),
+        }),
+      )`
+        SELECT account_id
+        FROM email_verification_tokens
+        WHERE token_hash = ${tokenHash}
+          AND used_at IS NULL
+          AND expires_at > NOW()
+      `,
+    );
+
+    if (!tokenRow) {
+      res.status(400).json({ error: 'Invalid or expired verification token' });
+      return;
+    }
+
+    // Mark account as verified and consume the token in a transaction
+    await pool.transaction(async (tx) => {
+      await tx.query(sql.unsafe`
+        UPDATE accounts
+        SET email_verified_at = NOW()
+        WHERE account_id = ${tokenRow.account_id}
+      `);
+      await tx.query(sql.unsafe`
+        UPDATE email_verification_tokens
+        SET used_at = NOW()
+        WHERE token_hash = ${tokenHash}
+      `);
+    });
+
+    // Fetch the account to mint a JWT
+    const account = await pool.one(
+      sql.type(
+        z.object({
+          account_id: z.number(),
+          user_role_id: z.number(),
+        }),
+      )`
+        SELECT account_id, user_role_id
+        FROM accounts
+        WHERE account_id = ${tokenRow.account_id}
+      `,
+    );
+
+    const jwtToken = jwt.sign(
+      { userId: account.account_id, roleId: account.user_role_id, jti: crypto.randomUUID() },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' },
+    );
+
+    res.status(200).json({ token: jwtToken, message: 'Email verified successfully.' });
+  } catch (err) {
+    logger.error('[verify-email] Unexpected error', { err });
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Login route
 router.post(
   '/login',
