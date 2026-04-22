@@ -309,7 +309,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
       role: user.role_name,
     });
   } catch (err) {
-    console.error(err);
+    logger.error('[me] Unexpected error', { err });
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -384,7 +384,7 @@ router.put(
         details: result.details,
       });
     } catch (err) {
-      console.error(err);
+      logger.error('[account] Unexpected error', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
@@ -461,6 +461,101 @@ router.post(
   },
 );
 
+// Reset password route — consumes a valid reset token and sets a new password
+router.post(
+  '/reset-password',
+  [
+    body('token').notEmpty().withMessage('Reset token is required.'),
+    body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
+  ],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { token, newPassword } = req.body;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    try {
+      const pool = await getPool();
+
+      // Look up the token — must be unused and not expired
+      const tokenRow = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+          }),
+        )`
+          SELECT account_id
+          FROM password_reset_tokens
+          WHERE token_hash = ${tokenHash}
+            AND used_at IS NULL
+            AND expires_at > NOW()
+        `,
+      );
+
+      if (!tokenRow) {
+        res.status(400).json({ error: 'Invalid or expired reset token' });
+        return;
+      }
+
+      // Verify the linked account is not banned
+      const account = await pool.one(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            email: z.string(),
+            username: z.string(),
+            is_banned: z.boolean(),
+          }),
+        )`
+          SELECT account_id, email, username, is_banned
+          FROM accounts
+          WHERE account_id = ${tokenRow.account_id}
+        `,
+      );
+
+      if (account.is_banned) {
+        res.status(403).json({ error: 'account_suspended' });
+        return;
+      }
+
+      // Hash new password and persist changes in a transaction
+      const hashedPassword = await argon2.hash(newPassword);
+
+      await pool.transaction(async (tx) => {
+        await tx.query(sql.unsafe`
+          UPDATE accounts
+          SET hashed_password = ${hashedPassword}
+          WHERE account_id = ${account.account_id}
+        `);
+        await tx.query(sql.unsafe`
+          UPDATE password_reset_tokens
+          SET used_at = NOW()
+          WHERE token_hash = ${tokenHash}
+        `);
+      });
+
+      // Best-effort confirmation email — log errors, do not fail the request
+      try {
+        await sendPasswordChangedEmail(account.email, account.username);
+      } catch (emailErr) {
+        logger.error('[reset-password] Failed to send password changed confirmation email', {
+          emailErr,
+          accountId: account.account_id,
+        });
+      }
+
+      res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+    } catch (err) {
+      logger.error('[reset-password] Unexpected error', { err });
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
 // Logout route — revokes the token's jti so it cannot be reused
 router.post('/logout', async (req: Request, res: Response) => {
   try {
@@ -487,7 +582,7 @@ router.post('/logout', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    logger.error('[logout] Unexpected error', { err });
     res.status(500).json({ message: 'Internal server error' });
   }
 });
