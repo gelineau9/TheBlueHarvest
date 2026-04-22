@@ -217,9 +217,10 @@ router.post(
             user_role_id: z.number(),
             is_banned: z.boolean(),
             banned_reason: z.string().nullable(),
+            email_verified_at: z.string().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason
+          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, email_verified_at
           FROM accounts
           WHERE email = ${email}
         `,
@@ -233,6 +234,15 @@ router.post(
       // Check if account is banned before verifying password
       if (user.is_banned) {
         res.status(403).json({ error: 'account_suspended', reason: user.banned_reason ?? null });
+        return;
+      }
+
+      // Block login until email is verified
+      if (!user.email_verified_at) {
+        res.status(403).json({
+          error: 'email_not_verified',
+          message: 'Please verify your email before logging in.',
+        });
         return;
       }
 
@@ -258,7 +268,7 @@ router.post(
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error('[login] Unexpected error', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
