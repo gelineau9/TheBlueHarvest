@@ -11,6 +11,7 @@
  *   RESEND_API_KEY     — Resend secret key (required in production)
  *   RESEND_FROM_EMAIL  — Sender address, e.g. noreply@yourdomain.com
  *   BACKEND_URL        — Used to build verification / reset links
+ *   FRONTEND_URL       — Base URL of the Next.js app (e.g. https://brandyhallarchives.com)
  */
 
 import { Resend } from 'resend';
@@ -76,12 +77,16 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function sendVerificationEmail(to: string, username: string, token: string): Promise<void> {
-  const link = `${process.env.BACKEND_URL}/api/auth/verify-email?token=${token}`;
+  const baseUrl =
+    process.env.FRONTEND_URL ??
+    process.env.ALLOWED_ORIGINS?.split(',')[0].trim() ??
+    process.env.BACKEND_URL;
+  const link = `${baseUrl}/verify-email?token=${token}`;
 
   const text = [
     `Hi ${username},`,
     ``,
-    `Thanks for signing up for The Blue Harvest.`,
+    `Thanks for signing up for The Brandy Hall Archives.`,
     `Please verify your email address by clicking the link below:`,
     ``,
     `  ${link}`,
@@ -100,7 +105,11 @@ export async function sendVerificationEmail(to: string, username: string, token:
 }
 
 export async function sendPasswordResetEmail(to: string, username: string, token: string): Promise<void> {
-  const link = `${process.env.BACKEND_URL}/api/auth/reset-password?token=${token}`;
+  const baseUrl =
+    process.env.FRONTEND_URL ??
+    process.env.ALLOWED_ORIGINS?.split(',')[0].trim() ??
+    process.env.BACKEND_URL;
+  const link = `${baseUrl}/reset-password?token=${token}`;
 
   const text = [
     `Hi ${username},`,
