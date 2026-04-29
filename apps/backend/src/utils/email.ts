@@ -77,7 +77,10 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function sendVerificationEmail(to: string, username: string, token: string): Promise<void> {
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.BACKEND_URL;
+  const baseUrl =
+    process.env.FRONTEND_URL ??
+    process.env.ALLOWED_ORIGINS?.split(',')[0].trim() ??
+    process.env.BACKEND_URL;
   const link = `${baseUrl}/verify-email?token=${token}`;
 
   const text = [
@@ -102,7 +105,10 @@ export async function sendVerificationEmail(to: string, username: string, token:
 }
 
 export async function sendPasswordResetEmail(to: string, username: string, token: string): Promise<void> {
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.BACKEND_URL;
+  const baseUrl =
+    process.env.FRONTEND_URL ??
+    process.env.ALLOWED_ORIGINS?.split(',')[0].trim() ??
+    process.env.BACKEND_URL;
   const link = `${baseUrl}/reset-password?token=${token}`;
 
   const text = [
