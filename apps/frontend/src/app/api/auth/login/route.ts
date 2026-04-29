@@ -11,7 +11,14 @@ export async function POST(request: Request) {
     const result = await login(formData);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: result.error,
+          errorCode: result.errorCode,
+          errorReason: result.errorReason,
+        },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({ success: true });

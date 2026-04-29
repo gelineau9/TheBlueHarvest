@@ -45,7 +45,14 @@ export async function login(formData: FormData) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      return { success: false, error: data.message || 'Login failed' };
+      return {
+        success: false,
+        error: data.message || 'Login failed',
+        // Pass the error code through so the form can do specific handling
+        // (e.g. account_suspended, email_not_verified)
+        errorCode: data.error as string | undefined,
+        errorReason: data.reason as string | undefined,
+      };
     }
 
     const data = await response.json();
@@ -114,19 +121,8 @@ export async function register(formData: FormData) {
       return { success: false, error: data.message || 'Registration failed' };
     }
 
-    const data = await response.json();
-
-    const cookieStore = await cookies();
-    await cookieStore.set({
-      name: 'auth_token',
-      value: data.token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
+    // Signup no longer returns a token — email verification is required first.
+    // The success response contains only { message }.
     return { success: true };
   } catch (error) {
     console.error('Registration action error:', error);

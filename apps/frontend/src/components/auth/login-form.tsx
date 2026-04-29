@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -28,13 +29,18 @@ export function LoginForm() {
 
       if (!response.ok) {
         const data = await response.json();
-        if (data.error === 'account_suspended') {
-          const reason = data.reason ? `: ${data.reason}` : '';
+        if (data.errorCode === 'account_suspended') {
+          const reason = data.errorReason ? `: ${data.errorReason}` : '';
           throw new Error(
             `Your account has been suspended${reason}. Please contact a moderator if you believe this is a mistake.`,
           );
         }
-        throw new Error(data.message || 'Login failed');
+        if (data.errorCode === 'email_not_verified') {
+          throw new Error(
+            'Please verify your email before logging in. Check your inbox for a verification link.',
+          );
+        }
+        throw new Error(data.error || 'Login failed');
       }
 
       // On successful login, refresh the page to update auth state
@@ -83,6 +89,11 @@ export function LoginForm() {
           {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </DialogClose>
+      <div className="text-center text-sm text-amber-700">
+        <Link href="/forgot-password" className="text-amber-900 hover:underline font-medium">
+          Forgot your password?
+        </Link>
+      </div>
     </form>
   );
 }
