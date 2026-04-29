@@ -45,7 +45,14 @@ export async function login(formData: FormData) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      return { success: false, error: data.message || 'Login failed' };
+      return {
+        success: false,
+        error: data.message || 'Login failed',
+        // Pass the error code through so the form can do specific handling
+        // (e.g. account_suspended, email_not_verified)
+        errorCode: data.error as string | undefined,
+        errorReason: data.reason as string | undefined,
+      };
     }
 
     const data = await response.json();
