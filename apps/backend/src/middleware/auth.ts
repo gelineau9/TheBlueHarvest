@@ -33,15 +33,15 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number; roleId: number };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number; roleId: number; jti?: string };
     req.userId = decoded.userId;
     req.userRoleId = decoded.roleId;
 
     // Check if the account is banned on every authenticated request
     const pool = await getPool();
     const account = await pool.maybeOne(
-      sql.type(z.object({ is_banned: z.boolean() }))`
-        SELECT is_banned
+      sql.type(z.object({ is_banned: z.boolean(), suspended_until: z.string().nullable() }))`
+        SELECT is_banned, suspended_until
         FROM accounts
         WHERE account_id = ${req.userId}
       `,
@@ -50,6 +50,24 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     if (account?.is_banned) {
       res.status(401).json({ error: 'account_suspended' });
       return;
+    }
+
+    if (account?.suspended_until && new Date(account.suspended_until) > new Date()) {
+      res.status(403).json({ error: 'account_suspended' });
+      return;
+    }
+
+    // Check token blocklist (only for tokens that carry a jti — older tokens without one are allowed through)
+    if (decoded.jti) {
+      const revoked = await pool.maybeOne(
+        sql.type(z.object({ jti: z.string() }))`
+          SELECT jti FROM revoked_tokens WHERE jti = ${decoded.jti}
+        `,
+      );
+      if (revoked) {
+        res.status(401).json({ error: 'Token has been revoked' });
+        return;
+      }
     }
 
     next();

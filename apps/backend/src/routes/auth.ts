@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
@@ -7,6 +8,12 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+} from '../utils/email.js';
 
 const router = Router();
 
@@ -60,11 +67,6 @@ router.post(
         `,
       );
 
-      // Create JWT
-      const token = jwt.sign({ userId: result.account_id, roleId: result.user_role_id }, process.env.JWT_SECRET!, {
-        expiresIn: '7d',
-      });
-
       // Fire-and-forget audit log
       writeAuditLog({
         actorAccountId: result.account_id,
@@ -74,13 +76,112 @@ router.post(
         metadata: { username },
       });
 
-      res.status(201).json({ token });
+      // Generate email verification token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await pool.query(
+        sql.unsafe`
+          INSERT INTO email_verification_tokens (token_hash, account_id, expires_at)
+          VALUES (${tokenHash}, ${result.account_id}, NOW() + INTERVAL '24 hours')
+        `,
+      );
+
+      // Send verification email — on failure, roll back the account
+      try {
+        await sendVerificationEmail(email, username, rawToken);
+      } catch (emailErr) {
+        logger.error('[signup] Failed to send verification email — rolling back account creation', {
+          emailErr,
+          accountId: result.account_id,
+        });
+        await pool.query(sql.unsafe`DELETE FROM accounts WHERE account_id = ${result.account_id}`);
+        res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
+        return;
+      }
+
+      res.status(201).json({ message: 'Account created. Please check your email to verify your account.' });
     } catch (err) {
-      console.error(err);
+      logger.error('[signup] Unexpected error during account creation', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 );
+
+// Verify email route
+router.get('/verify-email', async (req: Request, res: Response) => {
+  const { token } = req.query;
+
+  if (!token || typeof token !== 'string') {
+    res.status(400).json({ error: 'Invalid or expired verification token' });
+    return;
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  try {
+    const pool = await getPool();
+
+    // Look up the token — must be unused and not expired
+    const tokenRow = await pool.maybeOne(
+      sql.type(
+        z.object({
+          account_id: z.number(),
+        }),
+      )`
+        SELECT account_id
+        FROM email_verification_tokens
+        WHERE token_hash = ${tokenHash}
+          AND used_at IS NULL
+          AND expires_at > NOW()
+      `,
+    );
+
+    if (!tokenRow) {
+      res.status(400).json({ error: 'Invalid or expired verification token' });
+      return;
+    }
+
+    // Mark account as verified and consume the token in a transaction
+    await pool.transaction(async (tx) => {
+      await tx.query(sql.unsafe`
+        UPDATE accounts
+        SET email_verified_at = NOW()
+        WHERE account_id = ${tokenRow.account_id}
+      `);
+      await tx.query(sql.unsafe`
+        UPDATE email_verification_tokens
+        SET used_at = NOW()
+        WHERE token_hash = ${tokenHash}
+      `);
+    });
+
+    // Fetch the account to mint a JWT
+    const account = await pool.one(
+      sql.type(
+        z.object({
+          account_id: z.number(),
+          user_role_id: z.number(),
+        }),
+      )`
+        SELECT account_id, user_role_id
+        FROM accounts
+        WHERE account_id = ${tokenRow.account_id}
+      `,
+    );
+
+    const jwtToken = jwt.sign(
+      { userId: account.account_id, roleId: account.user_role_id, jti: crypto.randomUUID() },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' },
+    );
+
+    res.status(200).json({ token: jwtToken, message: 'Email verified successfully.' });
+  } catch (err) {
+    logger.error('[verify-email] Unexpected error', { err });
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Login route
 router.post(
@@ -116,9 +217,10 @@ router.post(
             user_role_id: z.number(),
             is_banned: z.boolean(),
             banned_reason: z.string().nullable(),
+            email_verified_at: z.string().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason
+          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, email_verified_at
           FROM accounts
           WHERE email = ${email}
         `,
@@ -135,6 +237,15 @@ router.post(
         return;
       }
 
+      // Block login until email is verified
+      if (!user.email_verified_at) {
+        res.status(403).json({
+          error: 'email_not_verified',
+          message: 'Please verify your email before logging in.',
+        });
+        return;
+      }
+
       // Verify password
       const isValid = await argon2.verify(user.hashed_password as string, password);
       if (!isValid) {
@@ -143,9 +254,11 @@ router.post(
       }
 
       // Create JWT
-      const token = jwt.sign({ userId: user.account_id, roleId: user.user_role_id }, process.env.JWT_SECRET!, {
-        expiresIn: '7d',
-      });
+      const token = jwt.sign(
+        { userId: user.account_id, roleId: user.user_role_id, jti: crypto.randomUUID() },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' },
+      );
 
       res.json({
         token,
@@ -155,7 +268,7 @@ router.post(
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error('[login] Unexpected error', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
@@ -196,7 +309,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
       role: user.role_name,
     });
   } catch (err) {
-    console.error(err);
+    logger.error('[me] Unexpected error', { err });
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -271,10 +384,207 @@ router.put(
         details: result.details,
       });
     } catch (err) {
-      console.error(err);
+      logger.error('[account] Unexpected error', { err });
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 );
+
+// Forgot password route — sends a reset link; always returns the same response to prevent email enumeration
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().withMessage('Please enter a valid email address.')],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { email } = req.body;
+
+    // Generic response used in all paths to prevent email enumeration
+    const genericResponse = {
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    };
+
+    try {
+      const pool = await getPool();
+
+      const account = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            username: z.string(),
+            is_banned: z.boolean(),
+          }),
+        )`
+          SELECT account_id, username, is_banned
+          FROM accounts
+          WHERE email = ${email}
+            AND deleted = false
+        `,
+      );
+
+      // Unknown email or banned account — return generic response, do nothing else
+      if (!account || account.is_banned) {
+        res.status(200).json(genericResponse);
+        return;
+      }
+
+      // Generate and store the reset token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await pool.query(
+        sql.unsafe`
+          INSERT INTO password_reset_tokens (token_hash, account_id, expires_at)
+          VALUES (${tokenHash}, ${account.account_id}, NOW() + INTERVAL '1 hour')
+        `,
+      );
+
+      // Best-effort email send — log failures but never leak them to the caller
+      try {
+        await sendPasswordResetEmail(email, account.username, rawToken);
+      } catch (emailErr) {
+        logger.error('[forgot-password] Failed to send password reset email', {
+          emailErr,
+          accountId: account.account_id,
+        });
+      }
+
+      res.status(200).json(genericResponse);
+    } catch (err) {
+      logger.error('[forgot-password] Unexpected error', { err });
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+// Reset password route — consumes a valid reset token and sets a new password
+router.post(
+  '/reset-password',
+  [
+    body('token').notEmpty().withMessage('Reset token is required.'),
+    body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long.'),
+  ],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { token, newPassword } = req.body;
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    try {
+      const pool = await getPool();
+
+      // Look up the token — must be unused and not expired
+      const tokenRow = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+          }),
+        )`
+          SELECT account_id
+          FROM password_reset_tokens
+          WHERE token_hash = ${tokenHash}
+            AND used_at IS NULL
+            AND expires_at > NOW()
+        `,
+      );
+
+      if (!tokenRow) {
+        res.status(400).json({ error: 'Invalid or expired reset token' });
+        return;
+      }
+
+      // Verify the linked account is not banned
+      const account = await pool.one(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            email: z.string(),
+            username: z.string(),
+            is_banned: z.boolean(),
+          }),
+        )`
+          SELECT account_id, email, username, is_banned
+          FROM accounts
+          WHERE account_id = ${tokenRow.account_id}
+        `,
+      );
+
+      if (account.is_banned) {
+        res.status(403).json({ error: 'account_suspended' });
+        return;
+      }
+
+      // Hash new password and persist changes in a transaction
+      const hashedPassword = await argon2.hash(newPassword);
+
+      await pool.transaction(async (tx) => {
+        await tx.query(sql.unsafe`
+          UPDATE accounts
+          SET hashed_password = ${hashedPassword}
+          WHERE account_id = ${account.account_id}
+        `);
+        await tx.query(sql.unsafe`
+          UPDATE password_reset_tokens
+          SET used_at = NOW()
+          WHERE token_hash = ${tokenHash}
+        `);
+      });
+
+      // Best-effort confirmation email — log errors, do not fail the request
+      try {
+        await sendPasswordChangedEmail(account.email, account.username);
+      } catch (emailErr) {
+        logger.error('[reset-password] Failed to send password changed confirmation email', {
+          emailErr,
+          accountId: account.account_id,
+        });
+      }
+
+      res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+    } catch (err) {
+      logger.error('[reset-password] Unexpected error', { err });
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+// Logout route — revokes the token's jti so it cannot be reused
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.json({ success: true });
+      return;
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.decode(token) as { jti?: string; exp?: number } | null;
+
+    if (!decoded?.jti || !decoded?.exp) {
+      res.json({ success: true });
+      return;
+    }
+
+    const pool = await getPool();
+    await pool.query(sql.unsafe`
+      INSERT INTO revoked_tokens (jti, expires_at)
+      VALUES (${decoded.jti}, to_timestamp(${decoded.exp}))
+      ON CONFLICT DO NOTHING
+    `);
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('[logout] Unexpected error', { err });
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 export default router;

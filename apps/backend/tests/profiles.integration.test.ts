@@ -64,8 +64,8 @@ beforeAll(async () => {
 
   // Create test account
   const result = await pool.one(sql.unsafe`
-    INSERT INTO accounts (username, email, hashed_password)
-    VALUES ('testuser', 'test@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+    INSERT INTO accounts (username, email, hashed_password, email_verified_at)
+    VALUES ('testuser', 'test@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword', NOW())
     RETURNING account_id
   `);
   testAccountId = result.account_id as number;
@@ -1434,8 +1434,8 @@ describe('Profile Editors API', () => {
 
     // Create editor account
     const editorResult = await pool.one(sql.unsafe`
-      INSERT INTO accounts (username, email, hashed_password)
-      VALUES ('editoruser', 'editor@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+      INSERT INTO accounts (username, email, hashed_password, email_verified_at)
+      VALUES ('editoruser', 'editor@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword', NOW())
       RETURNING account_id
     `);
     editorAccountId = editorResult.account_id as number;
@@ -1443,8 +1443,8 @@ describe('Profile Editors API', () => {
 
     // Create another account (not an editor)
     const otherResult = await pool.one(sql.unsafe`
-      INSERT INTO accounts (username, email, hashed_password)
-      VALUES ('otheruser', 'other@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+      INSERT INTO accounts (username, email, hashed_password, email_verified_at)
+      VALUES ('otheruser', 'other@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword', NOW())
       RETURNING account_id
     `);
     otherAccountId = otherResult.account_id as number;

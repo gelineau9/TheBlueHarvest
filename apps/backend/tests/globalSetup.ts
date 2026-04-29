@@ -146,6 +146,55 @@ export async function setup(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_featured_posts_order ON featured_posts(display_order);
   `);
 
+  // Migration 0006: account_follows + profile_follows
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS account_follows (
+      follower_id  INT REFERENCES accounts(account_id) ON DELETE CASCADE,
+      followed_id  INT REFERENCES accounts(account_id) ON DELETE CASCADE,
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (follower_id, followed_id),
+      CHECK (follower_id <> followed_id)
+    );
+    CREATE TABLE IF NOT EXISTS profile_follows (
+      account_id  INT REFERENCES accounts(account_id) ON DELETE CASCADE,
+      profile_id  INT REFERENCES profiles(profile_id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (account_id, profile_id)
+    );
+  `);
+
+  // Migration 0007: revoked_tokens (JWT blocklist)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS revoked_tokens (
+      jti         TEXT PRIMARY KEY,
+      expires_at  TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens (expires_at);
+  `);
+
+  // Migration 0008: email verification
+  await client.query(`
+    ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      token_hash   TEXT PRIMARY KEY,
+      account_id   INT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+      expires_at   TIMESTAMPTZ NOT NULL,
+      used_at      TIMESTAMPTZ DEFAULT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_ver_tokens_account ON email_verification_tokens (account_id);
+  `);
+
+  // Migration 0009: password reset
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash   TEXT PRIMARY KEY,
+      account_id   INT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+      expires_at   TIMESTAMPTZ NOT NULL,
+      used_at      TIMESTAMPTZ DEFAULT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pw_reset_tokens_account ON password_reset_tokens (account_id);
+  `);
+
   await client.end();
   console.log('[globalSetup] Test database schema applied.');
 }

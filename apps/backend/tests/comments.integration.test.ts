@@ -69,8 +69,8 @@ beforeAll(async () => {
 
   // Create test account
   const result = await pool.one(sql.unsafe`
-    INSERT INTO accounts (username, email, hashed_password)
-    VALUES ('commenttestuser', 'commenttest@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+    INSERT INTO accounts (username, email, hashed_password, email_verified_at)
+    VALUES ('commenttestuser', 'commenttest@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword', NOW())
     RETURNING account_id
   `);
   testAccountId = result.account_id as number;
@@ -78,8 +78,8 @@ beforeAll(async () => {
 
   // Create second test account
   const result2 = await pool.one(sql.unsafe`
-    INSERT INTO accounts (username, email, hashed_password)
-    VALUES ('commenttestuser2', 'commenttest2@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword')
+    INSERT INTO accounts (username, email, hashed_password, email_verified_at)
+    VALUES ('commenttestuser2', 'commenttest2@example.com', '$argon2id$v=19$m=65536,t=3,p=4$somehashedpassword', NOW())
     RETURNING account_id
   `);
   otherAccountId = result2.account_id as number;

@@ -6,10 +6,14 @@ import fs from 'fs';
 import sharp from 'sharp';
 import { sql } from 'slonik';
 import { z } from 'zod';
+import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+// Allowed image MIME types — used by both fileFilter (declared type) and magic byte validation (real type)
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 // Backend URL for serving uploaded files
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
@@ -44,8 +48,7 @@ const storage = multer.diskStorage({
 
 // File filter - only allow images
 const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
+  if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
@@ -65,8 +68,7 @@ const upload = multer({
 const avatarStorage = multer.memoryStorage();
 
 const avatarFileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
+  if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Only image files allowed (JPG, PNG, GIF, WEBP)'));
@@ -86,13 +88,26 @@ router.post(
   '/images',
   authenticateToken,
   upload.array('images', 10), // Max 10 images per upload
-  (req: Request, res: Response): void => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (!files || files.length === 0) {
         res.status(400).json({ error: 'No files uploaded' });
         return;
+      }
+
+      // Magic byte validation — fileFilter only checked the declared MIME type
+      for (const file of files) {
+        const detected = await fileTypeFromFile(file.path);
+        if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
+          // Delete all uploaded files for this request before rejecting
+          for (const f of files) {
+            fs.unlink(f.path, () => {});
+          }
+          res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
+          return;
+        }
       }
 
       // Return array of uploaded file info
@@ -196,6 +211,13 @@ router.post(
 
       if (!file) {
         res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+
+      // Magic byte validation — fileFilter only checked the declared MIME type
+      const detected = await fileTypeFromBuffer(file.buffer);
+      if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
+        res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
         return;
       }
 
