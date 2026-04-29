@@ -32,6 +32,11 @@ export default function VerifyEmailPage() {
         if (response.ok) {
           setStatus('success');
           setMessage(data.message || 'Your email has been verified successfully.');
+          // Cookie is now set — force a full page reload to home so AuthProvider
+          // re-runs checkAuth() and picks up the new auth_token cookie.
+          setTimeout(() => {
+            window.location.replace('/');
+          }, 1500);
         } else {
           setStatus('error');
           setMessage(data.error || 'This verification link is invalid or has expired.');
@@ -68,11 +73,14 @@ export default function VerifyEmailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-amber-700 text-center">
-              You are now logged in. Welcome to the Brandy Hall Archives.
+              You are now logged in. Redirecting you to the homepage…
             </p>
-            <Link href="/">
-              <Button className="w-full bg-amber-900 text-amber-50">Go to Homepage</Button>
-            </Link>
+            <Button
+              className="w-full bg-amber-900 text-amber-50"
+              onClick={() => window.location.replace('/')}
+            >
+              Go to Homepage
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -97,7 +97,7 @@ export async function sendVerificationEmail(to: string, username: string, token:
   ].join('\n');
 
   try {
-    await sendEmail({ to, subject: 'Verify your Blue Harvest email address', text });
+    await sendEmail({ to, subject: 'Verify your Brandy Hall Archives email address', text });
   } catch (err) {
     logger.error('[email] sendVerificationEmail failed', { err, to });
     throw err;
@@ -114,7 +114,7 @@ export async function sendPasswordResetEmail(to: string, username: string, token
   const text = [
     `Hi ${username},`,
     ``,
-    `We received a request to reset the password for your Blue Harvest account.`,
+    `We received a request to reset the password for your Brandy Hall Archives account.`,
     `Click the link below to choose a new password:`,
     ``,
     `  ${link}`,
@@ -126,7 +126,7 @@ export async function sendPasswordResetEmail(to: string, username: string, token
   ].join('\n');
 
   try {
-    await sendEmail({ to, subject: 'Reset your Blue Harvest password', text });
+    await sendEmail({ to, subject: 'Reset your Brandy Hall Archives password', text });
   } catch (err) {
     logger.error('[email] sendPasswordResetEmail failed', { err, to });
     throw err;
@@ -137,13 +137,13 @@ export async function sendPasswordChangedEmail(to: string, username: string): Pr
   const text = [
     `Hi ${username},`,
     ``,
-    `This is a confirmation that the password for your Blue Harvest account has been changed.`,
+    `This is a confirmation that the password for your Brandy Hall Archives account has been changed.`,
     ``,
     `If you did not make this change, please contact support immediately.`,
   ].join('\n');
 
   try {
-    await sendEmail({ to, subject: 'Your Blue Harvest password has been changed', text });
+    await sendEmail({ to, subject: 'Your Brandy Hall Archives password has been changed', text });
   } catch (err) {
     logger.error('[email] sendPasswordChangedEmail failed', { err, to });
     throw err;

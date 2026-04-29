@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -12,6 +12,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +44,8 @@ export function LoginForm() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // On successful login, refresh the page to update auth state
+      // Close the dialog, then reload to update auth state
+      closeRef.current?.click();
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -54,6 +56,8 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Hidden DialogClose — triggered programmatically only on success */}
+      <DialogClose ref={closeRef} className="hidden" />
       <div className="space-y-2">
         <Label htmlFor="email" className="text-amber-900">
           Email
@@ -84,11 +88,9 @@ export function LoginForm() {
         <p className="text-xs text-amber-600">Minimum 8 characters required</p>
       </div>
       {error && <div className="text-sm text-red-500">{error}</div>}
-      <DialogClose asChild>
-        <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
-        </Button>
-      </DialogClose>
+      <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
+        {isLoading ? 'Logging in...' : 'Login'}
+      </Button>
       <div className="text-center text-sm text-amber-700">
         <Link href="/forgot-password" className="text-amber-900 hover:underline font-medium">
           Forgot your password?
