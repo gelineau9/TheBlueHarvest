@@ -78,9 +78,10 @@ export function RegisterForm() {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-amber-900">Registration Successful!</CardTitle>
+          <CardTitle className="text-2xl text-amber-900">Check Your Email</CardTitle>
           <CardDescription className="text-amber-700">
-            Your account has been created successfully. You can now log in.
+            We&apos;ve sent a verification link to your email address. Please check your inbox and
+            click the link to activate your account before logging in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
