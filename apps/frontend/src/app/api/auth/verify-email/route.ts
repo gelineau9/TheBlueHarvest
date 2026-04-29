@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { API_CONFIG } from '@/config/api';
 
@@ -24,9 +23,11 @@ export async function GET(request: Request) {
       );
     }
 
-    // Verification succeeded — set the auth cookie so the user is logged in immediately
-    const cookieStore = await cookies();
-    await cookieStore.set({
+    // Verification succeeded — set the auth cookie so the user is logged in immediately.
+    // Must use nextResponse.cookies.set() in a Route Handler; cookies().set() is the
+    // Server Action pattern and does not attach headers to the returned NextResponse.
+    const nextResponse = NextResponse.json({ success: true, message: data.message });
+    nextResponse.cookies.set({
       name: 'auth_token',
       value: data.token,
       httpOnly: true,
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
       maxAge: 60 * 60 * 24 * 7, // 7 days — matches JWT expiry
     });
 
-    return NextResponse.json({ success: true, message: data.message });
+    return nextResponse;
   } catch (error) {
     console.error('[verify-email route] Unexpected error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

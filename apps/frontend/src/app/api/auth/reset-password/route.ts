@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { API_CONFIG } from '@/config/api';
 
@@ -24,9 +23,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Clear any existing session — the user should log in fresh after a password reset
-    const cookieStore = await cookies();
-    await cookieStore.set('auth_token', '', {
+    // Clear any existing session — the user should log in fresh after a password reset.
+    // Must use nextResponse.cookies.set() in a Route Handler; cookies().set() is the
+    // Server Action pattern and does not attach headers to the returned NextResponse.
+    const nextResponse = NextResponse.json({ success: true, message: data.message });
+    nextResponse.cookies.set('auth_token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
       maxAge: 0,
     });
 
-    return NextResponse.json({ success: true, message: data.message });
+    return nextResponse;
   } catch (error) {
     console.error('[reset-password route] Unexpected error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
