@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -9,6 +10,7 @@ import { registerSchema, type RegisterInput } from '@/app/lib/validations';
 import Link from 'next/link';
 
 export function RegisterForm() {
+  const router = useRouter();
   const [formData, setFormData] = useState<RegisterInput>({
     email: '',
     username: '',
@@ -17,7 +19,6 @@ export function RegisterForm() {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string>> & { general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   const handleInputChange = (field: keyof RegisterInput, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -54,7 +55,7 @@ export function RegisterForm() {
         throw new Error(data.error || data.message || 'Registration failed');
       }
 
-      setSuccess(true);
+      router.push('/register/success');
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
         // Handle validation errors
@@ -73,25 +74,6 @@ export function RegisterForm() {
       setIsLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-amber-900">Check Your Email</CardTitle>
-          <CardDescription className="text-amber-700">
-            We&apos;ve sent a verification link to your email address. Please check your inbox and
-            click the link to activate your account before logging in.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Link href="/">
-            <Button className="w-full bg-amber-900 text-amber-50">Go to Homepage</Button>
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

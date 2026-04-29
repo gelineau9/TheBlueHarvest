@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, User, PlusCircle, Shield } from 'lucide-react';
+import { LogOut, Settings, User, PlusCircle, Shield, KeyRound } from 'lucide-react';
 import { AuthDialog } from './auth/auth-dialog';
 import { useAuth } from './auth/auth-provider';
 
@@ -95,6 +95,12 @@ export function ProfileButton() {
             <DropdownMenuItem className="text-amber-900 hover:bg-amber-100">
               <Settings className="mr-2 h-4 w-4 text-amber-700" />
               <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="text-amber-900 hover:bg-amber-100">
+              <Link href="/change-password">
+                <KeyRound className="mr-2 h-4 w-4 text-amber-700" />
+                <span>Change Password</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-amber-800/20" />
             <DropdownMenuItem className="text-amber-900 hover:bg-amber-100" onClick={handleLogout}>
