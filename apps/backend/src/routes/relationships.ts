@@ -370,7 +370,7 @@ router.delete('/:profileId/relationships/:relId', authenticateToken, async (req:
       `,
     );
 
-    res.status(200).json({ message: 'Relationship removed successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Error removing relationship:', err);
     res.status(500).json({ error: 'Internal server error' });

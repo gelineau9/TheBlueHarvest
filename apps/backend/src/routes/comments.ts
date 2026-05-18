@@ -420,7 +420,7 @@ router.delete('/:postId/comments/:commentId', authenticateToken, async (req: Aut
         `,
     );
 
-    res.json({ success: true, message: 'Comment deleted' });
+    res.status(204).send();
   } catch (err) {
     console.error('Error deleting comment:', err);
     res.status(500).json({ error: 'Failed to delete comment' });

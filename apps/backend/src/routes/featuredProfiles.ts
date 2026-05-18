@@ -158,7 +158,7 @@ router.delete('/:id/featured/:featuredId', authenticateToken, async (req: AuthRe
       return;
     }
 
-    res.status(200).json({ message: 'Featured profile removed successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Featured profile remove error:', err);
     res.status(500).json({ error: 'Internal server error' });

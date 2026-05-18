@@ -582,7 +582,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Collection deleted successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Collection deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });

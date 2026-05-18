@@ -652,7 +652,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Profile deleted successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Profile deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -859,7 +859,7 @@ router.delete('/:id/members/:charId', authenticateToken, async (req: AuthRequest
       `,
     );
 
-    res.status(200).json({ message: 'Member removed successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Error removing kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });

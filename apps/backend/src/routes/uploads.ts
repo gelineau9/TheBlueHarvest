@@ -178,7 +178,7 @@ router.delete('/images/:filename', authenticateToken, async (req: AuthRequest, r
     }
 
     fs.unlinkSync(filePath);
-    res.status(200).json({ message: 'File deleted successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete file' });
@@ -300,7 +300,7 @@ router.delete('/avatar/:filename', authenticateToken, async (req: AuthRequest, r
     }
 
     fs.unlinkSync(filePath);
-    res.status(200).json({ message: 'Avatar deleted successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete avatar' });

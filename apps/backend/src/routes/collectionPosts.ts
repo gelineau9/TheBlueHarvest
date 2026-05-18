@@ -175,7 +175,7 @@ router.delete('/:collectionId/posts/:postId', authenticateToken, async (req: Aut
       `,
     );
 
-    res.status(200).json({ message: 'Post removed from collection successfully' });
+    res.status(204).send();
   } catch (err) {
     console.error('Error removing post from collection:', err);
     res.status(500).json({ error: 'Internal server error' });

@@ -267,7 +267,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         `,
       );
 
-      res.status(200).json({ message: 'Editor removed successfully' });
+      res.status(204).send();
     } catch (err) {
       console.error(`Error removing ${entityName} editor:`, err);
       res.status(500).json({ error: 'Internal server error' });
@@ -534,7 +534,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
         `,
       );
 
-      res.status(200).json({ message: 'Author removed successfully' });
+      res.status(204).send();
     } catch (err) {
       console.error(`Error removing ${entityName} author:`, err);
       res.status(500).json({ error: 'Internal server error' });
