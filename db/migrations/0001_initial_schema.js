@@ -48,3 +48,15 @@ export const up = (pgm) => {
     pgm.sql(sql);
   }
 };
+
+
+/**
+ * Rolling back the initial schema is destructive — all tables would be dropped.
+ * A manual backup and restore is required; automated rollback is not supported.
+ * @param {import('node-pg-migrate').MigrationBuilder} _pgm
+ */
+export const down = (_pgm) => {
+  // Intentionally left unimplemented.
+  // Rolling back the initial schema requires a full database restore.
+  throw new Error('Rolling back 0001_initial_schema is not supported automatically.');
+};
