@@ -227,8 +227,8 @@ export function RightSidebar() {
         ) : activityItems.length === 0 ? (
           <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
         ) : (
-          <div className="max-h-96 overflow-y-auto rounded-lg border border-amber-800/20 bg-amber-50/50">
-            <div className="space-y-3 p-3">
+          <div className="space-y-1">
+            <div className="space-y-3">
               {activityItems.map((item) => {
                 // Resolve the actor link: profile-level if available, else account-level
                 const posterHref = item.actor_profile_id
@@ -277,7 +277,7 @@ export function RightSidebar() {
                 );
               })}
 
-              {/* Load more — inside the scroll container */}
+              {/* Load more */}
               {activityHasMore && (
                 <button
                   onClick={handleLoadMore}
