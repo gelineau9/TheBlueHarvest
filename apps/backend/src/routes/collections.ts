@@ -174,7 +174,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           (
 SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id
+            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
@@ -285,7 +285,7 @@ router.get('/public', async (req: Request, res: Response) => {
           (
 SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id
+            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
