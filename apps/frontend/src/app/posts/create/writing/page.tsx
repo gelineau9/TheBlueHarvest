@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { WritingForm } from '@/components/posts/writing-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 export default function CreateWritingPage() {
@@ -33,18 +35,29 @@ export default function CreateWritingPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <Card className="border-amber-300 bg-white/80">
-        <CardHeader>
-          <CardTitle className="text-2xl text-amber-900">Create Writing</CardTitle>
-          <CardDescription className="text-amber-700">
+    <div className="py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <Link
+          href="/posts/create"
+          className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Post Types
+        </Link>
+
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-amber-900 mb-2">Create Writing</h1>
+          <p className="text-lg text-amber-700">
             Share a story, poem, journal entry, or any other written work with the community.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WritingForm onSuccess={handleSuccess} onCancel={handleCancel} />
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+
+        <Card className="border-amber-300 bg-white/80">
+          <CardContent className="pt-6">
+            <WritingForm onSuccess={handleSuccess} onCancel={handleCancel} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
