@@ -218,20 +218,17 @@ router.put(
         return;
       }
 
-      // Update sort_order for each post in the provided order
-      await db.transaction(async (tx) => {
-        for (let i = 0; i < post_ids.length; i++) {
-          await tx.query(
-            sql.type(z.object({}))`
-              UPDATE collection_posts
-              SET sort_order = ${i}
-              WHERE collection_id = ${collectionId} 
-                AND post_id = ${post_ids[i]} 
-                AND deleted = false
-            `,
-          );
-        }
-      });
+      // Update sort_order for all posts in a single query using unnest WITH ORDINALITY
+      await db.query(
+        sql.type(z.object({}))`
+          UPDATE collection_posts AS cp
+          SET sort_order = v.ord - 1
+          FROM unnest(${sql.array(post_ids, 'int4')}) WITH ORDINALITY AS v(post_id, ord)
+          WHERE cp.collection_id = ${collectionId}
+            AND cp.post_id = v.post_id
+            AND cp.deleted = false
+        `,
+      );
 
       res.status(200).json({ message: 'Posts reordered successfully' });
     } catch (err) {
