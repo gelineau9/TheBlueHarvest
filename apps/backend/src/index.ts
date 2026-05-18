@@ -107,6 +107,16 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Tight limit on file uploads — prevents storage exhaustion
+// 20 uploads per 15 minutes per IP
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many uploads, please try again later.' },
+});
+
 // ─────────────────────────────────────────────────────────
 // Static file serving
 // ─────────────────────────────────────────────────────────
@@ -133,6 +143,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // Apply rate limiters before route handlers
 // ─────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter);
+app.use('/api/uploads', uploadLimiter);
 app.use('/api', apiLimiter);
 
 // ─────────────────────────────────────────────────────────
