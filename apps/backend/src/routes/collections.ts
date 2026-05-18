@@ -144,48 +144,64 @@ router.post(
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const typeFilter = req.query.type ? parseInt(req.query.type as string) : null;
+  const parsedLimit = parseInt(req.query.limit as string) || 50;
+  const limit = Math.min(Math.max(parsedLimit, 1), 100);
+  const parsedOffset = parseInt(req.query.offset as string) || 0;
+  const offset = Math.max(parsedOffset, 0);
 
   try {
     const db = await getPool();
 
     const typeFilterFragment = typeFilter ? sql.fragment`AND c.collection_type_id = ${typeFilter}` : sql.fragment``;
 
-    const collections = await db.any(
-      sql.type(
-        z.object({
-          collection_id: z.number(),
-          collection_type_id: z.number(),
-          title: z.string(),
-          description: z.string().nullable(),
-          created_at: z.string(),
-          updated_at: z.string().nullable(),
-          type_name: z.string(),
-          post_count: z.string(),
-        }),
-      )`
-        SELECT 
-          c.collection_id,
-          c.collection_type_id,
-          c.title,
-          c.description,
-          c.created_at::text,
-          c.updated_at::text,
-          ct.type_name,
-          (
+    const [collections, totalRow] = await Promise.all([
+      db.any(
+        sql.type(
+          z.object({
+            collection_id: z.number(),
+            collection_type_id: z.number(),
+            title: z.string(),
+            description: z.string().nullable(),
+            created_at: z.string(),
+            updated_at: z.string().nullable(),
+            type_name: z.string(),
+            post_count: z.string(),
+          }),
+        )`
+          SELECT 
+            c.collection_id,
+            c.collection_type_id,
+            c.title,
+            c.description,
+            c.created_at::text,
+            c.updated_at::text,
+            ct.type_name,
+            (
 SELECT COUNT(*)::text 
-            FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
-          ) as post_count
-        FROM collections c
-        JOIN collection_types ct ON c.collection_type_id = ct.type_id
-        WHERE c.account_id = ${userId}
-          AND c.deleted = false
-          ${typeFilterFragment}
-        ORDER BY c.created_at DESC
-      `,
-    );
+              FROM collection_posts cp 
+              WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            ) as post_count
+          FROM collections c
+          JOIN collection_types ct ON c.collection_type_id = ct.type_id
+          WHERE c.account_id = ${userId}
+            AND c.deleted = false
+            ${typeFilterFragment}
+          ORDER BY c.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+      ),
+      db.one(
+        sql.type(z.object({ total: z.string() }))`
+          SELECT COUNT(*)::text AS total
+          FROM collections c
+          WHERE c.account_id = ${userId}
+            AND c.deleted = false
+            ${typeFilterFragment}
+        `,
+      ),
+    ]);
 
-    res.json(collections);
+    res.json({ collections, total: parseInt(totalRow.total), limit, offset });
   } catch (err) {
     console.error('Collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
