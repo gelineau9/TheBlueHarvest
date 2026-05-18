@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -214,9 +215,8 @@ router.get('/public', async (req: Request, res: Response) => {
       hasMore: offset + items.length < total,
     });
   } catch (error) {
-    console.error('Error fetching public archive:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return res.status(500).json({ error: 'Failed to fetch archive', details: errorMessage });
+    logger.error('[archive] Error fetching public archive', { error });
+    return res.status(500).json({ error: 'Failed to fetch archive' });
   }
 });
 
