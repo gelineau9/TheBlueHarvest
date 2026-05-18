@@ -219,12 +219,14 @@ router.get('/:postId/comments', optionalAuthenticateToken, async (req: AuthReque
       return;
     }
 
-    // Count total comments for pagination metadata
+    // Count total comments for pagination metadata — exclude soft-deleted so
+    // clients don't paginate into pages with only tombstones
     const countResult = await db.one(
       sql.type(z.object({ total: z.number() }))`
         SELECT COUNT(*)::int AS total
         FROM comments
         WHERE post_id = ${postId}
+          AND is_deleted = false
       `,
     );
 
