@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { HeroBackground } from '@/components/hero-background';
 import { ProfileButton } from '@/components/profile-button';
 
@@ -27,13 +28,13 @@ export function Banner() {
       {/* Centred title / subtitle */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 text-center">
         <div className="mb-2 inline-block rounded-sm bg-amber-900/20 px-6 py-2 backdrop-blur-sm">
-          <span className="font-fantasy text-3xl font-bold tracking-wide text-amber-50 drop-shadow-md sm:text-4xl md:text-5xl">
-            Brandy Hall Archives
-          </span>
-        </div>
-        <p className="rounded-sm bg-amber-900/20 px-4 py-1 text-base text-amber-50 drop-shadow-md backdrop-blur-sm sm:text-lg">
-          Your RP Portal to Middle-earth
-        </p>
+            <Link href="/" className="font-fantasy text-3xl font-bold tracking-wide text-amber-50 drop-shadow-md sm:text-4xl md:text-5xl hover:text-amber-100 transition-colors">
+              Brandy Hall Archives
+            </Link>
+          </div>
+          <p className="rounded-sm bg-amber-900/20 px-4 py-1 text-base text-amber-50 drop-shadow-md backdrop-blur-sm sm:text-lg">
+            Your chronicle to RP on Meriadoc, the official roleplaying server of The Lord of the Rings Online
+          </p>
       </div>
     </header>
   );
