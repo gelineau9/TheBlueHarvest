@@ -94,12 +94,14 @@ router.post(
         return;
       }
 
-      // Insert (or un-delete if a soft-deleted row exists)
+      // Upsert: restore a soft-deleted row if one exists, otherwise insert fresh.
+      // ON CONFLICT targets the unique (post_id, profile_id) pair and clears deleted.
       const result = await db.one(
         sql.type(z.object({ featured_profile_id: z.number() }))`
           INSERT INTO featured_profiles (post_id, profile_id)
           VALUES (${postId}, ${profile_id})
-          ON CONFLICT DO NOTHING
+          ON CONFLICT (post_id, profile_id) DO UPDATE
+            SET deleted = false
           RETURNING featured_profile_id
         `,
       );
