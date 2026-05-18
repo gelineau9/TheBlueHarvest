@@ -6,19 +6,21 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth/auth-provider';
 import { Banner } from '@/components/banner';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { getSession } from '@/app/lib/actions';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: 'Brandy Hall Archives - Your RP Portal to Middle-earth',
+  title: 'Brandy Hall Archives',
   description: 'A community for Lord of the Rings roleplayers and storytellers',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialSession = await getSession();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -28,7 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} flex min-h-screen flex-col bg-[#f5e6c8]`}>
-        <AuthProvider>
+        <AuthProvider initialSession={initialSession}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             {/*
               Banner is a Server Component that renders the full-bleed hero.
