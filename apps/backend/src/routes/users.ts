@@ -41,6 +41,7 @@ router.get('/public/:username', async (req: Request, res: Response) => {
         FROM accounts
         WHERE username = ${username}
           AND is_banned = false
+          AND deleted = false
       `,
     );
 
