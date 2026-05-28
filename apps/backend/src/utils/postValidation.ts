@@ -5,7 +5,7 @@
  * NOTE: Ownership and canEdit functions are in routes/editors.ts
  */
 
-import { sql } from 'slonik';
+import { sql, DatabasePool } from 'slonik';
 import { z } from 'zod';
 
 // Profile types that can author posts/collections
@@ -18,7 +18,7 @@ export const AUTHOR_PROFILE_TYPES = [1, 3, 4];
  * Returns the profile if valid, null otherwise
  */
 export async function getAuthorableProfile(
-  db: any,
+  db: DatabasePool,
   profileId: number,
   userId: number,
 ): Promise<{ profile_id: number; profile_type_id: number; name: string } | null> {
@@ -49,7 +49,7 @@ export async function getAuthorableProfile(
  * Returns { allowed: true } or { allowed: false, reason: string }
  */
 export async function canAddPostToCollection(
-  db: any,
+  db: DatabasePool,
   collectionId: number,
   postId: number,
 ): Promise<{ allowed: boolean; reason?: string }> {
@@ -103,7 +103,7 @@ export async function canAddPostToCollection(
 /**
  * Check if a post is already in a collection
  */
-export async function isPostInCollection(db: any, collectionId: number, postId: number): Promise<boolean> {
+export async function isPostInCollection(db: DatabasePool, collectionId: number, postId: number): Promise<boolean> {
   const result = await db.maybeOne(
     sql.type(z.object({ exists: z.boolean() }))`
       SELECT EXISTS (
@@ -118,7 +118,7 @@ export async function isPostInCollection(db: any, collectionId: number, postId: 
 /**
  * Get the next sort_order for a collection
  */
-export async function getNextSortOrder(db: any, collectionId: number): Promise<number> {
+export async function getNextSortOrder(db: DatabasePool, collectionId: number): Promise<number> {
   const result = await db.maybeOne(
     sql.type(z.object({ max_order: z.number().nullable() }))`
       SELECT MAX(sort_order) as max_order

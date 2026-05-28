@@ -20,7 +20,7 @@
  */
 
 import { Router, Response } from 'express';
-import { sql } from 'slonik';
+import { sql, DatabasePool } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
@@ -70,7 +70,7 @@ const TypeIdSchema = z.object({
 
 // ── Helper: can caller edit a profile? ───────────────────────────────────────
 
-async function canEditProfile(db: any, profileId: number, userId: number): Promise<boolean> {
+async function canEditProfile(db: DatabasePool, profileId: number, userId: number): Promise<boolean> {
   const result = await db.maybeOne(
     sql.type(z.object({ can_edit: z.boolean() }))`
       SELECT EXISTS (
