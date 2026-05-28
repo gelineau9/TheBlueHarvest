@@ -134,7 +134,7 @@ router.post(
             }
           : null,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Collection creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }

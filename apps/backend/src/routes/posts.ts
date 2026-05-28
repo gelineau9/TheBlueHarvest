@@ -120,7 +120,7 @@ router.post(
       });
 
       // Build response - include author info only if one was assigned
-      const response: any = {
+      const response: Record<string, unknown> = {
         post_id: result.post_id,
         account_id: result.account_id,
         post_type_id: result.post_type_id,
@@ -156,7 +156,7 @@ router.post(
       });
 
       res.status(201).json(response);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Post creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }

@@ -136,11 +136,12 @@ router.post(
         is_published: result.is_published,
         created_at: result.created_at,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Profile creation error:', err);
+      const dbErr = err as { code?: string; cause?: { code?: string } };
 
       // Handle unique constraint violation
-      if (err.code === '23505' || err.cause?.code === '23505') {
+      if (dbErr.code === '23505' || dbErr.cause?.code === '23505') {
         let errorMessage = 'There is already a profile with this name';
 
         // Provide context-specific error messages based on profile type
@@ -162,7 +163,7 @@ router.post(
       }
 
       // Handle CHECK constraint violation (ownership hierarchy)
-      if (err.code === '23514' || err.cause?.code === '23514') {
+      if (dbErr.code === '23514' || dbErr.cause?.code === '23514') {
         res.status(400).json({
           error:
             'This profile cannot be created due to ownership rules. Items, Kinships, and Organizations must belong to a character you own.',
@@ -603,11 +604,12 @@ router.put(
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Profile update error:', err);
+      const dbErr = err as { code?: string; cause?: { code?: string } };
 
       // Handle unique constraint violation (duplicate name)
-      if (err.code === '23505' || err.cause?.code === '23505') {
+      if (dbErr.code === '23505' || dbErr.cause?.code === '23505') {
         res.status(409).json({
           error: 'A profile with this name already exists',
         });
