@@ -34,7 +34,7 @@ const AuditLogRowSchema = z.object({
   action_type: z.string(),
   target_type: z.string().nullable(),
   target_id: z.number().nullable(),
-  metadata: z.any().nullable(),
+  metadata: z.unknown().nullable(),
   created_at: z.string(),
 });
 

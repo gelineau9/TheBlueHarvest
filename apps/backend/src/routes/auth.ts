@@ -285,7 +285,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
           account_id: z.number(),
           username: z.string(),
           email: z.string(),
-          details: z.any().nullable(),
+          details: z.unknown().nullable(),
           role_name: z.string(),
         }),
       )`
@@ -367,7 +367,7 @@ router.put(
             account_id: z.number(),
             username: z.string(),
             email: z.string(),
-            details: z.any().nullable(),
+            details: z.unknown().nullable(),
           }),
         )`
           UPDATE accounts

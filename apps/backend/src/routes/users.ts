@@ -318,7 +318,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
           is_owner: z.boolean(),
           parent_profile_id: z.number().nullable(),
           parent_profile_name: z.string().nullable(),
-          details: z.any().nullable(),
+          details: z.unknown().nullable(),
         }),
       )`
         SELECT 
