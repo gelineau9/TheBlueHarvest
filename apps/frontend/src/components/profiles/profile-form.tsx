@@ -629,7 +629,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 type="text"
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                placeholder="e.g. Blacksmith, Mage…"
+                placeholder="e.g. Blacksmith, Warden…"
                 maxLength={100}
                 disabled={isSubmitting}
                 className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"

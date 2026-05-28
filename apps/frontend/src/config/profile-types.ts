@@ -22,7 +22,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     label: 'Character',
     icon: Users,
     description:
-      'Create a character profile for your roleplay persona. This can be a hero, villain, or any character you want to bring to life in Middle-earth.',
+      'Document your roleplay persona on LOTRO\'s Meriadoc server.',
   },
   item: {
     id: 2,
@@ -30,7 +30,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'item',
     label: 'Item',
     icon: Sword,
-    description: 'Create an item profile for weapons, artifacts, heirlooms, or any significant object in your stories.',
+    description: 'Document weapons, artifacts, heirlooms, or any other significant item that appears in your writing and/or roleplay.',
   },
   kinship: {
     id: 3,
@@ -38,7 +38,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'kinship',
     label: 'Kinship',
     icon: Heart,
-    description: 'Create a kinship profile to represent guilds, fellowships, or groups of characters.',
+    description: 'Document your in-game roleplay kinship on LOTRO\'s Meriadoc server.',
   },
   organization: {
     id: 4,
@@ -46,7 +46,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'organization',
     label: 'Organization',
     icon: Building2,
-    description: 'Create an organization profile for factions, councils, or other groups in Middle-earth.',
+    description: 'Document factions, councils, guilds, or other groups that appear in your writing and/or roleplay.',
   },
   location: {
     id: 5,
@@ -54,7 +54,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'location',
     label: 'Location',
     icon: MapPin,
-    description: 'Create a location profile for places, settlements, or landmarks important to your stories.',
+    description: 'Document places, settlements, or landmarks that appear in your writing and/or roleplay.',
   },
 };
 
