@@ -51,7 +51,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Sheet>
 
           <Link href="/" className="font-fantasy text-lg font-bold tracking-wide text-amber-900">
-            Brandy Hall Archives
+            The Brandy Hall Archives
           </Link>
         </div>
 

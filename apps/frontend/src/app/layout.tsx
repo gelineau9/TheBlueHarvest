@@ -11,8 +11,8 @@ import { getSession } from '@/app/lib/actions';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: 'Brandy Hall Archives',
-  description: 'A community for Lord of the Rings roleplayers and storytellers',
+  title: 'The Brandy Hall Archives',
+  description: 'A community for Lord of the Rings Online roleplayers and storytellers on the Meriadoc server',
 };
 
 export default async function RootLayout({
