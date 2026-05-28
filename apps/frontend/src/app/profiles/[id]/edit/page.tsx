@@ -253,6 +253,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [foundingDate, setFoundingDate] = useState('');
   const [kinshipType, setKinshipType] = useState('Mixed');
   const [kinshipStatus, setKinshipStatus] = useState('Recruiting');
+  const [kinshipAreaOfOperation, setKinshipAreaOfOperation] = useState('');
   const [recruiterIds, setRecruiterIds] = useState<number[]>([]);
   const [members, setMembers] = useState<KinshipMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -291,6 +292,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [originalFoundingDate, setOriginalFoundingDate] = useState('');
   const [originalKinshipType, setOriginalKinshipType] = useState('Mixed');
   const [originalKinshipStatus, setOriginalKinshipStatus] = useState('Recruiting');
+  const [originalKinshipAreaOfOperation, setOriginalKinshipAreaOfOperation] = useState('');
   const [originalRecruiterIds, setOriginalRecruiterIds] = useState<number[]>([]);
 
   // Location originals
@@ -353,6 +355,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     foundingDate !== originalFoundingDate ||
     kinshipType !== originalKinshipType ||
     kinshipStatus !== originalKinshipStatus ||
+    kinshipAreaOfOperation !== originalKinshipAreaOfOperation ||
     JSON.stringify(recruiterIds) !== JSON.stringify(originalRecruiterIds) ||
     locationType !== originalLocationType ||
     locationRegion !== originalLocationRegion ||
@@ -437,16 +440,19 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           const initialFoundingDate = d?.founding_date || '';
           const initialKinshipType = d?.kinship_type || 'Mixed';
           const initialKinshipStatus = d?.status || 'Recruiting';
+          const initialKinshipAreaOfOperation = d?.area_of_operation || '';
           const initialRecruiterIds = d?.recruiters || [];
 
           setFoundingDate(initialFoundingDate);
           setKinshipType(initialKinshipType);
           setKinshipStatus(initialKinshipStatus);
+          setKinshipAreaOfOperation(initialKinshipAreaOfOperation);
           setRecruiterIds(initialRecruiterIds);
 
           setOriginalFoundingDate(initialFoundingDate);
           setOriginalKinshipType(initialKinshipType);
           setOriginalKinshipStatus(initialKinshipStatus);
+          setOriginalKinshipAreaOfOperation(initialKinshipAreaOfOperation);
           setOriginalRecruiterIds(initialRecruiterIds);
         }
 
@@ -663,6 +669,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         if (foundingDate.trim()) details.founding_date = foundingDate.trim();
         details.kinship_type = kinshipType;
         details.status = kinshipStatus;
+        if (kinshipAreaOfOperation.trim()) details.area_of_operation = kinshipAreaOfOperation.trim();
         if (recruiterIds.length > 0) details.recruiters = recruiterIds;
       }
 
@@ -731,6 +738,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalFoundingDate(foundingDate.trim());
       setOriginalKinshipType(kinshipType);
       setOriginalKinshipStatus(kinshipStatus);
+      setOriginalKinshipAreaOfOperation(kinshipAreaOfOperation.trim());
       setOriginalRecruiterIds(recruiterIds);
       setOriginalLocationType(locationType.trim());
       setOriginalLocationRegion(locationRegion.trim());
@@ -1200,6 +1208,21 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kinship_area_of_operation" className="text-amber-900 font-medium">
+                      Area of Operation
+                    </Label>
+                    <Input
+                      id="kinship_area_of_operation"
+                      type="text"
+                      value={kinshipAreaOfOperation}
+                      onChange={(e) => setKinshipAreaOfOperation(e.target.value)}
+                      placeholder="e.g. The Shire, Minas Tirith, Unknown…"
+                      maxLength={100}
+                      disabled={isSaving}
+                      className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                    />
                   </div>
                 </div>
               </div>
