@@ -5,9 +5,9 @@ export default function AboutPage() {
 
       <div className="space-y-6 text-[#3a2921]">
         <section>
-          <h2 className="mb-2 text-xl font-semibold text-amber-800">About Brandy Hall Archives</h2>
+          <h2 className="mb-2 text-xl font-semibold text-amber-800">About The Brandy Hall Archives</h2>
           <p className="leading-relaxed text-amber-900/80">
-            Brandy Hall Archives is a creative community for fans of Tolkien&apos;s Middle-earth. Members can share
+            <em>The Brandy Hall Archives</em> is a creative community for fans of Tolkien&apos;s Middle-earth. Members can share
             original writing, artwork, events, and various profiles set within the Lord of the Rings Online.
           </p>
         </section>

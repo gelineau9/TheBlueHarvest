@@ -87,7 +87,7 @@ export function LeftSidebar() {
         <NavItem href="/archive?profileTypes=3" label="Kinships" />
         <NavItem href="/archive" label="Archive" />
         <NavItem href="/collections" label="Collections" />
-        <NavItem href="/about" label="About And Rules" />
+        <NavItem href="/about" label="About and Rules" />
       </nav>
     </div>
   );

@@ -14,7 +14,7 @@ import { ProfileButton } from '@/components/profile-button';
 export function Banner() {
   return (
     <header
-      aria-label="Brandy Hall Archives site banner"
+      aria-label="The Brandy Hall Archives site banner"
       className="relative w-full h-[220px] overflow-hidden shrink-0"
     >
       {/* Full-bleed hero background image + gradient overlay */}
@@ -29,7 +29,7 @@ export function Banner() {
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 text-center">
         <div className="mb-2 inline-block rounded-sm bg-amber-900/20 px-6 py-2 backdrop-blur-sm">
             <Link href="/" className="font-fantasy text-3xl font-bold tracking-wide text-amber-50 drop-shadow-md sm:text-4xl md:text-5xl hover:text-amber-100 transition-colors">
-              Brandy Hall Archives
+              The Brandy Hall Archives
             </Link>
           </div>
           <p className="rounded-sm bg-amber-900/20 px-4 py-1 text-base text-amber-50 drop-shadow-md backdrop-blur-sm sm:text-lg">
