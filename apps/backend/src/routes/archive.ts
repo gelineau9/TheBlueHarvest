@@ -150,16 +150,8 @@ router.get('/public', async (req: Request, res: Response) => {
     const unionQuery =
       queryParts.length === 1 ? queryParts[0] : sql.fragment`(${queryParts[0]}) UNION ALL (${queryParts[1]})`;
 
-    // Count total items
-    const countQuery = sql.type(z.object({ count: z.number() }))`
-      SELECT COUNT(*)::int AS count FROM (${unionQuery}) AS combined
-    `;
-
-    const countResult = await db.one(countQuery);
-    const total = countResult.count;
-
-    // Fetch paginated items with dynamic ORDER BY
-    // We need to use sql.fragment for the ORDER BY clause since column names come from validated enum
+    // Fetch paginated items with total count via window function — avoids
+    // evaluating the UNION subquery twice (once for count, once for rows).
     const orderByClause =
       sortBy === 'name'
         ? order === 'asc'
@@ -186,14 +178,17 @@ router.get('/public', async (req: Request, res: Response) => {
         username: z.string(),
         created_at: z.string(),
         updated_at: z.string(),
+        total_count: z.number(),
       }),
     )`
-      SELECT * FROM (${unionQuery}) AS combined
+      SELECT *, COUNT(*) OVER ()::int AS total_count
+      FROM (${unionQuery}) AS combined
       ORDER BY ${orderByClause}
       LIMIT ${limit} OFFSET ${offset}
     `;
 
     const itemsResult = await db.any(itemsQuery);
+    const total = itemsResult[0]?.total_count ?? 0;
 
     const items = itemsResult.map((row) => ({
       id: row.id,
