@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 
   images: {
-    // unoptimized was set while running without a CDN. Re-enable once
-    // uploads are behind a CDN or the domain is stable enough to use
-    // Next.js image optimisation.
-    unoptimized: true,
     remotePatterns: [
       // Local development only — removed automatically in production builds
       ...(process.env.NODE_ENV === 'development'
