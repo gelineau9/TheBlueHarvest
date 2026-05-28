@@ -8,8 +8,8 @@ export function HeroBackground() {
 
       {/* Background image */}
       <Image
-        src="/hero-image.jpeg"
-        alt="Middle-earth landscape"
+        src="/BHAalpha.png"
+        alt="The Brandy Hall Archives"
         fill
         className="object-cover object-[center_90%]"
         priority
