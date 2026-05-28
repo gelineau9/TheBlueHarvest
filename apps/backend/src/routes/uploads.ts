@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -124,7 +125,7 @@ router.post(
         files: uploadedFiles,
       });
     } catch (err) {
-      console.error('Upload error:', err);
+      logger.error('Upload error:', err);
       res.status(500).json({ error: 'Failed to upload files' });
     }
   },
@@ -180,7 +181,7 @@ router.delete('/images/:filename', authenticateToken, async (req: AuthRequest, r
     fs.unlinkSync(filePath);
     res.status(204).send();
   } catch (err) {
-    console.error('Delete error:', err);
+    logger.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete file' });
   }
 });
@@ -248,7 +249,7 @@ router.post(
         },
       });
     } catch (err) {
-      console.error('Avatar upload error:', err);
+      logger.error('Avatar upload error:', err);
       res.status(500).json({ error: 'Failed to process avatar' });
     }
   },
@@ -302,7 +303,7 @@ router.delete('/avatar/:filename', authenticateToken, async (req: AuthRequest, r
     fs.unlinkSync(filePath);
     res.status(204).send();
   } catch (err) {
-    console.error('Delete error:', err);
+    logger.error('Delete error:', err);
     res.status(500).json({ error: 'Failed to delete avatar' });
   }
 });

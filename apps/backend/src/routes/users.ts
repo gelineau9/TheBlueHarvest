@@ -16,6 +16,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.get('/public/:username', async (req: Request, res: Response) => {
 
     res.json(account);
   } catch (err) {
-    console.error('Public user fetch error:', err);
+    logger.error('Public user fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -151,7 +152,7 @@ router.get('/me/posts', authenticateToken, async (req: AuthRequest, res: Respons
       next_cursor: nextCursor,
     });
   } catch (err) {
-    console.error('User posts fetch error:', err);
+    logger.error('User posts fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -246,7 +247,7 @@ router.get('/me/collections', authenticateToken, async (req: AuthRequest, res: R
       next_cursor: nextCursor,
     });
   } catch (err) {
-    console.error('User collections fetch error:', err);
+    logger.error('User collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -354,7 +355,7 @@ router.get('/me/profiles', authenticateToken, async (req: AuthRequest, res: Resp
       next_cursor: nextCursor,
     });
   } catch (err) {
-    console.error('User profiles fetch error:', err);
+    logger.error('User profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

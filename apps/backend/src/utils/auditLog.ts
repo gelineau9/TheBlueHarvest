@@ -1,6 +1,7 @@
 import { sql, type SerializableValue } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
+import { logger } from './logger.js';
 
 interface AuditEntry {
   actorAccountId: number;
@@ -27,6 +28,6 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
     );
   } catch (err) {
     // Audit log failures must never crash a request
-    console.error('Audit log write failed:', err);
+    logger.error('Audit log write failed:', err);
   }
 }

@@ -17,6 +17,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ router.post('/accounts/:id', authenticateToken, async (req: AuthRequest, res: Re
     );
     res.json({ following: true });
   } catch (err) {
-    console.error('Follow account error:', err);
+    logger.error('Follow account error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -73,7 +74,7 @@ router.delete('/accounts/:id', authenticateToken, async (req: AuthRequest, res: 
     );
     res.json({ following: false });
   } catch (err) {
-    console.error('Unfollow account error:', err);
+    logger.error('Unfollow account error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -112,7 +113,7 @@ router.post('/profiles/:id', authenticateToken, async (req: AuthRequest, res: Re
     );
     res.json({ following: true });
   } catch (err) {
-    console.error('Follow profile error:', err);
+    logger.error('Follow profile error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -138,7 +139,7 @@ router.delete('/profiles/:id', authenticateToken, async (req: AuthRequest, res: 
     );
     res.json({ following: false });
   } catch (err) {
-    console.error('Unfollow profile error:', err);
+    logger.error('Unfollow profile error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -234,7 +235,7 @@ router.get('/feed', authenticateToken, async (req: AuthRequest, res: Response) =
     const total = parseInt(countResult.total, 10);
     res.json({ posts, total, hasMore: offset + posts.length < total });
   } catch (err) {
-    console.error('Feed fetch error:', err);
+    logger.error('Feed fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -309,7 +310,7 @@ router.get('/check', authenticateToken, async (req: AuthRequest, res: Response) 
 
     res.json({ accounts, profiles });
   } catch (err) {
-    console.error('Follow check error:', err);
+    logger.error('Follow check error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

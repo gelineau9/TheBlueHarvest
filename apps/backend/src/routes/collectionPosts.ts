@@ -20,6 +20,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditCollection } from './editors.js';
 import { canAddPostToCollection, isPostInCollection, getNextSortOrder } from '../utils/postValidation.js';
 import { parseParam } from '../utils/params.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -124,7 +125,7 @@ router.post(
         sort_order: newEntry.sort_order,
       });
     } catch (err) {
-      console.error('Error adding post to collection:', err);
+      logger.error('Error adding post to collection:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -177,7 +178,7 @@ router.delete('/:collectionId/posts/:postId', authenticateToken, async (req: Aut
 
     res.status(204).send();
   } catch (err) {
-    console.error('Error removing post from collection:', err);
+    logger.error('Error removing post from collection:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -232,7 +233,7 @@ router.put(
 
       res.status(200).json({ message: 'Posts reordered successfully' });
     } catch (err) {
-      console.error('Error reordering posts:', err);
+      logger.error('Error reordering posts:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },

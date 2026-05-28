@@ -26,6 +26,7 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { parseParam } from '../utils/params.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -152,7 +153,7 @@ router.get('/:profileId/relationships', async (req: AuthRequest, res: Response) 
 
     res.json({ relationships: rows });
   } catch (err) {
-    console.error('Error fetching relationships:', err);
+    logger.error('Error fetching relationships:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -316,7 +317,7 @@ router.post(
         other_profile_avatar_url: targetProfile.avatar_url,
       });
     } catch (err) {
-      console.error('Error adding relationship:', err);
+      logger.error('Error adding relationship:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -372,7 +373,7 @@ router.delete('/:profileId/relationships/:relId', authenticateToken, async (req:
 
     res.status(204).send();
   } catch (err) {
-    console.error('Error removing relationship:', err);
+    logger.error('Error removing relationship:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

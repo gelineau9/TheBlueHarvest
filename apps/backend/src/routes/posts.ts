@@ -24,6 +24,7 @@ import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../mi
 import { canEditPost } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -156,7 +157,7 @@ router.post(
 
       res.status(201).json(response);
     } catch (err: any) {
-      console.error('Post creation error:', err);
+      logger.error('Post creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -211,7 +212,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     res.json(posts);
   } catch (err) {
-    console.error('Posts fetch error:', err);
+    logger.error('Posts fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -402,7 +403,7 @@ router.get('/public', optionalAuthenticateToken, async (req: AuthRequest, res: R
       hasMore,
     });
   } catch (err) {
-    console.error('Public posts fetch error:', err);
+    logger.error('Public posts fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -545,7 +546,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_featured: post.is_featured,
     });
   } catch (err) {
-    console.error('Post fetch error:', err);
+    logger.error('Post fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -682,7 +683,7 @@ router.put(
 
       res.json(updatedPost);
     } catch (err) {
-      console.error('Post update error:', err);
+      logger.error('Post update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -720,7 +721,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
     res.status(204).send();
   } catch (err) {
-    console.error('Post deletion error:', err);
+    logger.error('Post deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

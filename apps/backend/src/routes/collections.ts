@@ -33,6 +33,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditCollection } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -134,7 +135,7 @@ router.post(
           : null,
       });
     } catch (err: any) {
-      console.error('Collection creation error:', err);
+      logger.error('Collection creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -203,7 +204,7 @@ SELECT COUNT(*)::text
 
     res.json({ collections, total: parseInt(totalRow.total), limit, offset });
   } catch (err) {
-    console.error('Collections fetch error:', err);
+    logger.error('Collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -336,7 +337,7 @@ SELECT COUNT(*)::text
       hasMore,
     });
   } catch (err) {
-    console.error('Public collections fetch error:', err);
+    logger.error('Public collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -463,7 +464,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_owner: isOwner,
     });
   } catch (err) {
-    console.error('Collection fetch error:', err);
+    logger.error('Collection fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -562,7 +563,7 @@ router.put(
 
       res.json(updatedCollection);
     } catch (err) {
-      console.error('Collection update error:', err);
+      logger.error('Collection update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -600,7 +601,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
     res.status(204).send();
   } catch (err) {
-    console.error('Collection deletion error:', err);
+    logger.error('Collection deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

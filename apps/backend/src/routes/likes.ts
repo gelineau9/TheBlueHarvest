@@ -17,6 +17,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.post('/posts/:id', authenticateToken, async (req: AuthRequest, res: Respo
     const like_count = await getPostLikeCount(db, postId);
     res.json({ liked: true, like_count });
   } catch (err) {
-    console.error('Post like error:', err);
+    logger.error('Post like error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -107,7 +108,7 @@ router.delete('/posts/:id', authenticateToken, async (req: AuthRequest, res: Res
     const like_count = await getPostLikeCount(db, postId);
     res.json({ liked: false, like_count });
   } catch (err) {
-    console.error('Post unlike error:', err);
+    logger.error('Post unlike error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -149,7 +150,7 @@ router.post('/comments/:id', authenticateToken, async (req: AuthRequest, res: Re
     const like_count = await getCommentLikeCount(db, commentId);
     res.json({ liked: true, like_count });
   } catch (err) {
-    console.error('Comment like error:', err);
+    logger.error('Comment like error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -176,7 +177,7 @@ router.delete('/comments/:id', authenticateToken, async (req: AuthRequest, res: 
     const like_count = await getCommentLikeCount(db, commentId);
     res.json({ liked: false, like_count });
   } catch (err) {
-    console.error('Comment unlike error:', err);
+    logger.error('Comment unlike error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

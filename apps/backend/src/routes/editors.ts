@@ -21,6 +21,7 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { parseParam } from '../utils/params.js';
+import { logger } from '../utils/logger.js';
 
 // Reusable Zod schemas
 const EditorSchema = z.object({
@@ -113,7 +114,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
 
       res.json({ editors });
     } catch (err) {
-      console.error(`Error fetching ${entityName} editors:`, err);
+      logger.error(`Error fetching ${entityName} editors:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -216,7 +217,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           created_at: newEditor.created_at,
         });
       } catch (err) {
-        console.error(`Error adding ${entityName} editor:`, err);
+        logger.error(`Error adding ${entityName} editor:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
     },
@@ -269,7 +270,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
 
       res.status(204).send();
     } catch (err) {
-      console.error(`Error removing ${entityName} editor:`, err);
+      logger.error(`Error removing ${entityName} editor:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -481,7 +482,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
           is_primary: newAuthor.is_primary,
         });
       } catch (err) {
-        console.error(`Error adding ${entityName} author:`, err);
+        logger.error(`Error adding ${entityName} author:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
     },
@@ -536,7 +537,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
 
       res.status(204).send();
     } catch (err) {
-      console.error(`Error removing ${entityName} author:`, err);
+      logger.error(`Error removing ${entityName} author:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

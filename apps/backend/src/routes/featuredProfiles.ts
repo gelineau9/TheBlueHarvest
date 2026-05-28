@@ -16,6 +16,7 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditPost } from './editors.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -114,7 +115,7 @@ router.post(
         profile_type_id: profile.profile_type_id,
       });
     } catch (err) {
-      console.error('Featured profile add error:', err);
+      logger.error('Featured profile add error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -160,7 +161,7 @@ router.delete('/:id/featured/:featuredId', authenticateToken, async (req: AuthRe
 
     res.status(204).send();
   } catch (err) {
-    console.error('Featured profile remove error:', err);
+    logger.error('Featured profile remove error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

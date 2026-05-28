@@ -6,6 +6,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditProfile } from './editors.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -136,7 +137,7 @@ router.post(
         created_at: result.created_at,
       });
     } catch (err: any) {
-      console.error('Profile creation error:', err);
+      logger.error('Profile creation error:', err);
 
       // Handle unique constraint violation
       if (err.code === '23505' || err.cause?.code === '23505') {
@@ -219,7 +220,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     res.json(profiles);
   } catch (err) {
-    console.error('Profiles fetch error:', err);
+    logger.error('Profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -391,7 +392,7 @@ router.get('/public', async (req: Request, res: Response) => {
       hasMore,
     });
   } catch (err) {
-    console.error('Public profiles fetch error:', err);
+    logger.error('Public profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -475,7 +476,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_owner: isOwner,
     });
   } catch (err) {
-    console.error('Profile fetch error:', err);
+    logger.error('Profile fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -603,7 +604,7 @@ router.put(
         updated_at: updatedProfile.updated_at,
       });
     } catch (err: any) {
-      console.error('Profile update error:', err);
+      logger.error('Profile update error:', err);
 
       // Handle unique constraint violation (duplicate name)
       if (err.code === '23505' || err.cause?.code === '23505') {
@@ -654,7 +655,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
     res.status(204).send();
   } catch (err) {
-    console.error('Profile deletion error:', err);
+    logger.error('Profile deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -719,7 +720,7 @@ router.get('/:id/members', async (req: Request, res: Response) => {
 
     res.json({ members });
   } catch (err) {
-    console.error('Error fetching kinship members:', err);
+    logger.error('Error fetching kinship members:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -793,7 +794,7 @@ router.post('/:id/members', authenticateToken, async (req: AuthRequest, res: Res
 
     res.status(201).json({ message: 'Joined kinship successfully' });
   } catch (err) {
-    console.error('Error adding kinship member:', err);
+    logger.error('Error adding kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -861,7 +862,7 @@ router.delete('/:id/members/:charId', authenticateToken, async (req: AuthRequest
 
     res.status(204).send();
   } catch (err) {
-    console.error('Error removing kinship member:', err);
+    logger.error('Error removing kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
