@@ -14,9 +14,11 @@ if (!DB_USER || !DB_PASSWORD || !DB_HOST || !DB_PORT || !DB_NAME) {
 
 // encodeURIComponent handles special characters in passwords
 // DB_SSLMODE controls SSL behaviour:
-//   disable    — local Docker Postgres (no SSL configured)
-//   no-verify  — Supabase / hosted Postgres (encrypt, skip cert validation)
-const sslMode = process.env.DB_SSLMODE ?? 'no-verify';
+//   disable      — local Docker Postgres (no SSL configured)
+//   require      — production: encrypt + verify server certificate (default)
+//   no-verify    — legacy / self-signed certs only; avoid in production
+//   verify-full  — strictest: verify cert AND hostname
+const sslMode = process.env.DB_SSLMODE ?? 'require';
 const connectionString = `postgres://${encodeURIComponent(DB_USER)}:${encodeURIComponent(DB_PASSWORD)}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${sslMode}`;
 
 const pool = createPool(connectionString, {
