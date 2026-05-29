@@ -27,6 +27,7 @@
     "test:watch": "npx vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
     "@slonik/pg-driver": "^48.10.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
