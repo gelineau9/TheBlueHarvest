@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
         hostname: process.env.NEXT_PUBLIC_SUPABASE_HOSTNAME ?? 'your-project-ref.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      // Render backend — temporary fallback while upload migration is in progress
+      {
+        protocol: 'https',
+        hostname: process.env.NEXT_PUBLIC_BACKEND_HOSTNAME ?? 'yourdomain.com',
+        pathname: '/uploads/**',
+      },
     ],
   },
   transpilePackages: ['react-image-crop'],
