@@ -108,6 +108,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
         <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-semibold">
           Author (Optional)
         </Label>
+        <p className="text-sm text-amber-700">Attribute this writing to one of your characters or kinships.</p>
         {isLoadingCharacters ? (
           <div className="text-sm text-amber-700">Loading your profiles...</div>
         ) : (
@@ -132,7 +133,6 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
                 </option>
               ))}
             </select>
-            <p className="text-sm text-amber-700">Attribute this writing to one of your characters or kinships.</p>
             {errors.primary_author_profile_id && (
               <p className="text-sm text-red-600">{errors.primary_author_profile_id.message}</p>
             )}

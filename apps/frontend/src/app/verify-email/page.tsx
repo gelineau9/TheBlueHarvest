@@ -24,9 +24,7 @@ export default function VerifyEmailPage() {
 
     const verify = async () => {
       try {
-        const response = await fetch(
-          `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-        );
+        const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await response.json().catch(() => ({}));
 
         if (response.ok) {
@@ -75,10 +73,7 @@ export default function VerifyEmailPage() {
             <p className="text-sm text-amber-700 text-center">
               You are now logged in. Redirecting you to the homepage…
             </p>
-            <Button
-              className="w-full bg-amber-900 text-amber-50"
-              onClick={() => window.location.replace('/')}
-            >
+            <Button className="w-full bg-amber-900 text-amber-50" onClick={() => window.location.replace('/')}>
               Go to Homepage
             </Button>
           </CardContent>

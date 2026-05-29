@@ -6,6 +6,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditProfile } from './editors.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -97,7 +98,7 @@ router.post(
             account_id: z.number(),
             profile_type_id: z.number(),
             name: z.string(),
-            details: z.any().nullable(),
+            details: z.unknown().nullable(),
             parent_profile_id: z.number().nullable(),
             is_published: z.boolean(),
             created_at: z.string(),
@@ -135,11 +136,12 @@ router.post(
         is_published: result.is_published,
         created_at: result.created_at,
       });
-    } catch (err: any) {
-      console.error('Profile creation error:', err);
+    } catch (err: unknown) {
+      logger.error('Profile creation error:', err);
+      const dbErr = err as { code?: string; cause?: { code?: string } };
 
       // Handle unique constraint violation
-      if (err.code === '23505' || err.cause?.code === '23505') {
+      if (dbErr.code === '23505' || dbErr.cause?.code === '23505') {
         let errorMessage = 'There is already a profile with this name';
 
         // Provide context-specific error messages based on profile type
@@ -161,7 +163,7 @@ router.post(
       }
 
       // Handle CHECK constraint violation (ownership hierarchy)
-      if (err.code === '23514' || err.cause?.code === '23514') {
+      if (dbErr.code === '23514' || dbErr.cause?.code === '23514') {
         res.status(400).json({
           error:
             'This profile cannot be created due to ownership rules. Items, Kinships, and Organizations must belong to a character you own.',
@@ -219,7 +221,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     res.json(profiles);
   } catch (err) {
-    console.error('Profiles fetch error:', err);
+    logger.error('Profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -336,7 +338,7 @@ router.get('/public', async (req: Request, res: Response) => {
           profile_id: z.number(),
           profile_type_id: z.number(),
           name: z.string(),
-          details: z.any().nullable(),
+          details: z.unknown().nullable(),
           created_at: z.string(),
           type_name: z.string(),
           username: z.string(),
@@ -391,7 +393,7 @@ router.get('/public', async (req: Request, res: Response) => {
       hasMore,
     });
   } catch (err) {
-    console.error('Public profiles fetch error:', err);
+    logger.error('Public profiles fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -415,7 +417,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           account_id: z.number(),
           profile_type_id: z.number(),
           name: z.string(),
-          details: z.any().nullable(),
+          details: z.unknown().nullable(),
           parent_profile_id: z.number().nullable(),
           is_published: z.boolean(),
           created_at: z.string(),
@@ -475,7 +477,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_owner: isOwner,
     });
   } catch (err) {
-    console.error('Profile fetch error:', err);
+    logger.error('Profile fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -571,7 +573,7 @@ router.put(
             account_id: z.number(),
             profile_type_id: z.number(),
             name: z.string(),
-            details: z.any().nullable(),
+            details: z.unknown().nullable(),
             is_published: z.boolean(),
             created_at: z.string(),
             updated_at: z.string(),
@@ -602,11 +604,12 @@ router.put(
         created_at: updatedProfile.created_at,
         updated_at: updatedProfile.updated_at,
       });
-    } catch (err: any) {
-      console.error('Profile update error:', err);
+    } catch (err: unknown) {
+      logger.error('Profile update error:', err);
+      const dbErr = err as { code?: string; cause?: { code?: string } };
 
       // Handle unique constraint violation (duplicate name)
-      if (err.code === '23505' || err.cause?.code === '23505') {
+      if (dbErr.code === '23505' || dbErr.cause?.code === '23505') {
         res.status(409).json({
           error: 'A profile with this name already exists',
         });
@@ -652,9 +655,9 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Profile deleted successfully' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Profile deletion error:', err);
+    logger.error('Profile deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -719,7 +722,7 @@ router.get('/:id/members', async (req: Request, res: Response) => {
 
     res.json({ members });
   } catch (err) {
-    console.error('Error fetching kinship members:', err);
+    logger.error('Error fetching kinship members:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -793,7 +796,7 @@ router.post('/:id/members', authenticateToken, async (req: AuthRequest, res: Res
 
     res.status(201).json({ message: 'Joined kinship successfully' });
   } catch (err) {
-    console.error('Error adding kinship member:', err);
+    logger.error('Error adding kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -859,9 +862,9 @@ router.delete('/:id/members/:charId', authenticateToken, async (req: AuthRequest
       `,
     );
 
-    res.status(200).json({ message: 'Member removed successfully' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Error removing kinship member:', err);
+    logger.error('Error removing kinship member:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

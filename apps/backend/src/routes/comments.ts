@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest, optionalAuthenticateToken } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -183,7 +184,7 @@ router.post(
 
       res.status(201).json(commentWithUser);
     } catch (err) {
-      console.error('Error creating comment:', err);
+      logger.error('Error creating comment:', err);
       res.status(500).json({ error: 'Failed to create comment' });
     }
   },
@@ -219,12 +220,14 @@ router.get('/:postId/comments', optionalAuthenticateToken, async (req: AuthReque
       return;
     }
 
-    // Count total comments for pagination metadata
+    // Count total comments for pagination metadata — exclude soft-deleted so
+    // clients don't paginate into pages with only tombstones
     const countResult = await db.one(
       sql.type(z.object({ total: z.number() }))`
         SELECT COUNT(*)::int AS total
         FROM comments
         WHERE post_id = ${postId}
+          AND is_deleted = false
       `,
     );
 
@@ -267,7 +270,7 @@ router.get('/:postId/comments', optionalAuthenticateToken, async (req: AuthReque
       },
     });
   } catch (err) {
-    console.error('Error fetching comments:', err);
+    logger.error('Error fetching comments:', err);
     res.status(500).json({ error: 'Failed to fetch comments' });
   }
 });
@@ -360,7 +363,7 @@ router.put(
 
       res.json(updatedComment);
     } catch (err) {
-      console.error('Error updating comment:', err);
+      logger.error('Error updating comment:', err);
       res.status(500).json({ error: 'Failed to update comment' });
     }
   },
@@ -418,9 +421,9 @@ router.delete('/:postId/comments/:commentId', authenticateToken, async (req: Aut
         `,
     );
 
-    res.json({ success: true, message: 'Comment deleted' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Error deleting comment:', err);
+    logger.error('Error deleting comment:', err);
     res.status(500).json({ error: 'Failed to delete comment' });
   }
 });

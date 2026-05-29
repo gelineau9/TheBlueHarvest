@@ -36,3 +36,14 @@ export const up = (pgm) => {
     CREATE INDEX idx_featured_posts_order ON featured_posts(display_order);
   `);
 };
+
+/**
+ * @param {import('node-pg-migrate').MigrationBuilder} pgm
+ */
+export const down = (pgm) => {
+  pgm.sql(`
+    DROP TABLE IF EXISTS featured_posts;
+    ALTER TABLE accounts DROP COLUMN IF EXISTS suspended_until;
+    ALTER TABLE accounts DROP COLUMN IF EXISTS suspended_reason;
+  `);
+};

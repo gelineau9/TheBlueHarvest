@@ -24,6 +24,7 @@ import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../mi
 import { canEditPost } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -88,7 +89,7 @@ router.post(
               account_id: z.number(),
               post_type_id: z.number(),
               title: z.string(),
-              content: z.any().nullable(),
+              content: z.unknown().nullable(),
               is_published: z.boolean(),
               created_at: z.string(),
             }),
@@ -119,7 +120,7 @@ router.post(
       });
 
       // Build response - include author info only if one was assigned
-      const response: any = {
+      const response: Record<string, unknown> = {
         post_id: result.post_id,
         account_id: result.account_id,
         post_type_id: result.post_type_id,
@@ -155,8 +156,8 @@ router.post(
       });
 
       res.status(201).json(response);
-    } catch (err: any) {
-      console.error('Post creation error:', err);
+    } catch (err: unknown) {
+      logger.error('Post creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -211,7 +212,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     res.json(posts);
   } catch (err) {
-    console.error('Posts fetch error:', err);
+    logger.error('Posts fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -343,7 +344,7 @@ router.get('/public', optionalAuthenticateToken, async (req: AuthRequest, res: R
           post_id: z.number(),
           post_type_id: z.number(),
           title: z.string(),
-          content: z.any().nullable(),
+          content: z.unknown().nullable(),
           created_at: z.string(),
           type_name: z.string(),
           username: z.string(),
@@ -402,7 +403,7 @@ router.get('/public', optionalAuthenticateToken, async (req: AuthRequest, res: R
       hasMore,
     });
   } catch (err) {
-    console.error('Public posts fetch error:', err);
+    logger.error('Public posts fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -434,7 +435,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           account_id: z.number(),
           post_type_id: z.number(),
           title: z.string(),
-          content: z.any().nullable(),
+          content: z.unknown().nullable(),
           is_published: z.boolean(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
@@ -545,7 +546,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_featured: post.is_featured,
     });
   } catch (err) {
-    console.error('Post fetch error:', err);
+    logger.error('Post fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -638,7 +639,7 @@ router.put(
             account_id: z.number(),
             post_type_id: z.number(),
             title: z.string(),
-            content: z.any().nullable(),
+            content: z.unknown().nullable(),
             is_published: z.boolean(),
             created_at: z.string(),
             updated_at: z.string(),
@@ -682,7 +683,7 @@ router.put(
 
       res.json(updatedPost);
     } catch (err) {
-      console.error('Post update error:', err);
+      logger.error('Post update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -718,9 +719,9 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Post deleted successfully' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Post deletion error:', err);
+    logger.error('Post deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

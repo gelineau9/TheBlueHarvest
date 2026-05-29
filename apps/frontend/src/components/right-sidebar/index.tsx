@@ -62,6 +62,9 @@ export function RightSidebar() {
   const [activityHasMore, setActivityHasMore] = useState(false);
   const [activityOffset, setActivityOffset] = useState(0);
 
+  // Selected calendar date for event filtering (null = show all)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
   // Fetch upcoming events
   const fetchEvents = useCallback(async () => {
     setEventsLoading(true);
@@ -146,15 +149,34 @@ export function RightSidebar() {
         return ta - tb;
       });
 
-    const upcomingEvents = transformed
-      .filter((event) => {
-        const eventDate = new Date(event.eventDateTime);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      });
+    const upcomingEvents = transformed.filter((event) => {
+      const eventDate = new Date(event.eventDateTime);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    });
 
     return { calendarEvents: transformed, upcomingEvents };
   }, [events]);
+
+  // Filter upcoming events to the selected calendar date (if any)
+  const visibleEvents = useMemo(() => {
+    if (!selectedDate) return upcomingEvents.slice(0, 5);
+    const sel = new Date(selectedDate);
+    sel.setHours(0, 0, 0, 0);
+    return upcomingEvents.filter((event) => {
+      const d = new Date(event.eventDateTime);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === sel.getTime();
+    });
+  }, [upcomingEvents, selectedDate]);
+
+  const handleCalendarDateClick = useCallback((date: Date, eventsOnDate: CalendarEvent[]) => {
+    setSelectedDate((prev) => {
+      // Toggle off if same date clicked again
+      if (prev && prev.getTime() === date.getTime()) return null;
+      return eventsOnDate.length > 0 ? date : null;
+    });
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -173,9 +195,22 @@ export function RightSidebar() {
           </div>
         ) : (
           <>
-            <EventCalendar events={calendarEvents} />
+            <EventCalendar events={calendarEvents} onDateClick={handleCalendarDateClick} />
             <div className="mt-4">
-              <EventFeed events={upcomingEvents.slice(0, 5)} />
+              {selectedDate && (
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-amber-700">
+                    Events on {selectedDate.toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="text-xs text-amber-600 hover:text-amber-900 hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              )}
+              <EventFeed events={visibleEvents} />
             </div>
           </>
         )}
@@ -190,8 +225,8 @@ export function RightSidebar() {
         ) : activityItems.length === 0 ? (
           <p className="text-sm text-amber-700 italic">No recent activity yet.</p>
         ) : (
-          <div className="max-h-96 overflow-y-auto rounded-lg border border-amber-800/20 bg-amber-50/50">
-            <div className="space-y-3 p-3">
+          <div className="space-y-1">
+            <div className="space-y-3">
               {activityItems.map((item) => {
                 // Resolve the actor link: profile-level if available, else account-level
                 const posterHref = item.actor_profile_id
@@ -240,7 +275,7 @@ export function RightSidebar() {
                 );
               })}
 
-              {/* Load more — inside the scroll container */}
+              {/* Load more */}
               {activityHasMore && (
                 <button
                   onClick={handleLoadMore}

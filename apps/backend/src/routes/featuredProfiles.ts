@@ -16,6 +16,7 @@ import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditPost } from './editors.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -94,12 +95,14 @@ router.post(
         return;
       }
 
-      // Insert (or un-delete if a soft-deleted row exists)
+      // Upsert: restore a soft-deleted row if one exists, otherwise insert fresh.
+      // ON CONFLICT targets the unique (post_id, profile_id) pair and clears deleted.
       const result = await db.one(
         sql.type(z.object({ featured_profile_id: z.number() }))`
           INSERT INTO featured_profiles (post_id, profile_id)
           VALUES (${postId}, ${profile_id})
-          ON CONFLICT DO NOTHING
+          ON CONFLICT (post_id, profile_id) DO UPDATE
+            SET deleted = false
           RETURNING featured_profile_id
         `,
       );
@@ -112,7 +115,7 @@ router.post(
         profile_type_id: profile.profile_type_id,
       });
     } catch (err) {
-      console.error('Featured profile add error:', err);
+      logger.error('Featured profile add error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -156,9 +159,9 @@ router.delete('/:id/featured/:featuredId', authenticateToken, async (req: AuthRe
       return;
     }
 
-    res.status(200).json({ message: 'Featured profile removed successfully' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Featured profile remove error:', err);
+    logger.error('Featured profile remove error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -14,10 +14,7 @@ export async function POST(request: Request) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: data.message || 'Something went wrong' },
-        { status: response.status },
-      );
+      return NextResponse.json({ error: data.message || 'Something went wrong' }, { status: response.status });
     }
 
     return NextResponse.json({ success: true, message: data.message });

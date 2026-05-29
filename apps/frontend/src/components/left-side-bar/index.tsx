@@ -15,7 +15,7 @@ export function LeftSidebar() {
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
         <Link href="/">
-          <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">Brandy Hall Archives</h1>
+          <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">The Brandy Hall Archives</h1>
         </Link>
       </div>
 
@@ -87,7 +87,7 @@ export function LeftSidebar() {
         <NavItem href="/archive?profileTypes=3" label="Kinships" />
         <NavItem href="/archive" label="Archive" />
         <NavItem href="/collections" label="Collections" />
-        <NavItem href="/about" label="About And Rules" />
+        <NavItem href="/about" label="About and Rules" />
       </nav>
     </div>
   );

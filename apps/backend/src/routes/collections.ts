@@ -33,6 +33,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { canEditCollection } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -89,7 +90,7 @@ router.post(
               collection_type_id: z.number(),
               title: z.string(),
               description: z.string().nullable(),
-              content: z.any().nullable(),
+              content: z.unknown().nullable(),
               created_at: z.string(),
             }),
           )`
@@ -133,8 +134,8 @@ router.post(
             }
           : null,
       });
-    } catch (err: any) {
-      console.error('Collection creation error:', err);
+    } catch (err: unknown) {
+      logger.error('Collection creation error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -144,50 +145,66 @@ router.post(
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const typeFilter = req.query.type ? parseInt(req.query.type as string) : null;
+  const parsedLimit = parseInt(req.query.limit as string) || 50;
+  const limit = Math.min(Math.max(parsedLimit, 1), 100);
+  const parsedOffset = parseInt(req.query.offset as string) || 0;
+  const offset = Math.max(parsedOffset, 0);
 
   try {
     const db = await getPool();
 
     const typeFilterFragment = typeFilter ? sql.fragment`AND c.collection_type_id = ${typeFilter}` : sql.fragment``;
 
-    const collections = await db.any(
-      sql.type(
-        z.object({
-          collection_id: z.number(),
-          collection_type_id: z.number(),
-          title: z.string(),
-          description: z.string().nullable(),
-          created_at: z.string(),
-          updated_at: z.string().nullable(),
-          type_name: z.string(),
-          post_count: z.string(),
-        }),
-      )`
-        SELECT 
-          c.collection_id,
-          c.collection_type_id,
-          c.title,
-          c.description,
-          c.created_at::text,
-          c.updated_at::text,
-          ct.type_name,
-          (
+    const [collections, totalRow] = await Promise.all([
+      db.any(
+        sql.type(
+          z.object({
+            collection_id: z.number(),
+            collection_type_id: z.number(),
+            title: z.string(),
+            description: z.string().nullable(),
+            created_at: z.string(),
+            updated_at: z.string().nullable(),
+            type_name: z.string(),
+            post_count: z.string(),
+          }),
+        )`
+          SELECT 
+            c.collection_id,
+            c.collection_type_id,
+            c.title,
+            c.description,
+            c.created_at::text,
+            c.updated_at::text,
+            ct.type_name,
+            (
 SELECT COUNT(*)::text 
-            FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id
-          ) as post_count
-        FROM collections c
-        JOIN collection_types ct ON c.collection_type_id = ct.type_id
-        WHERE c.account_id = ${userId}
-          AND c.deleted = false
-          ${typeFilterFragment}
-        ORDER BY c.created_at DESC
-      `,
-    );
+              FROM collection_posts cp 
+              WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            ) as post_count
+          FROM collections c
+          JOIN collection_types ct ON c.collection_type_id = ct.type_id
+          WHERE c.account_id = ${userId}
+            AND c.deleted = false
+            ${typeFilterFragment}
+          ORDER BY c.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+      ),
+      db.one(
+        sql.type(z.object({ total: z.string() }))`
+          SELECT COUNT(*)::text AS total
+          FROM collections c
+          WHERE c.account_id = ${userId}
+            AND c.deleted = false
+            ${typeFilterFragment}
+        `,
+      ),
+    ]);
 
-    res.json(collections);
+    res.json({ collections, total: parseInt(totalRow.total), limit, offset });
   } catch (err) {
-    console.error('Collections fetch error:', err);
+    logger.error('Collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -285,7 +302,7 @@ router.get('/public', async (req: Request, res: Response) => {
           (
 SELECT COUNT(*)::text 
             FROM collection_posts cp 
-            WHERE cp.collection_id = c.collection_id
+            WHERE cp.collection_id = c.collection_id AND cp.deleted = false
           ) as post_count
         FROM collections c
         JOIN collection_types ct ON c.collection_type_id = ct.type_id
@@ -320,7 +337,7 @@ SELECT COUNT(*)::text
       hasMore,
     });
   } catch (err) {
-    console.error('Public collections fetch error:', err);
+    logger.error('Public collections fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -345,7 +362,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
           collection_type_id: z.number(),
           title: z.string(),
           description: z.string().nullable(),
-          content: z.any().nullable(),
+          content: z.unknown().nullable(),
           created_at: z.string(),
           updated_at: z.string().nullable(),
           type_name: z.string(),
@@ -447,7 +464,7 @@ router.get('/:id', optionalAuthenticateToken, async (req: AuthRequest, res: Resp
       is_owner: isOwner,
     });
   } catch (err) {
-    console.error('Collection fetch error:', err);
+    logger.error('Collection fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -532,7 +549,7 @@ router.put(
             collection_type_id: z.number(),
             title: z.string(),
             description: z.string().nullable(),
-            content: z.any().nullable(),
+            content: z.unknown().nullable(),
             created_at: z.string(),
             updated_at: z.string(),
           }),
@@ -546,7 +563,7 @@ router.put(
 
       res.json(updatedCollection);
     } catch (err) {
-      console.error('Collection update error:', err);
+      logger.error('Collection update error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -582,9 +599,9 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
       return;
     }
 
-    res.status(200).json({ message: 'Collection deleted successfully' });
+    res.status(204).send();
   } catch (err) {
-    console.error('Collection deletion error:', err);
+    logger.error('Collection deletion error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

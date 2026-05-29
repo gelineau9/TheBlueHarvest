@@ -15,12 +15,13 @@
  */
 
 import { Router, Response } from 'express';
-import { sql } from 'slonik';
+import { sql, DatabasePool } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { parseParam } from '../utils/params.js';
+import { logger } from '../utils/logger.js';
 
 // Reusable Zod schemas
 const EditorSchema = z.object({
@@ -55,7 +56,7 @@ export interface EditorRoutesConfig {
   editorTable: string; // 'profile_editors', 'post_editors', 'collection_editors'
   editorIdColumn: string; // 'editor_id', 'post_editor_id', 'collection_editor_id'
   paramName: string; // 'profileId', 'postId', 'collectionId'
-  isOwner: (db: any, entityId: number, userId: number) => Promise<boolean>;
+  isOwner: (db: DatabasePool, entityId: number, userId: number) => Promise<boolean>;
 }
 
 export function createEditorRoutes(config: EditorRoutesConfig): Router {
@@ -113,7 +114,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
 
       res.json({ editors });
     } catch (err) {
-      console.error(`Error fetching ${entityName} editors:`, err);
+      logger.error(`Error fetching ${entityName} editors:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -216,7 +217,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
           created_at: newEditor.created_at,
         });
       } catch (err) {
-        console.error(`Error adding ${entityName} editor:`, err);
+        logger.error(`Error adding ${entityName} editor:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
     },
@@ -267,9 +268,9 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
         `,
       );
 
-      res.status(200).json({ message: 'Editor removed successfully' });
+      res.status(204).send();
     } catch (err) {
-      console.error(`Error removing ${entityName} editor:`, err);
+      logger.error(`Error removing ${entityName} editor:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -279,7 +280,7 @@ export function createEditorRoutes(config: EditorRoutesConfig): Router {
 
 // --- Ownership check helpers (consolidated here) ---
 
-export async function isProfileOwner(db: any, profileId: number, userId: number): Promise<boolean> {
+export async function isProfileOwner(db: DatabasePool, profileId: number, userId: number): Promise<boolean> {
   const profile = await db.maybeOne(
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM profiles
@@ -289,7 +290,7 @@ export async function isProfileOwner(db: any, profileId: number, userId: number)
   return profile?.account_id === userId;
 }
 
-export async function isPostOwner(db: any, postId: number, userId: number): Promise<boolean> {
+export async function isPostOwner(db: DatabasePool, postId: number, userId: number): Promise<boolean> {
   const post = await db.maybeOne(
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM posts
@@ -299,7 +300,7 @@ export async function isPostOwner(db: any, postId: number, userId: number): Prom
   return post?.account_id === userId;
 }
 
-export async function isCollectionOwner(db: any, collectionId: number, userId: number): Promise<boolean> {
+export async function isCollectionOwner(db: DatabasePool, collectionId: number, userId: number): Promise<boolean> {
   const collection = await db.maybeOne(
     sql.type(z.object({ account_id: z.number() }))`
       SELECT account_id FROM collections
@@ -311,7 +312,7 @@ export async function isCollectionOwner(db: any, collectionId: number, userId: n
 
 // --- Exported canEdit helpers (for use in main routes) ---
 
-export async function canEditProfile(db: any, profileId: number, userId: number): Promise<boolean> {
+export async function canEditProfile(db: DatabasePool, profileId: number, userId: number): Promise<boolean> {
   const result = await db.maybeOne(
     sql.type(z.object({ can_edit: z.boolean() }))`
       SELECT EXISTS (
@@ -326,7 +327,7 @@ export async function canEditProfile(db: any, profileId: number, userId: number)
   return result?.can_edit ?? false;
 }
 
-export async function canEditPost(db: any, postId: number, userId: number): Promise<boolean> {
+export async function canEditPost(db: DatabasePool, postId: number, userId: number): Promise<boolean> {
   const result = await db.maybeOne(
     sql.type(z.object({ can_edit: z.boolean() }))`
       SELECT EXISTS (
@@ -341,7 +342,7 @@ export async function canEditPost(db: any, postId: number, userId: number): Prom
   return result?.can_edit ?? false;
 }
 
-export async function canEditCollection(db: any, collectionId: number, userId: number): Promise<boolean> {
+export async function canEditCollection(db: DatabasePool, collectionId: number, userId: number): Promise<boolean> {
   const result = await db.maybeOne(
     sql.type(z.object({ can_edit: z.boolean() }))`
       SELECT EXISTS (
@@ -381,7 +382,7 @@ export interface AuthorRoutesConfig {
   entityName: string; // 'post', 'collection'
   entityIdColumn: string; // 'post_id', 'collection_id'
   authorTable: string; // 'authors', 'collection_authors'
-  canEdit: (db: any, entityId: number, userId: number) => Promise<boolean>;
+  canEdit: (db: DatabasePool, entityId: number, userId: number) => Promise<boolean>;
 }
 
 export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
@@ -481,7 +482,7 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
           is_primary: newAuthor.is_primary,
         });
       } catch (err) {
-        console.error(`Error adding ${entityName} author:`, err);
+        logger.error(`Error adding ${entityName} author:`, err);
         res.status(500).json({ error: 'Internal server error' });
       }
     },
@@ -534,9 +535,9 @@ export function createAuthorRoutes(config: AuthorRoutesConfig): Router {
         `,
       );
 
-      res.status(200).json({ message: 'Author removed successfully' });
+      res.status(204).send();
     } catch (err) {
-      console.error(`Error removing ${entityName} author:`, err);
+      logger.error(`Error removing ${entityName} author:`, err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -12,7 +12,7 @@ export function AuthDialog({ trigger }: AuthDialogProps) {
       <DialogTrigger asChild>{trigger || <Button variant="outline">Login</Button>}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-amber-50">
         <DialogHeader>
-          <DialogTitle className="text-amber-900">Login to The Blue Harvest</DialogTitle>
+          <DialogTitle className="text-amber-900">Login to The Brandy Hall Archives</DialogTitle>
         </DialogHeader>
         <LoginForm />
       </DialogContent>

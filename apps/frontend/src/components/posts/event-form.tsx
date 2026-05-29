@@ -191,6 +191,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         <Label htmlFor="event_author" className="text-amber-900 font-semibold">
           Author (Optional)
         </Label>
+        <p className="text-sm text-amber-700">Attribute this event to one of your characters or kinships.</p>
         {isLoadingProfiles ? (
           <div className="text-sm text-amber-700">Loading your profiles...</div>
         ) : (
@@ -209,7 +210,6 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
                 </option>
               ))}
             </select>
-            <p className="text-sm text-amber-700">Attribute this event to one of your characters or kinships.</p>
           </>
         )}
       </div>

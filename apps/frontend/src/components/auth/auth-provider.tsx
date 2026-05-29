@@ -18,6 +18,15 @@ interface AuthContextType extends AuthState {
   refreshAuth: () => Promise<void>;
 }
 
+export interface InitialSession {
+  isLoggedIn: boolean;
+  id?: number;
+  username?: string;
+  email?: string;
+  details?: { avatar?: { url?: string } } | null;
+  role?: string;
+}
+
 const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   isLoading: true,
@@ -26,12 +35,37 @@ const AuthContext = createContext<AuthContextType>({
   refreshAuth: async () => {},
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authState, setAuthState] = useState<AuthState>({
-    isLoggedIn: false,
-    isLoading: true,
-    isAdmin: false,
-    isModerator: false,
+function sessionToAuthState(session: InitialSession): AuthState {
+  const role = session.role as 'user' | 'admin' | 'moderator' | undefined;
+  return {
+    isLoggedIn: session.isLoggedIn,
+    isLoading: false,
+    accountId: session.id,
+    username: session.username,
+    avatarUrl: session.details?.avatar?.url,
+    email: session.email,
+    role,
+    isAdmin: role === 'admin',
+    isModerator: role === 'moderator' || role === 'admin',
+  };
+}
+
+interface AuthProviderProps {
+  children: React.ReactNode;
+  /**
+   * Initial session state fetched server-side by the root layout.
+   * When provided, AuthProvider starts in the correct auth state and
+   * skips the isLoading: true → resolved flash on every hard page load.
+   */
+  initialSession?: InitialSession;
+}
+
+export function AuthProvider({ children, initialSession }: AuthProviderProps) {
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    if (initialSession) {
+      return sessionToAuthState(initialSession);
+    }
+    return { isLoggedIn: false, isLoading: true, isAdmin: false, isModerator: false };
   });
 
   const checkAuth = useCallback(async () => {
@@ -54,18 +88,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
       }
-    } catch (err) {
-      console.error('Auth check error:', err);
+    } catch {
       setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
     }
   }, []);
 
-  // Run once on mount. Do NOT add pathname here — that caused a /api/auth/me
-  // request on every navigation, producing an auth-state flicker.
-  // Call refreshAuth() explicitly after login/logout mutations instead.
+  // If no initial session was provided by the server, fall back to the
+  // client-side check. When initialSession is present this effect is a no-op
+  // (state is already correct) but refreshAuth() remains available for
+  // explicit re-checks after login/logout mutations.
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!initialSession) {
+      checkAuth();
+    }
+  }, [checkAuth, initialSession]);
 
   return <AuthContext.Provider value={{ ...authState, refreshAuth: checkAuth }}>{children}</AuthContext.Provider>;
 }

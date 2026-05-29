@@ -16,6 +16,7 @@ import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -150,7 +151,7 @@ router.get('/', async (req: Request, res: Response) => {
     const total = parseInt(countResult.total, 10);
     res.json({ items, total, hasMore: offset + items.length < total });
   } catch (err) {
-    console.error('Activity feed error:', err);
+    logger.error('Activity feed error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

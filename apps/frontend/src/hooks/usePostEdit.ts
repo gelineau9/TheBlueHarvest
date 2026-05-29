@@ -132,50 +132,41 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
   const [authorableProfiles, setAuthorableProfiles] = useState<AuthorableProfile[]>([]);
   const [authorableProfilesLoaded, setAuthorableProfilesLoaded] = useState(false);
 
-  // Fetch characters (type 1 only) for event contact dropdown
+  // Fetch characters (type 1) and kinships (type 3) together — characters are
+  // used for the event contact dropdown; both types are used for author pickers.
   useEffect(() => {
-    const fetchCharacters = async () => {
-      try {
-        const response = await fetch('/api/profiles?type=1');
-        if (response.ok) {
-          const data = await response.json();
-          // Backend returns flat array, not { profiles: [] }
-          setCharacters(Array.isArray(data) ? data : data.profiles || []);
-        }
-      } catch (err) {
-        console.error('Failed to fetch characters:', err);
-      } finally {
-        setCharactersLoaded(true);
-      }
-    };
-
-    fetchCharacters();
-  }, []);
-
-  // Fetch authorable profiles (type 1 + 3) for post author dropdowns
-  useEffect(() => {
-    const fetchAuthorableProfiles = async () => {
+    const fetchProfiles = async () => {
       try {
         const [charRes, kinRes] = await Promise.all([fetch('/api/profiles?type=1'), fetch('/api/profiles?type=3')]);
-        if (charRes.ok && kinRes.ok) {
+        if (charRes.ok) {
           const charData = await charRes.json();
-          const kinData = await kinRes.json();
-          const chars: AuthorableProfile[] = (Array.isArray(charData) ? charData : charData.profiles || []).map(
-            (p: CharacterProfile) => ({ ...p, profile_type_id: 1, type_label: 'Character' }),
-          );
-          const kins: AuthorableProfile[] = (Array.isArray(kinData) ? kinData : kinData.profiles || []).map(
-            (p: CharacterProfile) => ({ ...p, profile_type_id: 3, type_label: 'Kinship' }),
-          );
-          setAuthorableProfiles([...chars, ...kins]);
+          const chars: CharacterProfile[] = Array.isArray(charData) ? charData : charData.profiles || [];
+          setCharacters(chars);
+
+          if (kinRes.ok) {
+            const kinData = await kinRes.json();
+            const kins: AuthorableProfile[] = (Array.isArray(kinData) ? kinData : kinData.profiles || []).map(
+              (p: CharacterProfile) => ({ ...p, profile_type_id: 3, type_label: 'Kinship' }),
+            );
+            setAuthorableProfiles([
+              ...chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' }) as AuthorableProfile),
+              ...kins,
+            ]);
+          } else {
+            setAuthorableProfiles(
+              chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' }) as AuthorableProfile),
+            );
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch authorable profiles:', err);
+        console.error('Failed to fetch profiles:', err);
       } finally {
+        setCharactersLoaded(true);
         setAuthorableProfilesLoaded(true);
       }
     };
 
-    fetchAuthorableProfiles();
+    fetchProfiles();
   }, []);
 
   // Fetch post data

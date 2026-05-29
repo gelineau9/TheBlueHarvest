@@ -255,8 +255,7 @@ export async function getSession() {
       details: data.details,
       role: data.role as string | undefined,
     };
-  } catch (error) {
-    console.error('Get session error:', error);
+  } catch {
     return { isLoggedIn: false };
   }
 }

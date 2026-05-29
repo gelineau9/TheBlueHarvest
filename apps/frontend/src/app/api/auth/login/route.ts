@@ -8,10 +8,7 @@ export async function POST(request: Request) {
 
     const result = loginSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.issues[0]?.message ?? 'Validation failed' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: result.error.issues[0]?.message ?? 'Validation failed' }, { status: 400 });
     }
 
     const { email, password } = result.data;

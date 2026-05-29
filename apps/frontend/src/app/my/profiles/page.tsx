@@ -145,7 +145,7 @@ export default function MyProfilesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-amber-900 mb-2">My Profiles</h1>
-              <p className="text-amber-700">Manage profiles you own or can edit</p>
+              <p className="text-amber-700">Manage profiles you own or have been given permission to edit</p>
             </div>
             <Link href="/profiles/create">
               <Button className="bg-amber-600 hover:bg-amber-700 text-white">

@@ -47,14 +47,11 @@ export default function ForgotPasswordPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-amber-900">Check Your Email</CardTitle>
             <CardDescription className="text-amber-700">
-              If an account with that email exists, a password reset link has been sent. The link
-              expires in 1 hour.
+              If an account with that email exists, a password reset link has been sent. The link expires in 1 hour.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-amber-700 text-center">
-              Didn&apos;t receive it? Check your spam folder.
-            </p>
+            <p className="text-sm text-amber-700 text-center">Didn&apos;t receive it? Check your spam folder.</p>
             <Link href="/">
               <Button className="w-full bg-amber-900 text-amber-50">Go to Homepage</Button>
             </Link>
@@ -93,11 +90,7 @@ export default function ForgotPasswordPage() {
 
             {error && <div className="text-sm text-red-500 text-center">{error}</div>}
 
-            <Button
-              type="submit"
-              className="w-full bg-amber-900 text-amber-50"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
               {isLoading ? 'Sending…' : 'Send Reset Link'}
             </Button>
 

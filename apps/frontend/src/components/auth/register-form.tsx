@@ -79,7 +79,7 @@ export function RegisterForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl text-amber-900">Create Account</CardTitle>
-        <CardDescription className="text-amber-700">Join our community today</CardDescription>
+        <CardDescription className="text-amber-700">Join the Brandy Hall Archives</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -160,7 +160,7 @@ export function RegisterForm() {
 
           <div className="text-center text-sm text-amber-700">
             Already have an account?{' '}
-            <Link href="/login" className="text-amber-900 hover:underline font-medium">
+            <Link href="/" className="text-amber-900 hover:underline font-medium">
               Sign in
             </Link>
           </div>

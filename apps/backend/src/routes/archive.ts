@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -149,16 +150,8 @@ router.get('/public', async (req: Request, res: Response) => {
     const unionQuery =
       queryParts.length === 1 ? queryParts[0] : sql.fragment`(${queryParts[0]}) UNION ALL (${queryParts[1]})`;
 
-    // Count total items
-    const countQuery = sql.type(z.object({ count: z.number() }))`
-      SELECT COUNT(*)::int AS count FROM (${unionQuery}) AS combined
-    `;
-
-    const countResult = await db.one(countQuery);
-    const total = countResult.count;
-
-    // Fetch paginated items with dynamic ORDER BY
-    // We need to use sql.fragment for the ORDER BY clause since column names come from validated enum
+    // Fetch paginated items with total count via window function — avoids
+    // evaluating the UNION subquery twice (once for count, once for rows).
     const orderByClause =
       sortBy === 'name'
         ? order === 'asc'
@@ -185,14 +178,17 @@ router.get('/public', async (req: Request, res: Response) => {
         username: z.string(),
         created_at: z.string(),
         updated_at: z.string(),
+        total_count: z.number(),
       }),
     )`
-      SELECT * FROM (${unionQuery}) AS combined
+      SELECT *, COUNT(*) OVER ()::int AS total_count
+      FROM (${unionQuery}) AS combined
       ORDER BY ${orderByClause}
       LIMIT ${limit} OFFSET ${offset}
     `;
 
     const itemsResult = await db.any(itemsQuery);
+    const total = itemsResult[0]?.total_count ?? 0;
 
     const items = itemsResult.map((row) => ({
       id: row.id,
@@ -214,9 +210,8 @@ router.get('/public', async (req: Request, res: Response) => {
       hasMore: offset + items.length < total,
     });
   } catch (error) {
-    console.error('Error fetching public archive:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return res.status(500).json({ error: 'Failed to fetch archive', details: errorMessage });
+    logger.error('[archive] Error fetching public archive', { error });
+    return res.status(500).json({ error: 'Failed to fetch archive' });
   }
 });
 

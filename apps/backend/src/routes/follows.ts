@@ -17,6 +17,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ router.post('/accounts/:id', authenticateToken, async (req: AuthRequest, res: Re
     );
     res.json({ following: true });
   } catch (err) {
-    console.error('Follow account error:', err);
+    logger.error('Follow account error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -73,7 +74,7 @@ router.delete('/accounts/:id', authenticateToken, async (req: AuthRequest, res: 
     );
     res.json({ following: false });
   } catch (err) {
-    console.error('Unfollow account error:', err);
+    logger.error('Unfollow account error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -112,7 +113,7 @@ router.post('/profiles/:id', authenticateToken, async (req: AuthRequest, res: Re
     );
     res.json({ following: true });
   } catch (err) {
-    console.error('Follow profile error:', err);
+    logger.error('Follow profile error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -138,7 +139,7 @@ router.delete('/profiles/:id', authenticateToken, async (req: AuthRequest, res: 
     );
     res.json({ following: false });
   } catch (err) {
-    console.error('Unfollow profile error:', err);
+    logger.error('Unfollow profile error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -149,7 +150,7 @@ const FeedPostSchema = z.object({
   post_id: z.number(),
   post_type_id: z.number(),
   title: z.string(),
-  content: z.any().nullable(),
+  content: z.unknown().nullable(),
   created_at: z.string(),
   type_name: z.string(),
   username: z.string(),
@@ -170,91 +171,71 @@ router.get('/feed', authenticateToken, async (req: AuthRequest, res: Response) =
   try {
     const db = await getPool();
 
-    const posts = await db.any(
-      sql.type(FeedPostSchema)`
-        SELECT
-          p.post_id,
-          p.post_type_id,
-          p.title,
-          p.content,
-          p.created_at::text,
-          pt.type_name,
-          a.username,
-          ap.profile_id   AS primary_author_id,
-          ap.name         AS primary_author_name
-        FROM posts p
-        JOIN post_types pt ON p.post_type_id = pt.type_id
-        JOIN accounts   a  ON p.account_id   = a.account_id
-        LEFT JOIN authors auth ON p.post_id = auth.post_id
-          AND auth.is_primary = true
-          AND auth.deleted    = false
-        LEFT JOIN profiles ap ON auth.profile_id = ap.profile_id
-        WHERE p.deleted      = false
-          AND p.is_published = true
-          AND p.post_id IN (
-            SELECT followed_id_posts FROM (
-              SELECT p2.post_id AS followed_id_posts
-              FROM posts p2
-              WHERE p2.account_id IN (
-                SELECT followed_id FROM account_follows WHERE follower_id = ${userId}
-              )
-              UNION
-              SELECT a2.post_id AS followed_id_posts
-              FROM authors a2
-              WHERE a2.deleted = false
-                AND a2.profile_id IN (
-                  SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
-                )
-              UNION
-              SELECT fp.post_id AS followed_id_posts
-              FROM featured_profiles fp
-              WHERE fp.deleted = false
-                AND fp.profile_id IN (
-                  SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
-                )
-            ) AS combined
-          )
-        ORDER BY p.created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `,
-    );
+    // Shared fragment: all post IDs visible to this user via follows
+    const followedPostIds = sql.fragment`
+      SELECT p2.post_id
+      FROM posts p2
+      WHERE p2.account_id IN (
+        SELECT followed_id FROM account_follows WHERE follower_id = ${userId}
+      )
+      UNION
+      SELECT a2.post_id
+      FROM authors a2
+      WHERE a2.deleted = false
+        AND a2.profile_id IN (
+          SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
+        )
+      UNION
+      SELECT fp.post_id
+      FROM featured_profiles fp
+      WHERE fp.deleted = false
+        AND fp.profile_id IN (
+          SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
+        )
+    `;
 
-    const countResult = await db.one(
-      sql.type(FeedCountSchema)`
-        SELECT COUNT(*)::text AS total
-        FROM posts p
-        WHERE p.deleted      = false
-          AND p.is_published = true
-          AND p.post_id IN (
-            SELECT followed_id_posts FROM (
-              SELECT p2.post_id AS followed_id_posts
-              FROM posts p2
-              WHERE p2.account_id IN (
-                SELECT followed_id FROM account_follows WHERE follower_id = ${userId}
-              )
-              UNION
-              SELECT a2.post_id AS followed_id_posts
-              FROM authors a2
-              WHERE a2.deleted = false
-                AND a2.profile_id IN (
-                  SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
-                )
-              UNION
-              SELECT fp.post_id AS followed_id_posts
-              FROM featured_profiles fp
-              WHERE fp.deleted = false
-                AND fp.profile_id IN (
-                  SELECT profile_id FROM profile_follows WHERE account_id = ${userId}
-                )
-            ) AS combined
-          )
-      `,
-    );
+    const [posts, countResult] = await Promise.all([
+      db.any(
+        sql.type(FeedPostSchema)`
+          SELECT
+            p.post_id,
+            p.post_type_id,
+            p.title,
+            p.content,
+            p.created_at::text,
+            pt.type_name,
+            a.username,
+            ap.profile_id   AS primary_author_id,
+            ap.name         AS primary_author_name
+          FROM posts p
+          JOIN post_types pt ON p.post_type_id = pt.type_id
+          JOIN accounts   a  ON p.account_id   = a.account_id
+          LEFT JOIN authors auth ON p.post_id = auth.post_id
+            AND auth.is_primary = true
+            AND auth.deleted    = false
+          LEFT JOIN profiles ap ON auth.profile_id = ap.profile_id
+          WHERE p.deleted      = false
+            AND p.is_published = true
+            AND p.post_id IN (${followedPostIds})
+          ORDER BY p.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+      ),
+      db.one(
+        sql.type(FeedCountSchema)`
+          SELECT COUNT(*)::text AS total
+          FROM posts p
+          WHERE p.deleted      = false
+            AND p.is_published = true
+            AND p.post_id IN (${followedPostIds})
+        `,
+      ),
+    ]);
 
     const total = parseInt(countResult.total, 10);
     res.json({ posts, total, hasMore: offset + posts.length < total });
   } catch (err) {
-    console.error('Feed fetch error:', err);
+    logger.error('Feed fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -329,7 +310,7 @@ router.get('/check', authenticateToken, async (req: AuthRequest, res: Response) 
 
     res.json({ accounts, profiles });
   } catch (err) {
-    console.error('Follow check error:', err);
+    logger.error('Follow check error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

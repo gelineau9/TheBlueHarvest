@@ -18,3 +18,13 @@ export const up = (pgm) => {
     ALTER TABLE accounts ADD COLUMN banned_reason TEXT DEFAULT NULL;
   `);
 };
+
+/**
+ * @param {import('node-pg-migrate').MigrationBuilder} pgm
+ */
+export const down = (pgm) => {
+  pgm.sql(`
+    ALTER TABLE accounts DROP COLUMN IF EXISTS is_banned;
+    ALTER TABLE accounts DROP COLUMN IF EXISTS banned_reason;
+  `);
+};

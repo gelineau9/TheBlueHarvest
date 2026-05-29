@@ -136,9 +136,11 @@ export function FollowedFeed() {
       </div>
 
       {total === 0 ? (
-        <p className="text-sm text-amber-700 italic">
-          Follow characters, kinships, or users to see their content here.
-        </p>
+        <div className="rounded-lg border border-amber-800/20 bg-amber-50/50 px-4 py-5">
+          <p className="text-sm text-amber-700 italic">
+            Follow characters, kinships, or users to see their content here.
+          </p>
+        </div>
       ) : (
         <div className="rounded-lg border border-amber-800/20 bg-amber-50/50 py-1">
           {posts.map((post, i) => (

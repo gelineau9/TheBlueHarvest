@@ -5,6 +5,7 @@ import { body, query as queryValidator, validationResult } from 'express-validat
 import { getPool } from '../config/database.js';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth.js';
 import { writeAuditLog } from '../utils/auditLog.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ const AuditLogRowSchema = z.object({
   action_type: z.string(),
   target_type: z.string().nullable(),
   target_id: z.number().nullable(),
-  metadata: z.any().nullable(),
+  metadata: z.unknown().nullable(),
   created_at: z.string(),
 });
 
@@ -196,7 +197,7 @@ router.get(
 
       res.json({ users, total: countResult.count, hasMore: offset + users.length < countResult.count });
     } catch (err) {
-      console.error('Error fetching admin users:', err);
+      logger.error('Error fetching admin users:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -247,7 +248,7 @@ router.get('/users/:id/content', authenticateToken, requireRole(2, 3), async (re
 
     res.json({ posts, profiles, comments });
   } catch (err) {
-    console.error('Error fetching user content:', err);
+    logger.error('Error fetching user content:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -310,7 +311,7 @@ router.put(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Error changing user role:', err);
+      logger.error('Error changing user role:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -410,7 +411,7 @@ router.put(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Error banning/unbanning user:', err);
+      logger.error('Error banning/unbanning user:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -487,7 +488,7 @@ router.put(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Error suspending/unsuspending user:', err);
+      logger.error('Error suspending/unsuspending user:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -552,7 +553,7 @@ router.delete('/users/:id', authenticateToken, requireRole(2), async (req: AuthR
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting account:', err);
+    logger.error('Error deleting account:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -605,7 +606,7 @@ router.delete('/posts/:id', authenticateToken, requireRole(2, 3), async (req: Au
       res.json({ success: true, action: 'soft_deleted' });
     }
   } catch (err) {
-    console.error('Error deleting post:', err);
+    logger.error('Error deleting post:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -656,7 +657,7 @@ router.delete(
 
       res.json({ success: true, count: ids.length });
     } catch (err) {
-      console.error('Error bulk deleting posts:', err);
+      logger.error('Error bulk deleting posts:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -699,7 +700,7 @@ router.post('/posts/:id/restore', authenticateToken, requireRole(2, 3), async (r
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Error restoring post:', err);
+    logger.error('Error restoring post:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -752,7 +753,7 @@ router.delete('/profiles/:id', authenticateToken, requireRole(2, 3), async (req:
       res.json({ success: true, action: 'soft_deleted' });
     }
   } catch (err) {
-    console.error('Error deleting profile:', err);
+    logger.error('Error deleting profile:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -803,7 +804,7 @@ router.delete(
 
       res.json({ success: true, count: ids.length });
     } catch (err) {
-      console.error('Error bulk deleting profiles:', err);
+      logger.error('Error bulk deleting profiles:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -846,7 +847,7 @@ router.post('/profiles/:id/restore', authenticateToken, requireRole(2, 3), async
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Error restoring profile:', err);
+    logger.error('Error restoring profile:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -900,7 +901,7 @@ router.delete('/comments/:id', authenticateToken, requireRole(2, 3), async (req:
       res.json({ success: true, action: 'soft_deleted' });
     }
   } catch (err) {
-    console.error('Error deleting comment:', err);
+    logger.error('Error deleting comment:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -946,7 +947,7 @@ router.get(
 
       res.json({ posts, total: countResult.count, hasMore: offset + posts.length < countResult.count });
     } catch (err) {
-      console.error('Error fetching deleted posts:', err);
+      logger.error('Error fetching deleted posts:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -993,7 +994,7 @@ router.get(
 
       res.json({ profiles, total: countResult.count, hasMore: offset + profiles.length < countResult.count });
     } catch (err) {
-      console.error('Error fetching deleted profiles:', err);
+      logger.error('Error fetching deleted profiles:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -1017,7 +1018,7 @@ router.get('/featured-posts', authenticateToken, requireRole(2, 3), async (_req:
 
     res.json({ featured: rows });
   } catch (err) {
-    console.error('Error fetching featured posts:', err);
+    logger.error('Error fetching featured posts:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1079,7 +1080,7 @@ router.post(
 
       res.json({ success: true, featured_post_id: row.featured_post_id });
     } catch (err) {
-      console.error('Error featuring post:', err);
+      logger.error('Error featuring post:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -1127,7 +1128,7 @@ router.delete(
 
       res.json({ success: true });
     } catch (err) {
-      console.error('Error unfeaturing post:', err);
+      logger.error('Error unfeaturing post:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -1203,7 +1204,7 @@ router.get(
 
       res.json({ entries, total: countResult.count, hasMore: offset + entries.length < countResult.count });
     } catch (err) {
-      console.error('Error fetching audit log:', err);
+      logger.error('Error fetching audit log:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },

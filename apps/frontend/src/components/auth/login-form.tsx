@@ -37,9 +37,7 @@ export function LoginForm() {
           );
         }
         if (data.errorCode === 'email_not_verified') {
-          throw new Error(
-            'Please verify your email before logging in. Check your inbox for a verification link.',
-          );
+          throw new Error('Please verify your email before logging in. Check your inbox for a verification link.');
         }
         throw new Error(data.error || 'Login failed');
       }

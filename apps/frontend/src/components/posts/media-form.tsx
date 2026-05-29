@@ -142,6 +142,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
         <Label htmlFor="media_author" className="text-amber-900 font-semibold">
           Author (Optional)
         </Label>
+        <p className="text-sm text-amber-700">Attribute this media to one of your characters or kinships.</p>
         {isLoadingProfiles ? (
           <div className="text-sm text-amber-700">Loading your profiles...</div>
         ) : (
@@ -160,7 +161,6 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
                 </option>
               ))}
             </select>
-            <p className="text-sm text-amber-700">Attribute this media to one of your characters or kinships.</p>
           </>
         )}
       </div>

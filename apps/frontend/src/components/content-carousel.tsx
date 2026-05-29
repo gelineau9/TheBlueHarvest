@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { LayoutGrid, LayoutList } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface ContentCarouselProps<T> {
@@ -12,6 +13,11 @@ interface ContentCarouselProps<T> {
   renderItem: (item: T, index: number) => React.ReactNode;
   /** Message shown when items array is empty and not loading */
   emptyMessage?: string;
+  /** When provided, shows a card/list toggle button in the header */
+  listView?: boolean;
+  onToggleView?: () => void;
+  /** Renders a compact row for list mode; required when listView is used */
+  renderListItem?: (item: T, index: number) => React.ReactNode;
 }
 
 /**
@@ -21,6 +27,7 @@ interface ContentCarouselProps<T> {
  * - Renders skeleton placeholders while loading
  * - Delegates card rendering entirely to the renderItem render-prop so each
  *   domain carousel (writing, art) can provide its own card shape
+ * - Supports an optional card/list view toggle via listView + onToggleView props
  */
 export function ContentCarousel<T>({
   title,
@@ -29,17 +36,35 @@ export function ContentCarousel<T>({
   isLoading,
   renderItem,
   emptyMessage = 'Nothing here yet — check back soon.',
+  listView = false,
+  onToggleView,
+  renderListItem,
 }: ContentCarouselProps<T>) {
   return (
     <section aria-label={title} className="mb-10 px-4">
       {/* Header row */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-fantasy text-2xl font-semibold text-amber-900">{title}</h2>
-        {viewAllHref && (
-          <Link href={viewAllHref} className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline">
-            View all →
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {onToggleView && (
+            <button
+              type="button"
+              onClick={onToggleView}
+              aria-label={listView ? 'Switch to card view' : 'Switch to list view'}
+              className="rounded p-1 text-amber-700 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+            >
+              {listView ? <LayoutGrid className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
+            </button>
+          )}
+          {viewAllHref && (
+            <Link
+              href={viewAllHref}
+              className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline"
+            >
+              View all →
+            </Link>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -53,6 +78,10 @@ export function ContentCarousel<T>({
         </div>
       ) : items.length === 0 ? (
         <p className="py-8 text-center text-sm text-amber-700/70">{emptyMessage}</p>
+      ) : listView && renderListItem ? (
+        <div className="flex flex-col divide-y divide-amber-200">
+          {items.map((item, index) => renderListItem(item, index))}
+        </div>
       ) : (
         <Carousel opts={{ align: 'start' }} className="w-full">
           <CarouselContent>

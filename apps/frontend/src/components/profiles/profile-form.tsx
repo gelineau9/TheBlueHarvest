@@ -188,6 +188,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const [foundingDate, setFoundingDate] = useState('');
   const [kinshipType, setKinshipType] = useState('Mixed');
   const [kinshipStatus, setKinshipStatus] = useState('Recruiting');
+  const [kinshipAreaOfOperation, setKinshipAreaOfOperation] = useState('');
   const [kinshipDescription, setKinshipDescription] = useState('');
   const [kinshipPendingRelationships, setKinshipPendingRelationships] = useState<PendingRelationship[]>([]);
 
@@ -352,6 +353,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         details.description = kinshipDescription.trim() || undefined;
         details.kinship_type = kinshipType;
         details.status = kinshipStatus;
+        if (kinshipAreaOfOperation.trim()) details.area_of_operation = kinshipAreaOfOperation.trim();
         if (foundingDate.trim()) details.founding_date = foundingDate.trim();
         if (banner) details.banner = banner;
       } else if (isItem) {
@@ -629,7 +631,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 type="text"
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                placeholder="e.g. Blacksmith, Mage…"
+                placeholder="e.g. Blacksmith, Warden…"
                 maxLength={100}
                 disabled={isSubmitting}
                 className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
@@ -884,6 +886,21 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kinship_area_of_operation" className="text-amber-900 font-medium">
+                  Area of Operation
+                </Label>
+                <Input
+                  id="kinship_area_of_operation"
+                  type="text"
+                  value={kinshipAreaOfOperation}
+                  onChange={(e) => setKinshipAreaOfOperation(e.target.value)}
+                  placeholder="e.g. The Shire, Minas Tirith, Unknown…"
+                  maxLength={100}
+                  disabled={isSubmitting}
+                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                />
               </div>
             </div>
           </div>
@@ -1162,7 +1179,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                   type="text"
                   value={orgAreaOfOperation}
                   onChange={(e) => setOrgAreaOfOperation(e.target.value)}
-                  placeholder="e.g. The Shire, Middle-earth, Unknown…"
+                  placeholder="e.g. The Shire, Minas Tirith, Unknown…"
                   maxLength={100}
                   disabled={isSubmitting}
                   className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"

@@ -22,7 +22,7 @@ const SpotlightRowSchema = z.object({
   post_id: z.number(),
   post_type_id: z.number(),
   title: z.string(),
-  content: z.any().nullable(),
+  content: z.unknown().nullable(),
   type_name: z.string(),
   username: z.string(),
   primary_author_id: z.number().nullable(),

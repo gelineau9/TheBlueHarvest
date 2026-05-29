@@ -27,14 +27,12 @@ export default function RegisterSuccessPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-amber-900">Check Your Email</CardTitle>
           <CardDescription className="text-amber-700">
-            We&apos;ve sent a verification link to your email address. Please check your inbox and
-            click the link to activate your account before logging in.
+            We&apos;ve sent a verification link to your email address. Please check your inbox and click the link to
+            activate your account before logging in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-amber-700 text-center">
-            Didn&apos;t receive it? Check your spam folder.
-          </p>
+          <p className="text-sm text-amber-700 text-center">Didn&apos;t receive it? Check your spam folder.</p>
           <p className="text-xs text-amber-600 text-center">
             Redirecting to homepage in {seconds} second{seconds !== 1 ? 's' : ''}…
           </p>
