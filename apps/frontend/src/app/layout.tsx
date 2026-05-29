@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth/auth-provider';
 import { Banner } from '@/components/banner';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { AlphaNotice } from '@/components/alpha-notice';
 import { getSession } from '@/app/lib/actions';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -48,6 +49,7 @@ export default async function RootLayout({
               individual pages.
             */}
             <DashboardLayout>{children}</DashboardLayout>
+            <AlphaNotice />
           </ThemeProvider>
         </AuthProvider>
       </body>

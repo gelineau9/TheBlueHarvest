@@ -12,7 +12,7 @@ import { ProfileButton } from '@/components/profile-button';
  */
 export function Banner() {
   return (
-    <header aria-label="The Brandy Hall Archives site banner" className="relative w-full h-[315px] shrink-0">
+    <header aria-label="The Brandy Hall Archives site banner" className="relative w-full h-[315px] shrink-0 mb-3 shadow-[0_4px_12px_rgba(0,0,0,0.25)] border-b border-amber-800/30">
       {/* Full-bleed hero background image + gradient overlay */}
       <HeroBackground />
 
