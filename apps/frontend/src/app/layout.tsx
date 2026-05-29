@@ -13,6 +13,9 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 export const metadata: Metadata = {
   title: 'The Brandy Hall Archives',
   description: 'A community for Lord of the Rings Online roleplayers and storytellers on the Meriadoc server',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default async function RootLayout({
