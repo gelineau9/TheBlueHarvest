@@ -21,8 +21,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'character',
     label: 'Character',
     icon: Users,
-    description:
-      'Document your roleplay persona on LOTRO\'s Meriadoc server.',
+    description: "Document your roleplay persona on LOTRO's Meriadoc server.",
   },
   item: {
     id: 2,
@@ -30,7 +29,8 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'item',
     label: 'Item',
     icon: Sword,
-    description: 'Document weapons, artifacts, heirlooms, or any other significant item that appears in your writing and/or roleplay.',
+    description:
+      'Document weapons, artifacts, heirlooms, or any other significant item that appears in your writing and/or roleplay.',
   },
   kinship: {
     id: 3,
@@ -38,7 +38,7 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     name: 'kinship',
     label: 'Kinship',
     icon: Heart,
-    description: 'Document your in-game roleplay kinship on LOTRO\'s Meriadoc server.',
+    description: "Document your in-game roleplay kinship on LOTRO's Meriadoc server.",
   },
   organization: {
     id: 4,

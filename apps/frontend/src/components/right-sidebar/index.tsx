@@ -149,12 +149,11 @@ export function RightSidebar() {
         return ta - tb;
       });
 
-    const upcomingEvents = transformed
-      .filter((event) => {
-        const eventDate = new Date(event.eventDateTime);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      });
+    const upcomingEvents = transformed.filter((event) => {
+      const eventDate = new Date(event.eventDateTime);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    });
 
     return { calendarEvents: transformed, upcomingEvents };
   }, [events]);
@@ -201,8 +200,7 @@ export function RightSidebar() {
               {selectedDate && (
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-amber-700">
-                    Events on{' '}
-                    {selectedDate.toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+                    Events on {selectedDate.toLocaleDateString('default', { month: 'short', day: 'numeric' })}
                   </span>
                   <button
                     onClick={() => setSelectedDate(null)}

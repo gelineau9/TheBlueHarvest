@@ -49,7 +49,6 @@ export const up = (pgm) => {
   }
 };
 
-
 /**
  * Rolling back the initial schema is destructive — all tables would be dropped.
  * A manual backup and restore is required; automated rollback is not supported.

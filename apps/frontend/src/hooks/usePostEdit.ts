@@ -149,12 +149,12 @@ export function usePostEdit({ postId }: UsePostEditOptions): UsePostEditReturn {
               (p: CharacterProfile) => ({ ...p, profile_type_id: 3, type_label: 'Kinship' }),
             );
             setAuthorableProfiles([
-              ...chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' } as AuthorableProfile)),
+              ...chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' }) as AuthorableProfile),
               ...kins,
             ]);
           } else {
             setAuthorableProfiles(
-              chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' } as AuthorableProfile)),
+              chars.map((p) => ({ ...p, profile_type_id: 1, type_label: 'Character' }) as AuthorableProfile),
             );
           }
         }

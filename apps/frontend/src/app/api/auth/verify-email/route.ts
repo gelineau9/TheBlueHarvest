@@ -10,9 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing verification token' }, { status: 400 });
     }
 
-    const response = await fetch(
-      `${API_CONFIG.BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-    );
+    const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`);
 
     const data = await response.json().catch(() => ({}));
 

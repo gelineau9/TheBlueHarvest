@@ -57,7 +57,10 @@ export function ContentCarousel<T>({
             </button>
           )}
           {viewAllHref && (
-            <Link href={viewAllHref} className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline">
+            <Link
+              href={viewAllHref}
+              className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline"
+            >
               View all →
             </Link>
           )}

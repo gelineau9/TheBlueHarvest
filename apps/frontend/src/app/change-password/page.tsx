@@ -57,9 +57,7 @@ export default function ChangePasswordPage() {
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-amber-900">Change Password</CardTitle>
-            <CardDescription className="text-amber-700">
-              Sending a reset link to your email…
-            </CardDescription>
+            <CardDescription className="text-amber-700">Sending a reset link to your email…</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -94,9 +92,7 @@ export default function ChangePasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-amber-700 text-center">
-            Didn&apos;t receive it? Check your spam folder.
-          </p>
+          <p className="text-sm text-amber-700 text-center">Didn&apos;t receive it? Check your spam folder.</p>
           <Link href="/">
             <Button className="w-full bg-amber-900 text-amber-50">Go to Homepage</Button>
           </Link>

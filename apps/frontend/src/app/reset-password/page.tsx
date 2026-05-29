@@ -99,9 +99,7 @@ export default function ResetPasswordPage() {
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-amber-900">Reset Password</CardTitle>
-          <CardDescription className="text-amber-700">
-            Enter a new password for your account.
-          </CardDescription>
+          <CardDescription className="text-amber-700">Enter a new password for your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -139,11 +137,7 @@ export default function ResetPasswordPage() {
 
             {error && <div className="text-sm text-red-500 text-center">{error}</div>}
 
-            <Button
-              type="submit"
-              className="w-full bg-amber-900 text-amber-50"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
               {isLoading ? 'Resetting…' : 'Reset Password'}
             </Button>
 

@@ -9,11 +9,7 @@ import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { writeAuditLog } from '../utils/auditLog.js';
 import { logger } from '../utils/logger.js';
-import {
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  sendPasswordChangedEmail,
-} from '../utils/email.js';
+import { sendVerificationEmail, sendPasswordResetEmail, sendPasswordChangedEmail } from '../utils/email.js';
 
 const router = Router();
 

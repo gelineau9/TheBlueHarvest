@@ -23,7 +23,8 @@ const profileTypes: ProfileType[] = [
     id: 2,
     name: 'item',
     label: 'Item',
-    description: 'Document weapons, artifacts, heirlooms, or any other significant item that appears in your writing and/or roleplay.',
+    description:
+      'Document weapons, artifacts, heirlooms, or any other significant item that appears in your writing and/or roleplay.',
     icon: Sword,
   },
   {

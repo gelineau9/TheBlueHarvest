@@ -22,8 +22,8 @@ export default function AboutPage() {
         </section>
 
         <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-700">
-          This page is a work in progress. Throughout <em>The Brandy Hall Archives</em>&apos; alpha, you may see
-          changes to this page.
+          This page is a work in progress. Throughout <em>The Brandy Hall Archives</em>&apos; alpha, you may see changes
+          to this page.
         </div>
       </div>
     </div>
