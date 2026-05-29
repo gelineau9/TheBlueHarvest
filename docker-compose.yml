@@ -85,9 +85,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    volumes:
-      # Named volume — all uploaded avatars and images persist here.
-      - uploads_data:/app/apps/backend/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,9 +108,9 @@ services:
       context: .
       dockerfile: ./apps/frontend/Dockerfile
       args:
-        # Baked into the JS bundle at build time — must be the public-facing
-        # hostname (no protocol), e.g. yourdomain.com
-        NEXT_PUBLIC_BACKEND_HOSTNAME: ${NEXT_PUBLIC_BACKEND_HOSTNAME}
+        # Baked into the JS bundle at build time — must be the Supabase project hostname
+        # (no protocol), e.g. abcdefghijklmnop.supabase.co
+        NEXT_PUBLIC_SUPABASE_HOSTNAME: ${NEXT_PUBLIC_SUPABASE_HOSTNAME}
     container_name: bha-frontend
     restart: unless-stopped
     env_file:
@@ -137,6 +134,4 @@ services:
 # ──────────────────────────────────────────
 volumes:
   postgres_data:
-    driver: local
-  uploads_data:
     driver: local

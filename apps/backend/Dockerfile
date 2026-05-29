@@ -80,12 +80,6 @@ RUN npm ci --omit=dev
 # Copy compiled output from builder stage
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 
-# Create uploads directories with correct ownership
-# (these will be overlaid by the named Docker volume at runtime)
-RUN mkdir -p /app/apps/backend/uploads/images \
-              /app/apps/backend/uploads/avatars \
- && chown -R backend:nodejs /app/apps/backend/uploads
-
 USER backend
 
 WORKDIR /app/apps/backend

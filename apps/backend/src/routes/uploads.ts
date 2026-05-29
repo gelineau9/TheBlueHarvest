@@ -2,52 +2,21 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
 import { sql } from 'slonik';
 import { z } from 'zod';
-import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
+import { supabase } from '../config/storage.js';
 
 const router = Router();
 
 // Allowed image MIME types — used by both fileFilter (declared type) and magic byte validation (real type)
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
-// Backend URL for serving uploaded files
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
-
-// Ensure uploads directories exist
-const uploadsDir = path.join(process.cwd(), 'uploads');
-const imagesDir = path.join(uploadsDir, 'images');
-const avatarsDir = path.join(uploadsDir, 'avatars');
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-if (!fs.existsSync(imagesDir)) {
-  fs.mkdirSync(imagesDir, { recursive: true });
-}
-if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
-}
-
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, imagesDir);
-  },
-  filename: (_req, file, cb) => {
-    // Generate unique filename: timestamp-randomstring.extension
-    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
-});
-
-// File filter - only allow images
+// All uploads go to memory — files are streamed directly to Supabase Storage
 const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
   if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(null, true);
@@ -56,29 +25,17 @@ const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
   }
 };
 
-// Configure multer with 10MB limit for high-res images
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
   },
 });
 
-// Configure multer for avatar uploads (5MB limit, uses memory storage for processing)
-const avatarStorage = multer.memoryStorage();
-
-const avatarFileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
-  if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files allowed (JPG, PNG, GIF, WEBP)'));
-  }
-};
-
 const avatarUpload = multer({
-  storage: avatarStorage,
-  fileFilter: avatarFileFilter,
+  storage: multer.memoryStorage(),
+  fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
   },
@@ -100,25 +57,37 @@ router.post(
 
       // Magic byte validation — fileFilter only checked the declared MIME type
       for (const file of files) {
-        const detected = await fileTypeFromFile(file.path);
+        const detected = await fileTypeFromBuffer(file.buffer);
         if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
-          // Delete all uploaded files for this request before rejecting
-          for (const f of files) {
-            fs.unlink(f.path, () => {});
-          }
           res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
           return;
         }
       }
 
-      // Return array of uploaded file info
-      const uploadedFiles = files.map((file) => ({
-        filename: file.filename,
-        originalName: file.originalname,
-        size: file.size,
-        mimetype: file.mimetype,
-        url: `${BACKEND_URL}/uploads/images/${file.filename}`,
-      }));
+      // Upload all files to Supabase Storage
+      const uploadedFiles = await Promise.all(
+        files.map(async (file) => {
+          const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+          const ext = path.extname(file.originalname);
+          const filename = `${uniqueSuffix}${ext}`;
+
+          const { error } = await supabase.storage
+            .from('images')
+            .upload(filename, file.buffer, { contentType: file.mimetype });
+
+          if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+
+          const { data } = supabase.storage.from('images').getPublicUrl(filename);
+
+          return {
+            filename,
+            originalName: file.originalname,
+            size: file.size,
+            mimetype: file.mimetype,
+            url: data.publicUrl,
+          };
+        }),
+      );
 
       res.status(201).json({
         message: 'Files uploaded successfully',
@@ -147,10 +116,12 @@ router.delete('/images/:filename', authenticateToken, async (req: AuthRequest, r
     }
 
     const userId = req.userId!;
-    const fileUrl = `${BACKEND_URL}/uploads/images/${filename}`;
+
+    // Reconstruct the Supabase CDN URL to match what's stored in the DB
+    const { data: urlData } = supabase.storage.from('images').getPublicUrl(filename);
+    const fileUrl = urlData.publicUrl;
 
     // Ownership check: verify this file belongs to the requesting user
-    // Check post_media → posts.account_id, and profile_media → profiles.account_id
     const db = await getPool();
     const owned = await db.maybeOne(
       sql.type(z.object({ media_id: z.number() }))`
@@ -172,13 +143,9 @@ router.delete('/images/:filename', authenticateToken, async (req: AuthRequest, r
       return;
     }
 
-    const filePath = path.join(imagesDir, filename);
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'File not found' });
-      return;
-    }
+    const { error } = await supabase.storage.from('images').remove([filename]);
+    if (error) throw new Error(`Supabase delete failed: ${error.message}`);
 
-    fs.unlinkSync(filePath);
     res.status(204).send();
   } catch (err) {
     logger.error('Delete error:', err);
@@ -222,30 +189,34 @@ router.post(
         return;
       }
 
-      // Generate unique filename
+      // Generate unique filename — always WebP after Sharp processing
       const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-      const filename = `${uniqueSuffix}.webp`; // Always output as WebP for optimization
-      const outputPath = path.join(avatarsDir, filename);
+      const filename = `${uniqueSuffix}.webp`;
 
-      // Resize to 400x400px and optimize with sharp
-      await sharp(file.buffer)
+      // Resize to 400x400px and convert to WebP
+      const processedBuffer = await sharp(file.buffer)
         .resize(400, 400, {
-          fit: 'cover', // Crop to fill 400x400
+          fit: 'cover',
           position: 'center',
         })
-        .webp({ quality: 85 }) // Convert to WebP for smaller file size
-        .toFile(outputPath);
+        .webp({ quality: 85 })
+        .toBuffer();
 
-      // Get the final file size
-      const stats = fs.statSync(outputPath);
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filename, processedBuffer, { contentType: 'image/webp' });
+
+      if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filename);
 
       res.status(201).json({
         message: 'Avatar uploaded successfully',
         file: {
-          filename: filename,
+          filename,
           originalName: file.originalname,
-          size: stats.size,
-          url: `${BACKEND_URL}/uploads/avatars/${filename}`,
+          size: processedBuffer.length,
+          url: data.publicUrl,
         },
       });
     } catch (err) {
@@ -271,9 +242,12 @@ router.delete('/avatar/:filename', authenticateToken, async (req: AuthRequest, r
     }
 
     const userId = req.userId!;
-    const fileUrl = `${BACKEND_URL}/uploads/avatars/${filename}`;
 
-    // Ownership check: avatars are stored in account_media (account_id) or profile_media
+    // Reconstruct the Supabase CDN URL to match what's stored in the DB
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filename);
+    const fileUrl = urlData.publicUrl;
+
+    // Ownership check: avatars are stored in account_media or profile_media
     const db = await getPool();
     const owned = await db.maybeOne(
       sql.type(z.object({ media_id: z.number() }))`
@@ -294,13 +268,9 @@ router.delete('/avatar/:filename', authenticateToken, async (req: AuthRequest, r
       return;
     }
 
-    const filePath = path.join(avatarsDir, filename);
-    if (!fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'File not found' });
-      return;
-    }
+    const { error } = await supabase.storage.from('avatars').remove([filename]);
+    if (error) throw new Error(`Supabase delete failed: ${error.message}`);
 
-    fs.unlinkSync(filePath);
     res.status(204).send();
   } catch (err) {
     logger.error('Delete error:', err);

@@ -7,23 +7,11 @@ const nextConfig: NextConfig = {
 
   images: {
     remotePatterns: [
-      // Local development only — removed automatically in production builds
-      ...(process.env.NODE_ENV === 'development'
-        ? ([
-            {
-              protocol: 'http',
-              hostname: 'localhost',
-              port: '4000',
-              pathname: '/uploads/**',
-            },
-          ] as const)
-        : []),
-      // Production: locked to your own domain via NEXT_PUBLIC_BACKEND_HOSTNAME.
-      // Set this in .env / docker-compose build args.
+      // Supabase Storage CDN — serves both images and avatars buckets
       {
         protocol: 'https',
-        hostname: process.env.NEXT_PUBLIC_BACKEND_HOSTNAME ?? 'yourdomain.com',
-        pathname: '/uploads/**',
+        hostname: process.env.NEXT_PUBLIC_SUPABASE_HOSTNAME ?? 'your-project-ref.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },
