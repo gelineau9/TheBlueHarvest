@@ -210,6 +210,17 @@ router.post(
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filename);
 
+      // Register in account_media so the delete ownership check can find it
+      const authReq = req as AuthRequest;
+      if (authReq.userId) {
+        const db = await getPool();
+        await db.query(sql.unsafe`
+          INSERT INTO account_media (account_id, url, media_type)
+          VALUES (${authReq.userId}, ${data.publicUrl}, 'avatar')
+          ON CONFLICT DO NOTHING
+        `);
+      }
+
       res.status(201).json({
         message: 'Avatar uploaded successfully',
         file: {

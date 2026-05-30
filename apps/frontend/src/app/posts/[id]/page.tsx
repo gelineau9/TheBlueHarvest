@@ -343,8 +343,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               <h1 className="text-4xl font-bold text-amber-900 mb-2">{post.title}</h1>
             </div>
             {/* Edit/Delete Buttons */}
-            {post.can_edit && (
-              <div className="flex gap-2">
+            <div className="flex gap-2">
+              {post.can_edit && (
                 <Button
                   onClick={() => router.push(`/posts/${post.post_id}/edit`)}
                   className="bg-amber-800 text-amber-50 hover:bg-amber-700"
@@ -352,38 +352,38 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
-                {isAdmin && (
-                  <Button
-                    onClick={handlePin}
-                    disabled={isPinning}
-                    variant="outline"
-                    className="border-amber-600 text-amber-800 hover:bg-amber-50"
-                  >
-                    {post.is_featured ? (
-                      <>
-                        <PinOff className="w-4 h-4 mr-2" />
-                        Unpin
-                      </>
-                    ) : (
-                      <>
-                        <Pin className="w-4 h-4 mr-2" />
-                        Pin
-                      </>
-                    )}
-                  </Button>
-                )}
-                {post.is_owner && (
-                  <Button
-                    onClick={() => setShowDeleteDialog(true)}
-                    variant="outline"
-                    className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                )}
-              </div>
-            )}
+              )}
+              {isAdmin && (
+                <Button
+                  onClick={handlePin}
+                  disabled={isPinning}
+                  variant="outline"
+                  className="border-amber-600 text-amber-800 hover:bg-amber-50"
+                >
+                  {post.is_featured ? (
+                    <>
+                      <PinOff className="w-4 h-4 mr-2" />
+                      Unpin
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="w-4 h-4 mr-2" />
+                      Pin
+                    </>
+                  )}
+                </Button>
+              )}
+              {(post.is_owner || isAdmin) && (
+                <Button
+                  onClick={() => setShowDeleteDialog(true)}
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Author and Date Info */}

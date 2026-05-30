@@ -701,14 +701,15 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
   try {
     const db = await getPool();
+    const isAdmin = req.userRoleId !== undefined && req.userRoleId <= 2;
 
-    // Only owner can delete
+    // Owner or admin can delete
     const result = await db.maybeOne(
       sql.type(z.object({ post_id: z.number() }))`
         UPDATE posts
         SET deleted = true
         WHERE post_id = ${postId}
-          AND account_id = ${userId}
+          AND (account_id = ${userId} OR ${isAdmin})
           AND deleted = false
         RETURNING post_id
       `,
