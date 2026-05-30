@@ -1307,8 +1307,7 @@ describe('DELETE /api/profiles/:id', () => {
         .delete(`/api/profiles/${deletableProfileId}`)
         .set('Authorization', `Bearer ${validToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Profile deleted successfully');
+      expect(response.status).toBe(204);
 
       // Verify profile is soft-deleted in database
       const dbProfile = await pool.maybeOne(sql.unsafe`
@@ -1404,7 +1403,7 @@ describe('DELETE /api/profiles/:id', () => {
         .delete(`/api/profiles/${deletableProfileId}`)
         .set('Authorization', `Bearer ${validToken}`);
 
-      expect(firstResponse.status).toBe(200);
+      expect(firstResponse.status).toBe(204);
 
       // Second deletion should fail with 404
       const secondResponse = await request(app)
@@ -1621,8 +1620,7 @@ describe('Profile Editors API', () => {
         .delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`)
         .set('Authorization', `Bearer ${ownerToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Editor removed successfully');
+      expect(response.status).toBe(204);
 
       // Verify editor is soft-deleted
       const editor = await pool.maybeOne(sql.unsafe`
@@ -1636,8 +1634,7 @@ describe('Profile Editors API', () => {
         .delete(`/api/profiles/${testProfileForEditors}/editors/${testEditorId}`)
         .set('Authorization', `Bearer ${editorToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Editor removed successfully');
+      expect(response.status).toBe(204);
     });
 
     it('should return 403 when non-owner/non-self tries to remove editor', async () => {

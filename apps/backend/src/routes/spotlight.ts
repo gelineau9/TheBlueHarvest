@@ -140,56 +140,35 @@ router.get('/', async (_req: Request, res: Response) => {
           )})`
         : sql.fragment``;
 
-    // Find the highest like_count among eligible trending posts
-    const trendingMaxRow = await db.maybeOne(
-      sql.type(z.object({ max_likes: z.number() }))`
-        SELECT COALESCE(MAX(
-          (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id)
-        ), 0) AS max_likes
+    const lane3Rows = await db.any(
+      sql.type(SpotlightRowSchema)`
+        SELECT
+          p.post_id,
+          p.post_type_id,
+          p.title,
+          p.content,
+          p.created_at::text,
+          pt.type_name,
+          a.username,
+          author_profile.profile_id  AS primary_author_id,
+          author_profile.name        AS primary_author_name,
+          (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count
         FROM posts p
+        JOIN post_types pt  ON p.post_type_id = pt.type_id
+        JOIN accounts a     ON p.account_id   = a.account_id
+        LEFT JOIN authors auth
+          ON auth.post_id = p.post_id AND auth.is_primary = true AND auth.deleted = false
+        LEFT JOIN profiles author_profile
+          ON auth.profile_id = author_profile.profile_id
         WHERE p.deleted = false
           AND p.is_published = true
           AND p.post_type_id IN (1, 2)
           AND p.created_at >= NOW() - INTERVAL '30 days'
           ${excludeLane1And2Fragment}
+        ORDER BY like_count DESC, p.created_at DESC
+        LIMIT 6
       `,
     );
-
-    const maxLikes = trendingMaxRow?.max_likes ?? 0;
-
-    // Only include trending if at least one post has a like; include all ties at the top count
-    const lane3Rows =
-      maxLikes > 0
-        ? await db.any(
-            sql.type(SpotlightRowSchema)`
-              SELECT
-                p.post_id,
-                p.post_type_id,
-                p.title,
-                p.content,
-                p.created_at::text,
-                pt.type_name,
-                a.username,
-                author_profile.profile_id  AS primary_author_id,
-                author_profile.name        AS primary_author_name,
-                (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count
-              FROM posts p
-              JOIN post_types pt  ON p.post_type_id = pt.type_id
-              JOIN accounts a     ON p.account_id   = a.account_id
-              LEFT JOIN authors auth
-                ON auth.post_id = p.post_id AND auth.is_primary = true AND auth.deleted = false
-              LEFT JOIN profiles author_profile
-                ON auth.profile_id = author_profile.profile_id
-              WHERE p.deleted = false
-                AND p.is_published = true
-                AND p.post_type_id IN (1, 2)
-                AND p.created_at >= NOW() - INTERVAL '30 days'
-                ${excludeLane1And2Fragment}
-                AND (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) = ${maxLikes}
-              ORDER BY p.post_id DESC
-            `,
-          )
-        : [];
 
     const lane3: SpotlightItem[] = lane3Rows.map((row) => ({
       ...row,

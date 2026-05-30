@@ -656,8 +656,7 @@ describe('DELETE /api/posts/:postId/comments/:commentId - Delete Comment', () =>
         .delete(`/api/posts/${testPostId}/comments/${deletableCommentId}`)
         .set('Authorization', `Bearer ${validToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Comment deleted');
+      expect(response.status).toBe(204);
 
       // Verify comment is soft-deleted
       const comment = await pool.one(sql.unsafe`

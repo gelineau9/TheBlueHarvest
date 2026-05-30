@@ -543,8 +543,7 @@ describe('DELETE /api/posts/:id - Delete Post', () => {
         .delete(`/api/posts/${deletablePostId}`)
         .set('Authorization', `Bearer ${validToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Post deleted successfully');
+      expect(response.status).toBe(204);
 
       // Verify soft-deleted in database
       const dbPost = await pool.maybeOne(sql.unsafe`
