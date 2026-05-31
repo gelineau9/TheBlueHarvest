@@ -146,7 +146,7 @@ router.post(
 
         // Provide context-specific error messages based on profile type
         if (profile_type_id === 1) {
-          errorMessage = 'This character name is already taken. Character names must be unique across all users.';
+          errorMessage = 'You already have a character with this name. Please choose a different name.';
         } else if ([2, 3, 4].includes(profile_type_id)) {
           const typeNames: { [key: number]: string } = { 2: 'item', 3: 'kinship', 4: 'organization' };
           const typeName = typeNames[profile_type_id];
