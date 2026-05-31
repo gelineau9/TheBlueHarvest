@@ -270,7 +270,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
             !showDeleteConfirm && (
               <div>
                 <div
-                  className="text-amber-800 prose prose-amber prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0"
+                  className="rte-content text-amber-800 prose prose-amber prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content || '') }}
                 />
                 <div className="mt-2 flex items-center justify-between">

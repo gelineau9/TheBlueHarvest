@@ -336,7 +336,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
           {/* Description */}
           {collection.description && (
             <div
-              className="prose prose-amber max-w-none text-amber-700 mb-4 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+              className="prose prose-amber max-w-none rte-content text-amber-700 mb-4 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(collection.description) }}
             />
           )}

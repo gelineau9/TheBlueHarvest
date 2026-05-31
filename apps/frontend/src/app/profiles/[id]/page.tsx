@@ -769,7 +769,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <div className="border-t border-amber-100 mt-4 pt-4">
                 <h3 className="text-sm font-semibold text-amber-900 mb-2">Appearance</h3>
                 <div
-                  className="prose prose-amber max-w-none text-amber-800 text-sm [&_a]:text-amber-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_img]:rounded [&_img]:max-w-full"
+                  className="prose prose-amber max-w-none rte-content text-amber-800 text-sm [&_a]:text-amber-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_img]:rounded [&_img]:max-w-full"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.appearance) }}
                 />
               </div>
@@ -1139,20 +1139,17 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </h2>
             {d?.description ? (
               <div
-                className="prose prose-amber max-w-none text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                className="prose prose-amber max-w-none rte-content text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
-              />
-            ) : (
-              <p className="text-amber-600 italic">No description has been added yet.</p>
+                />
+              </div>
             )}
-          </Card>
-        )}
-        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && (
-          <Card className="p-8 bg-white border-amber-300 mb-6">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
-            {d?.description ? (
-              <div
-                className="prose prose-amber max-w-none text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+
+            {/* Fallback generic */}
+            {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && d.description && (
+              <div className="mt-6">
+                <div
+                className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
               />
             ) : (

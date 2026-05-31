@@ -488,7 +488,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 {/* Art Description */}
                 {post.content.description && (
                   <div
-                    className="mt-6 prose prose-amber max-w-none text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                    className="mt-6 prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
                   />
                 )}
@@ -498,7 +498,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           {/* Writing Post - Show Body */}
           {post.post_type_id === 1 && (
             <div
-              className="prose prose-amber max-w-none text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+              className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body || '') }}
             />
           )}
@@ -600,7 +600,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 <div className="prose prose-amber max-w-none">
                   <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
                   <div
-                    className="text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                    className="rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
                   />
                 </div>
@@ -615,7 +615,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             post.post_type_id !== 4 &&
             post.content.body && (
               <div
-                className="prose prose-amber max-w-none text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body) }}
               />
             )}

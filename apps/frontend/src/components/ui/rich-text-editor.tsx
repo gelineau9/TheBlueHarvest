@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import HardBreak from '@tiptap/extension-hard-break';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Subscript from '@tiptap/extension-subscript';
@@ -34,6 +35,34 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
+        hardBreak: false, // managed manually below
+      }),
+      // Enter = <br>; Enter again on a line that ends with <br> = new paragraph
+      HardBreak.extend({
+        addKeyboardShortcuts() {
+          return {
+            'Mod-Enter': () => this.editor.commands.setHardBreak(),
+            'Shift-Enter': () => this.editor.commands.setHardBreak(),
+            Enter: ({ editor }) => {
+              const { state } = editor;
+              const { selection } = state;
+              const { $from, empty } = selection;
+              if (!empty) return false;
+              // If the node immediately before the cursor is a hardBreak,
+              // delete it and split into a new paragraph instead
+              const nodeBefore = $from.nodeBefore;
+              if (nodeBefore && nodeBefore.type === state.schema.nodes.hardBreak) {
+                return editor
+                  .chain()
+                  .deleteRange({ from: $from.pos - nodeBefore.nodeSize, to: $from.pos })
+                  .splitBlock()
+                  .run();
+              }
+              // Otherwise insert a line break within the current paragraph
+              return editor.commands.setHardBreak();
+            },
+          };
+        },
       }),
       Link.configure({
         openOnClick: false,
