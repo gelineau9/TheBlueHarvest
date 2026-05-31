@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   // server.js plus the exact node_modules it needs, nothing more.
   output: 'standalone',
 
+  // Raise the Route Handler body limit so large image uploads aren't
+  // rejected before the proxy can forward them to the backend.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
+  },
+
   images: {
     remotePatterns: [
       // Supabase Storage CDN — serves both images and avatars buckets

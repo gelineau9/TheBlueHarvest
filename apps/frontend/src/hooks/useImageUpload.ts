@@ -46,6 +46,18 @@ export function useImageUpload({
         return;
       }
 
+      // Client-side size check — reject before hitting the 4.5MB Route Handler limit
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (matches backend Multer limit)
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_FILE_SIZE) {
+          setUploadError(
+            `"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 10 MB.`,
+          );
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+      }
+
       setIsUploading(true);
       setUploadError(null);
 
@@ -60,14 +72,24 @@ export function useImageUpload({
           body: formData,
         });
 
-        const data = await response.json();
+        // Handle non-JSON responses (e.g. 413 from Next.js body limit)
+        let data: { error?: string; files?: UploadedImage[] };
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
 
         if (!response.ok) {
-          setUploadError(data.error || 'Failed to upload images');
+          if (response.status === 413) {
+            setUploadError('Image too large. Please use an image under 10 MB.');
+          } else {
+            setUploadError(data.error || 'Failed to upload images');
+          }
           return;
         }
 
-        setUploadedImages((prev) => [...prev, ...data.files]);
+        setUploadedImages((prev) => [...prev, ...(data.files ?? [])]);
       } catch {
         setUploadError('Failed to upload images. Please try again.');
       } finally {
