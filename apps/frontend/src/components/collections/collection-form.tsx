@@ -15,7 +15,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 const collectionFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
-  description: z.string().max(1000, 'Description must not exceed 1000 characters').optional(),
+  description: z.string().max(10000, 'Description must not exceed 10000 characters').optional(),
   primary_author_profile_id: z.number().int().optional(),
 });
 
