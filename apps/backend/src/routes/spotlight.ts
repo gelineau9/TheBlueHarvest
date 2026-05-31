@@ -129,7 +129,7 @@ router.get('/', async (_req: Request, res: Response) => {
       display_order: null,
     }));
 
-    // ── Lane 3: Trending writing & art ──────────────────────────────────────
+    // ── Lane 3: Trending — 1 writing + 1 art ───────────────────────────────
     const lane1And2Ids = [...lane1Ids, ...lane2.map((r) => r.post_id)];
 
     const excludeLane1And2Fragment =
@@ -140,7 +140,8 @@ router.get('/', async (_req: Request, res: Response) => {
           )})`
         : sql.fragment``;
 
-    const lane3Rows = await db.any(
+    // Top writing post (post_type_id = 1)
+    const trendingWritingRows = await db.any(
       sql.type(SpotlightRowSchema)`
         SELECT
           p.post_id,
@@ -162,15 +163,46 @@ router.get('/', async (_req: Request, res: Response) => {
           ON auth.profile_id = author_profile.profile_id
         WHERE p.deleted = false
           AND p.is_published = true
-          AND p.post_type_id IN (1, 2)
+          AND p.post_type_id = 1
           AND p.created_at >= NOW() - INTERVAL '30 days'
           ${excludeLane1And2Fragment}
         ORDER BY like_count DESC, p.created_at DESC
-        LIMIT 6
+        LIMIT 1
       `,
     );
 
-    const lane3: SpotlightItem[] = lane3Rows.map((row) => ({
+    // Top art post (post_type_id = 2)
+    const trendingArtRows = await db.any(
+      sql.type(SpotlightRowSchema)`
+        SELECT
+          p.post_id,
+          p.post_type_id,
+          p.title,
+          p.content,
+          p.created_at::text,
+          pt.type_name,
+          a.username,
+          author_profile.profile_id  AS primary_author_id,
+          author_profile.name        AS primary_author_name,
+          (SELECT COUNT(*)::int FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count
+        FROM posts p
+        JOIN post_types pt  ON p.post_type_id = pt.type_id
+        JOIN accounts a     ON p.account_id   = a.account_id
+        LEFT JOIN authors auth
+          ON auth.post_id = p.post_id AND auth.is_primary = true AND auth.deleted = false
+        LEFT JOIN profiles author_profile
+          ON auth.profile_id = author_profile.profile_id
+        WHERE p.deleted = false
+          AND p.is_published = true
+          AND p.post_type_id = 2
+          AND p.created_at >= NOW() - INTERVAL '30 days'
+          ${excludeLane1And2Fragment}
+        ORDER BY like_count DESC, p.created_at DESC
+        LIMIT 1
+      `,
+    );
+
+    const lane3: SpotlightItem[] = [...trendingWritingRows, ...trendingArtRows].map((row) => ({
       ...row,
       source: 'trending' as const,
       display_order: null,
