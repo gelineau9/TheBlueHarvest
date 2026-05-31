@@ -1010,7 +1010,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
                   <div className="space-y-2">
                     <Label htmlFor="inGameName" className="text-amber-900 font-medium">
-                      In-Game Name <span className="text-amber-500 font-normal">(optional)</span>
+                      In-Game Name
                     </Label>
                     <Input
                       id="inGameName"
