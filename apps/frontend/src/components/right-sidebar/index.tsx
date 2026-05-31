@@ -269,7 +269,7 @@ export function RightSidebar() {
                     kind="post"
                     username={posterName}
                     usernameHref={posterHref}
-                    action={`posted ${an(item.type_name)} new ${item.type_name.toLowerCase()}`}
+                    action={`posted a new ${item.type_name.toLowerCase()}`}
                     target={`"${item.title}"`}
                     targetHref={`/posts/${item.id}`}
                     time={formatRelativeTime(item.created_at)}
