@@ -132,3 +132,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ProseMirror / RTE editor styles */
+.ProseMirror p {
+  min-height: 1.5em;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
