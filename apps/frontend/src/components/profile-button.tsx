@@ -39,9 +39,9 @@ export function ProfileButton() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-11 w-11 rounded-full bg-amber-50/30 backdrop-blur-sm hover:bg-amber-50/50 cursor-pointer"
+          className="relative h-14 w-14 rounded-full bg-amber-50/30 backdrop-blur-sm hover:bg-amber-50/50 cursor-pointer"
         >
-          <Avatar className="h-11 w-11 border-2 border-amber-800/30">
+          <Avatar className="h-14 w-14 border-2 border-amber-800/30">
             {isLoading ? (
               <AvatarFallback className="bg-amber-100 text-amber-900">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-600 border-t-transparent"></div>
