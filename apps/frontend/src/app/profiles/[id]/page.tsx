@@ -1149,7 +1149,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         )}
 
         {/* Fallback generic */}
-        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && d.description && (
+        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && d?.description && (
           <Card className="p-8 bg-white border-amber-300 mb-6">
             <div
               className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
