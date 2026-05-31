@@ -229,6 +229,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [occupation, setOccupation] = useState('');
   const [age, setAge] = useState('');
   const [residence, setResidence] = useState('');
+  const [inGameName, setInGameName] = useState('');
   const [appearance, setAppearance] = useState('');
 
   // Kinship profile picker (character edit form)
@@ -288,6 +289,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [originalAge, setOriginalAge] = useState('');
   const [originalKinshipProfileId, setOriginalKinshipProfileId] = useState<number | null>(null);
   const [originalResidence, setOriginalResidence] = useState('');
+  const [originalInGameName, setOriginalInGameName] = useState('');
   const [originalAppearance, setOriginalAppearance] = useState('');
   const [originalFoundingDate, setOriginalFoundingDate] = useState('');
   const [originalKinshipType, setOriginalKinshipType] = useState('Mixed');
@@ -351,6 +353,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     age !== originalAge ||
     kinshipProfileId !== originalKinshipProfileId ||
     residence !== originalResidence ||
+    inGameName !== originalInGameName ||
     appearance !== originalAppearance ||
     foundingDate !== originalFoundingDate ||
     kinshipType !== originalKinshipType ||
@@ -409,6 +412,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           const initialAge = d?.age || '';
           const initialKinshipProfileId = d?.kinship_profile_id ?? null;
           const initialResidence = d?.residence || '';
+          const initialInGameName = d?.in_game_name || '';
           const initialAppearance = d?.appearance || '';
 
           setRace(initialRace);
@@ -416,6 +420,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           setAge(initialAge);
           setKinshipProfileId(initialKinshipProfileId);
           setResidence(initialResidence);
+          setInGameName(initialInGameName);
           setAppearance(initialAppearance);
 
           setOriginalRace(initialRace);
@@ -423,6 +428,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           setOriginalAge(initialAge);
           setOriginalKinshipProfileId(initialKinshipProfileId);
           setOriginalResidence(initialResidence);
+          setOriginalInGameName(initialInGameName);
           setOriginalAppearance(initialAppearance);
 
           // If there's a linked kinship, fetch its name for display
@@ -662,6 +668,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
         if (age.trim()) details.age = age.trim();
         if (kinshipProfileId) details.kinship_profile_id = kinshipProfileId;
         if (residence.trim()) details.residence = residence.trim();
+        if (inGameName.trim()) details.in_game_name = inGameName.trim();
         if (appearance.trim()) details.appearance = appearance.trim();
       }
 
@@ -734,6 +741,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalAge(age.trim());
       setOriginalKinshipProfileId(kinshipProfileId);
       setOriginalResidence(residence.trim());
+      setOriginalInGameName(inGameName.trim());
       setOriginalAppearance(appearance.trim());
       setOriginalFoundingDate(foundingDate.trim());
       setOriginalKinshipType(kinshipType);
@@ -1008,6 +1016,20 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                       value={residence}
                       onChange={(e) => setResidence(e.target.value)}
                       placeholder="Where does this character live?"
+                      maxLength={100}
+                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="inGameName" className="text-amber-900 font-medium">
+                      In-Game Name <span className="text-amber-500 font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      id="inGameName"
+                      value={inGameName}
+                      onChange={(e) => setInGameName(e.target.value)}
+                      placeholder="LOTRO character name, if different"
                       maxLength={100}
                       className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
                     />

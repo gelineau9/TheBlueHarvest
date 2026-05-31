@@ -49,6 +49,7 @@ interface ProfileDetails {
   kinship?: string;
   kinship_profile_id?: number;
   residence?: string;
+  in_game_name?: string;
   // Kinship-specific
   founding_date?: string;
   kinship_type?: string;
@@ -711,7 +712,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
             <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
-            {d && (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence) ? (
+            {d && (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence || d.in_game_name) ? (
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 {d?.race && (
                   <div>
@@ -752,6 +753,12 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <div className="col-span-2 sm:col-span-1">
                     <dt className="text-amber-600 font-medium">Residence</dt>
                     <dd className="text-amber-900">{d.residence}</dd>
+                  </div>
+                )}
+                {d?.in_game_name && (
+                  <div className="col-span-2 sm:col-span-1">
+                    <dt className="text-amber-600 font-medium">In-Game Name</dt>
+                    <dd className="text-amber-900">{d.in_game_name}</dd>
                   </div>
                 )}
               </dl>
