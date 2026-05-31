@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { User, Pencil, X, Check, Trash2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { LikeButton } from '@/components/likes/LikeButton';
+import DOMPurify from 'isomorphic-dompurify';
 
 export interface Comment {
   comment_id: number;
@@ -72,7 +73,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
   };
 
   const handleSaveEdit = async () => {
-    if (!editContent.trim()) {
+    if (!editContent.replace(/<[^>]*>/g, '').trim()) {
       setEditError('Comment cannot be empty');
       return;
     }
@@ -84,7 +85,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
       const response = await fetch(`/api/posts/${comment.post_id}/comments/${comment.comment_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editContent.trim() }),
+        body: JSON.stringify({ content: editContent }),
       });
 
       if (!response.ok) {
@@ -221,19 +222,17 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
 
           {isEditing ? (
             <div className="space-y-2">
-              <Textarea
+              <RichTextEditor
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[60px] resize-none text-sm"
+                onChange={setEditContent}
                 disabled={isSubmitting}
-                autoFocus
               />
               {editError && <p className="text-red-600 text-xs">{editError}</p>}
               <div className="flex gap-2">
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  disabled={isSubmitting || !editContent.trim()}
+                  disabled={isSubmitting || !editContent.replace(/<[^>]*>/g, '').trim()}
                   className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
                 >
                   <Check className="w-3 h-3 mr-1" />
@@ -254,7 +253,10 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
           ) : (
             !showDeleteConfirm && (
               <div>
-                <p className="text-amber-800 whitespace-pre-wrap break-words">{comment.content}</p>
+                <div
+                  className="text-amber-800 prose prose-amber prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content || '') }}
+                />
                 <div className="mt-2 flex items-center justify-between">
                   <Button
                     variant="ghost"

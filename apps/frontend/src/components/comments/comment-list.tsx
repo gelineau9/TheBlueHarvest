@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuth } from '@/components/auth/auth-provider';
 import { CommentItem, Comment } from './comment-item';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
@@ -174,14 +174,14 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.replace(/<[^>]*>/g, '').trim()) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
       const body: { content: string; profile_id?: number } = {
-        content: newComment.trim(),
+        content: newComment,
       };
       if (selectedCharacterId) {
         body.profile_id = selectedCharacterId;
@@ -210,14 +210,14 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.trim() || replyingTo === null) return;
+    if (!replyContent.replace(/<[^>]*>/g, '').trim() || replyingTo === null) return;
 
     setIsReplySubmitting(true);
     setReplyError(null);
 
     try {
       const body: { content: string; profile_id?: number; parent_comment_id: number } = {
-        content: replyContent.trim(),
+        content: replyContent,
         parent_comment_id: replyingTo,
       };
       if (replyCharacterId) {
@@ -256,14 +256,11 @@ export function CommentList({ postId }: CommentListProps) {
   const replyForm =
     replyingTo !== null ? (
       <form onSubmit={handleReplySubmit} className="border-l-2 border-amber-300 pl-3 space-y-2">
-        <Textarea
-          placeholder="Write a reply..."
+        <RichTextEditor
           value={replyContent}
-          onChange={(e) => setReplyContent(e.target.value)}
-          className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[60px] resize-none text-sm"
+          onChange={setReplyContent}
+          placeholder="Write a reply..."
           disabled={isReplySubmitting}
-          maxLength={10000}
-          autoFocus
         />
         {replyError && <p className="text-red-600 text-xs">{replyError}</p>}
         <div className="flex items-center justify-between gap-4">
@@ -298,7 +295,7 @@ export function CommentList({ postId }: CommentListProps) {
             <Button
               type="submit"
               size="sm"
-              disabled={isReplySubmitting || !replyContent.trim()}
+              disabled={isReplySubmitting || !replyContent.replace(/<[^>]*>/g, '').trim()}
               className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
             >
               <Send className="w-3 h-3 mr-1" />
@@ -320,13 +317,11 @@ export function CommentList({ postId }: CommentListProps) {
       {isLoggedIn && (
         <form onSubmit={handleSubmit} className="mb-6">
           <div className="space-y-3">
-            <Textarea
-              placeholder="Write a comment..."
+            <RichTextEditor
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[80px] resize-none"
+              onChange={setNewComment}
+              placeholder="Write a comment..."
               disabled={isSubmitting}
-              maxLength={10000}
             />
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -348,7 +343,7 @@ export function CommentList({ postId }: CommentListProps) {
               </div>
               <Button
                 type="submit"
-                disabled={isSubmitting || !newComment.trim()}
+                disabled={isSubmitting || !newComment.replace(/<[^>]*>/g, '').trim()}
                 className="bg-amber-800 text-amber-50 hover:bg-amber-700"
               >
                 <Send className="w-4 h-4 mr-2" />
