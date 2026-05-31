@@ -33,6 +33,7 @@ interface ProfileDetails {
   age?: string;
   kinship_profile_id?: number;
   residence?: string;
+  in_game_name?: string;
   // Kinship-specific
   founding_date?: string;
   kinship_type?: string;
