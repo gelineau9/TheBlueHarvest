@@ -8,6 +8,8 @@ import { EventCalendar, CalendarEvent } from '@/components/events/EventCalendar'
 import { EventFeed, EventFeedItem } from '@/components/events/EventFeed';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
+const an = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PostContent {
@@ -254,7 +256,7 @@ export function RightSidebar() {
                       kind="profile"
                       username={posterName}
                       usernameHref={posterHref}
-                      action={`created a ${item.type_name.toLowerCase()}`}
+                      action={`created ${an(item.type_name)} ${item.type_name.toLowerCase()}`}
                       target={item.title}
                       targetHref={`/profiles/${item.id}`}
                       time={formatRelativeTime(item.created_at)}
@@ -267,7 +269,7 @@ export function RightSidebar() {
                     kind="post"
                     username={posterName}
                     usernameHref={posterHref}
-                    action={`posted a new ${item.type_name.toLowerCase()}`}
+                    action={`posted ${an(item.type_name)} new ${item.type_name.toLowerCase()}`}
                     target={`"${item.title}"`}
                     targetHref={`/posts/${item.id}`}
                     time={formatRelativeTime(item.created_at)}
