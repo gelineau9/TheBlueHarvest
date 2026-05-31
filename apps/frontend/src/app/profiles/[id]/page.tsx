@@ -761,7 +761,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             {d?.appearance && (
               <div className="border-t border-amber-100 mt-4 pt-4">
                 <h3 className="text-sm font-semibold text-amber-900 mb-2">Appearance</h3>
-                <p className="text-amber-800 whitespace-pre-wrap text-sm">{d.appearance}</p>
+                <div
+                  className="prose prose-amber max-w-none text-amber-800 text-sm [&_a]:text-amber-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_img]:rounded [&_img]:max-w-full"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.appearance) }}
+                />
               </div>
             )}
           </Card>
@@ -1141,9 +1144,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           <Card className="p-8 bg-white border-amber-300 mb-6">
             <h2 className="text-2xl font-bold text-amber-900 mb-4">Details</h2>
             {d?.description ? (
-              <div className="prose prose-amber max-w-none">
-                <p className="text-amber-800 whitespace-pre-wrap">{d.description}</p>
-              </div>
+              <div
+                className="prose prose-amber max-w-none text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
+              />
             ) : (
               <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
             )}

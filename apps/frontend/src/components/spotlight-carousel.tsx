@@ -93,7 +93,7 @@ function SpotlightSlide({ item }: { item: SpotlightItem }) {
     item.post_type_id === 1 && typeof item.content?.body === 'string'
       ? item.content.body.replace(/<[^>]*>/g, '').slice(0, 280)
       : item.content?.description
-        ? item.content.description.slice(0, 280)
+        ? item.content.description.replace(/<[^>]*>/g, '').slice(0, 280)
         : null;
 
   // ── Image variant — full-bleed hero with text overlay ──────────────────────
