@@ -85,6 +85,9 @@ export function ContentCard({
     day: 'numeric',
   });
 
+  // Strip any HTML tags from RTE-produced preview text
+  const plainPreview = preview ? preview.replace(/<[^>]*>/g, '').trim() : undefined;
+
   const hasThumbnail = thumbnail && contentCategory === 'post' && [2, 3, 4].includes(typeId);
 
   return (
@@ -129,7 +132,7 @@ export function ContentCard({
               <h3 className="text-base font-bold text-amber-900 mb-1 line-clamp-2">{name}</h3>
 
               {/* Preview text */}
-              {preview && <p className="text-sm text-amber-700 mb-2 line-clamp-2">{preview}</p>}
+              {plainPreview && <p className="text-sm text-amber-700 mb-2 line-clamp-2">{plainPreview}</p>}
 
               {/* Meta info */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-600">

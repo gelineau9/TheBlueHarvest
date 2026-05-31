@@ -8,14 +8,14 @@ import { z } from 'zod';
 import { createCollection, updateCollection } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, X } from 'lucide-react';
 import Link from 'next/link';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 const collectionFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
-  description: z.string().max(1000, 'Description must not exceed 1000 characters').optional(),
+  description: z.string().max(10000, 'Description must not exceed 10000 characters').optional(),
   primary_author_profile_id: z.number().int().optional(),
 });
 
@@ -399,12 +399,10 @@ export function CollectionForm({
             <Label htmlFor="description" className="text-amber-900 font-medium">
               Description
             </Label>
-            <Textarea
-              id="description"
-              {...register('description')}
+            <RichTextEditor
+              value={watch('description') || ''}
+              onChange={(html) => setValue('description', html, { shouldValidate: true })}
               placeholder={`Describe your ${collectionTypeName}`}
-              rows={4}
-              className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
             />
             {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
           </div>

@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuth } from '@/components/auth/auth-provider';
 import { CommentItem, Comment } from './comment-item';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 
 const PAGE_SIZE = 50;
 const REPLY_PREVIEW_COUNT = 3;
+
+type CommentFilter = 'all' | 'ic' | 'ooc';
 
 interface CommentListProps {
   postId: number;
@@ -20,10 +22,18 @@ interface CommentListProps {
 
 type CommentNode = Comment & { replies: CommentNode[] };
 
-function buildCommentTree(comments: Comment[]): CommentNode[] {
+function buildCommentTree(comments: Comment[], filter: CommentFilter): CommentNode[] {
+  // Apply filter to flat list before building tree
+  const filtered =
+    filter === 'ic'
+      ? comments.filter((c) => c.profile_id !== null)
+      : filter === 'ooc'
+        ? comments.filter((c) => c.profile_id === null)
+        : comments;
+
   const map = new Map<number, CommentNode>();
   const roots: CommentNode[] = [];
-  for (const c of comments) map.set(c.comment_id, { ...c, replies: [] });
+  for (const c of filtered) map.set(c.comment_id, { ...c, replies: [] });
   for (const node of map.values()) {
     if (node.parent_comment_id !== null && map.has(node.parent_comment_id)) {
       map.get(node.parent_comment_id)!.replies.push(node);
@@ -31,6 +41,12 @@ function buildCommentTree(comments: Comment[]): CommentNode[] {
       roots.push(node);
     }
   }
+  // Sort roots: IC (profile_id set) before OOC
+  roots.sort((a, b) => {
+    const aIC = a.profile_id !== null ? 0 : 1;
+    const bIC = b.profile_id !== null ? 0 : 1;
+    return aIC - bIC;
+  });
   return roots;
 }
 
@@ -112,6 +128,7 @@ export function CommentList({ postId }: CommentListProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [commentFilter, setCommentFilter] = useState<CommentFilter>('all');
 
   // New comment form state
   const [newComment, setNewComment] = useState('');
@@ -174,14 +191,14 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.replace(/<[^>]*>/g, '').trim()) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
       const body: { content: string; profile_id?: number } = {
-        content: newComment.trim(),
+        content: newComment,
       };
       if (selectedCharacterId) {
         body.profile_id = selectedCharacterId;
@@ -210,14 +227,14 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.trim() || replyingTo === null) return;
+    if (!replyContent.replace(/<[^>]*>/g, '').trim() || replyingTo === null) return;
 
     setIsReplySubmitting(true);
     setReplyError(null);
 
     try {
       const body: { content: string; profile_id?: number; parent_comment_id: number } = {
-        content: replyContent.trim(),
+        content: replyContent,
         parent_comment_id: replyingTo,
       };
       if (replyCharacterId) {
@@ -256,14 +273,11 @@ export function CommentList({ postId }: CommentListProps) {
   const replyForm =
     replyingTo !== null ? (
       <form onSubmit={handleReplySubmit} className="border-l-2 border-amber-300 pl-3 space-y-2">
-        <Textarea
-          placeholder="Write a reply..."
+        <RichTextEditor
           value={replyContent}
-          onChange={(e) => setReplyContent(e.target.value)}
-          className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[60px] resize-none text-sm"
+          onChange={setReplyContent}
+          placeholder="Write a reply..."
           disabled={isReplySubmitting}
-          maxLength={10000}
-          autoFocus
         />
         {replyError && <p className="text-red-600 text-xs">{replyError}</p>}
         <div className="flex items-center justify-between gap-4">
@@ -298,7 +312,7 @@ export function CommentList({ postId }: CommentListProps) {
             <Button
               type="submit"
               size="sm"
-              disabled={isReplySubmitting || !replyContent.trim()}
+              disabled={isReplySubmitting || !replyContent.replace(/<[^>]*>/g, '').trim()}
               className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
             >
               <Send className="w-3 h-3 mr-1" />
@@ -311,22 +325,43 @@ export function CommentList({ postId }: CommentListProps) {
 
   return (
     <Card className="p-6 bg-white border-amber-300 mt-6">
-      <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="w-5 h-5 text-amber-700" />
-        <h2 className="text-lg font-semibold text-amber-900">Comments {total > 0 && `(${total})`}</h2>
+      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-amber-700" />
+          <h2 className="text-lg font-semibold text-amber-900">Comments {total > 0 && `(${total})`}</h2>
+        </div>
+        {comments.length > 0 && (
+          <div className="flex items-center gap-1 text-sm">
+            {(['all', 'ic', 'ooc'] as CommentFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setCommentFilter(f)}
+                className={`px-3 py-1 rounded-full font-medium transition-colors ${
+                  commentFilter === f
+                    ? f === 'ic'
+                      ? 'bg-emerald-600 text-white'
+                      : f === 'ooc'
+                        ? 'bg-amber-800 text-white'
+                        : 'bg-amber-800 text-white'
+                    : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                }`}
+              >
+                {f === 'all' ? 'All' : f.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Top-level comment form - always visible when logged in */}
       {isLoggedIn && (
         <form onSubmit={handleSubmit} className="mb-6">
           <div className="space-y-3">
-            <Textarea
-              placeholder="Write a comment..."
+            <RichTextEditor
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 min-h-[80px] resize-none"
+              onChange={setNewComment}
+              placeholder="Write a comment..."
               disabled={isSubmitting}
-              maxLength={10000}
             />
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -348,7 +383,7 @@ export function CommentList({ postId }: CommentListProps) {
               </div>
               <Button
                 type="submit"
-                disabled={isSubmitting || !newComment.trim()}
+                disabled={isSubmitting || !newComment.replace(/<[^>]*>/g, '').trim()}
                 className="bg-amber-800 text-amber-50 hover:bg-amber-700"
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -369,9 +404,11 @@ export function CommentList({ postId }: CommentListProps) {
         <p className="text-amber-600 text-sm">
           No comments yet. {isLoggedIn ? 'Be the first to comment!' : 'Sign in to leave a comment.'}
         </p>
+      ) : buildCommentTree(comments, commentFilter).length === 0 ? (
+        <p className="text-amber-600 text-sm">No {commentFilter.toUpperCase()} comments yet.</p>
       ) : (
         <div className="space-y-3">
-          {buildCommentTree(comments).map((node) => (
+          {buildCommentTree(comments, commentFilter).map((node) => (
             <CommentThread
               key={node.comment_id}
               node={node}

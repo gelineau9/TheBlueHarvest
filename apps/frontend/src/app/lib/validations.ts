@@ -44,7 +44,7 @@ export const createPostSchema = z.object({
 export const createCollectionSchema = z.object({
   collection_type_id: z.number().int().min(1).max(5),
   title: z.string().min(1, 'Title is required').max(200, 'Title must not exceed 200 characters'),
-  description: z.string().max(1000, 'Description must not exceed 1000 characters').optional(),
+  description: z.string().max(10000, 'Description must not exceed 10000 characters').optional(),
   content: z.object({}).passthrough().optional(), // Flexible content structure
   primary_author_profile_id: z.number().int().optional(),
 });

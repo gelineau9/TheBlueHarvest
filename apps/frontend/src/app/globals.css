@@ -132,3 +132,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ProseMirror / RTE editor styles */
+.ProseMirror p {
+  margin-bottom: 1em;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+/* br inside a paragraph = single line break, no extra gap */
+.ProseMirror br {
+  display: block;
+  content: '';
+  margin-top: 0;
+}
+
+/* Rendered RTE output — mirrors editor spacing exactly */
+.rte-content p {
+  margin-bottom: 1em;
+}
+
+.rte-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rte-content br {
+  display: block;
+  content: '';
+  margin-top: 0;
+}

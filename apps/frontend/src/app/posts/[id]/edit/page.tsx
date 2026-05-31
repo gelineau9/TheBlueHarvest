@@ -7,11 +7,11 @@ import { ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 const getMinDate = () => {
@@ -499,13 +499,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   <Label htmlFor="body" className="text-amber-900 font-semibold">
                     Content
                   </Label>
-                  <Textarea
-                    id="body"
+                  <RichTextEditor
                     value={body}
-                    onChange={(e) => setBody(e.target.value)}
+                    onChange={setBody}
                     placeholder="Write your post content..."
-                    rows={12}
-                    className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
                   />
                 </div>
               </>
@@ -597,13 +594,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   <Label htmlFor="description" className="text-amber-900 font-semibold">
                     Description
                   </Label>
-                  <Textarea
-                    id="description"
+                  <RichTextEditor
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={setDescription}
                     placeholder="Enter a description..."
-                    rows={6}
-                    className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
                   />
                 </div>
               </>
@@ -762,13 +756,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   <Label htmlFor="description" className="text-amber-900 font-semibold">
                     Description
                   </Label>
-                  <Textarea
-                    id="description"
+                  <RichTextEditor
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={setDescription}
                     placeholder="Enter event description..."
-                    rows={6}
-                    className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 resize-none"
                   />
                 </div>
               </>

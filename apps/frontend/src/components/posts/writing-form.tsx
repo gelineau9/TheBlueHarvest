@@ -7,8 +7,8 @@ import { createPostSchema, CreatePostInput } from '@/app/lib/validations';
 import { createPost } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 
@@ -23,6 +23,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
+  const [bodyContent, setBodyContent] = useState('');
 
   const {
     profiles: authorableProfiles,
@@ -52,7 +53,6 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     const value = e.target.value;
     setTagsInput(value);
 
-    // Parse tags from comma-separated input
     const tags = value
       .split(',')
       .map((tag) => tag.trim())
@@ -65,14 +65,13 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createPost({ ...data, is_published: isPublished });
+      const result = await createPost({ ...data, content: { ...data.content, body: bodyContent }, is_published: isPublished });
       if (!result.success) {
         setError(result.error || 'Failed to create post');
         return;
       }
       const postId = result.post?.post_id;
       if (postId) {
-        // Non-blocking: fire and forget featured profile inserts
         if (featuredProfiles.length > 0) {
           Promise.all(
             featuredProfiles.map((p) =>
@@ -163,15 +162,16 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
 
       {/* Body */}
       <div className="space-y-2">
-        <Label htmlFor="body" className="text-amber-900 font-semibold">
+        <Label className="text-amber-900 font-semibold">
           Content *
         </Label>
-        <Textarea
-          id="body"
-          {...register('content.body')}
+        <RichTextEditor
+          value={bodyContent}
+          onChange={(html) => {
+            setBodyContent(html);
+            setValue('content.body', html, { shouldValidate: true });
+          }}
           placeholder="Write your story here..."
-          rows={12}
-          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
           disabled={isSubmitting}
         />
         {errors.content?.body && <p className="text-sm text-red-600">{errors.content.body.message}</p>}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
+import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -452,12 +453,6 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 {post.username}
               </Link>
             </span>
-            <LikeButton
-              type="post"
-              id={post.post_id}
-              initialLikeCount={post.like_count}
-              initialLikedByMe={post.liked_by_me}
-            />
           </div>
         </Card>
 
@@ -492,16 +487,20 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 </div>
                 {/* Art Description */}
                 {post.content.description && (
-                  <p className="mt-6 text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+                  <div
+                    className="mt-6 prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
+                  />
                 )}
               </div>
             )}
 
           {/* Writing Post - Show Body */}
           {post.post_type_id === 1 && (
-            <div className="prose prose-amber max-w-none">
-              <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body || ''}</p>
-            </div>
+            <div
+              className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body || '') }}
+            />
           )}
 
           {/* Event Post - Show Event Details */}
@@ -600,7 +599,10 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               {post.content.description && (
                 <div className="prose prose-amber max-w-none">
                   <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
-                  <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.description}</p>
+                  <div
+                    className="rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
+                  />
                 </div>
               )}
             </div>
@@ -612,10 +614,20 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
             post.post_type_id !== 3 &&
             post.post_type_id !== 4 &&
             post.content.body && (
-              <div className="prose prose-amber max-w-none">
-                <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{post.content.body}</p>
-              </div>
+              <div
+                className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body) }}
+              />
             )}
+
+          <div className="mt-6 pt-4 border-t border-amber-200 flex justify-end">
+            <LikeButton
+              type="post"
+              id={post.post_id}
+              initialLikeCount={post.like_count}
+              initialLikedByMe={post.liked_by_me}
+            />
+          </div>
         </Card>
 
         {/* Tags */}
