@@ -773,13 +773,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               <Label htmlFor="appearance" className="text-amber-900 font-medium">
                 Appearance
               </Label>
-              <Textarea
-                id="appearance"
+              <RichTextEditor
                 value={appearance}
-                onChange={(e) => setAppearance(e.target.value)}
+                onChange={setAppearance}
                 placeholder="Describe your character's physical appearance…"
-                rows={4}
-                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
                 disabled={isSubmitting}
               />
             </div>

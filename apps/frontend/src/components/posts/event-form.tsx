@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { createPost } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Upload, X, Calendar, Clock, MapPin, Users } from 'lucide-react';
 import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
@@ -391,15 +391,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description" className="text-amber-900 font-semibold">
+        <Label className="text-amber-900 font-semibold">
           Description *
         </Label>
-        <Textarea
-          id="description"
-          {...register('description')}
+        <RichTextEditor
+          value={watch('description')}
+          onChange={(html) => setValue('description', html, { shouldValidate: true })}
           placeholder="Describe your event - what will happen, who should attend, any requirements..."
-          rows={6}
-          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white resize-none"
           disabled={isSubmitting}
         />
         {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
