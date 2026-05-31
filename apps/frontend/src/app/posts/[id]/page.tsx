@@ -453,12 +453,6 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 {post.username}
               </Link>
             </span>
-            <LikeButton
-              type="post"
-              id={post.post_id}
-              initialLikeCount={post.like_count}
-              initialLikedByMe={post.liked_by_me}
-            />
           </div>
         </Card>
 
@@ -626,6 +620,16 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               />
             )}
         </Card>
+
+        {/* Like */}
+        <div className="flex justify-end mb-2">
+          <LikeButton
+            type="post"
+            id={post.post_id}
+            initialLikeCount={post.like_count}
+            initialLikedByMe={post.liked_by_me}
+          />
+        </div>
 
         {/* Tags */}
         {post.content.tags && post.content.tags.length > 0 && (
