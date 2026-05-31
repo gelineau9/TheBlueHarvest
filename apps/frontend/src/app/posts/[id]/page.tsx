@@ -619,17 +619,16 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body) }}
               />
             )}
-        </Card>
 
-        {/* Like */}
-        <div className="flex justify-end mb-2">
-          <LikeButton
-            type="post"
-            id={post.post_id}
-            initialLikeCount={post.like_count}
-            initialLikedByMe={post.liked_by_me}
-          />
-        </div>
+          <div className="mt-6 pt-4 border-t border-amber-200 flex justify-end">
+            <LikeButton
+              type="post"
+              id={post.post_id}
+              initialLikeCount={post.like_count}
+              initialLikedByMe={post.liked_by_me}
+            />
+          </div>
+        </Card>
 
         {/* Tags */}
         {post.content.tags && post.content.tags.length > 0 && (
