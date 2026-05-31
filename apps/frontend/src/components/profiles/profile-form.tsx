@@ -755,6 +755,22 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               <p className="text-xs text-amber-600">Type to search existing kinship profiles.</p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="inGameName" className="text-amber-900 font-medium">
+                In-Game Name <span className="text-amber-500 font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="inGameName"
+                type="text"
+                value={inGameName}
+                onChange={(e) => setInGameName(e.target.value)}
+                placeholder="LOTRO character name, if different"
+                maxLength={100}
+                disabled={isSubmitting}
+                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+              />
+            </div>
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="residence" className="text-amber-900 font-medium">
                 Residence
@@ -765,22 +781,6 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 value={residence}
                 onChange={(e) => setResidence(e.target.value)}
                 placeholder="Where does this character live?"
-                maxLength={100}
-                disabled={isSubmitting}
-                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-              />
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="inGameName" className="text-amber-900 font-medium">
-                In-Game Name <span className="text-amber-500 font-normal">(optional)</span>
-              </Label>
-              <Input
-                id="inGameName"
-                type="text"
-                value={inGameName}
-                onChange={(e) => setInGameName(e.target.value)}
-                placeholder="LOTRO character name, if different"
                 maxLength={100}
                 disabled={isSubmitting}
                 className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
