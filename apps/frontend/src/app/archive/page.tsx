@@ -187,7 +187,7 @@ export default function ArchivePage() {
     updateParams({ sortBy: newSortBy, order: newOrder });
   };
 
-  // Toggle profile type filter
+  // Toggle profile type filter — implicitly scopes to profiles when a type is selected
   const handleProfileTypeToggle = (typeId: number) => {
     let newSelected: number[];
     if (selectedProfileTypes.includes(typeId)) {
@@ -195,10 +195,21 @@ export default function ArchivePage() {
     } else {
       newSelected = [...selectedProfileTypes, typeId];
     }
-    updateParams({ profileTypes: newSelected.length > 0 ? newSelected.join(',') : null });
+    const updates: Record<string, string | null> = {
+      profileTypes: newSelected.length > 0 ? newSelected.join(',') : null,
+    };
+    // Selecting a profile sub-type implicitly scopes to profiles only
+    if (newSelected.length > 0) {
+      updates.contentType = 'profiles';
+      updates.postTypes = null;
+    } else if (selectedPostTypes.length === 0) {
+      // No sub-type filters active — return to 'all'
+      updates.contentType = null;
+    }
+    updateParams(updates);
   };
 
-  // Toggle post type filter
+  // Toggle post type filter — implicitly scopes to posts when a type is selected
   const handlePostTypeToggle = (typeId: number) => {
     let newSelected: number[];
     if (selectedPostTypes.includes(typeId)) {
@@ -206,7 +217,18 @@ export default function ArchivePage() {
     } else {
       newSelected = [...selectedPostTypes, typeId];
     }
-    updateParams({ postTypes: newSelected.length > 0 ? newSelected.join(',') : null });
+    const updates: Record<string, string | null> = {
+      postTypes: newSelected.length > 0 ? newSelected.join(',') : null,
+    };
+    // Selecting a post sub-type implicitly scopes to posts only
+    if (newSelected.length > 0) {
+      updates.contentType = 'posts';
+      updates.profileTypes = null;
+    } else if (selectedProfileTypes.length === 0) {
+      // No sub-type filters active — return to 'all'
+      updates.contentType = null;
+    }
+    updateParams(updates);
   };
 
   // Clear all filters
