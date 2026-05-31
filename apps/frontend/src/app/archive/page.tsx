@@ -449,29 +449,6 @@ export default function ArchivePage() {
           )}
         </div>
 
-        {/* Content Type Toggle */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-sm font-medium text-amber-800 mr-2">Show:</span>
-          {CONTENT_TYPES.map((type) => (
-            <Button
-              key={type.value}
-              variant="outline"
-              size="sm"
-              onClick={() => handleContentTypeChange(type.value)}
-              className={`
-                border-amber-300 transition-all
-                ${
-                  contentType === type.value
-                    ? 'bg-amber-800 text-amber-50 border-amber-800 hover:bg-amber-700 hover:border-amber-700'
-                    : 'bg-white text-amber-900 hover:bg-amber-50'
-                }
-              `}
-            >
-              {type.label}
-            </Button>
-          ))}
-        </div>
-
         {/* Subtype Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex flex-wrap items-center gap-2 flex-1">
