@@ -25,7 +25,6 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-visually-hidden": "^1.2.4",
-    "@tiptap/extension-image": "^3.24.0",
     "@tiptap/extension-link": "^3.24.0",
     "@tiptap/extension-placeholder": "^3.24.0",
     "@tiptap/extension-subscript": "^3.24.0",

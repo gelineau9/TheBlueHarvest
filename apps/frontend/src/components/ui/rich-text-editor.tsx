@@ -2,7 +2,6 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Subscript from '@tiptap/extension-subscript';
@@ -17,7 +16,6 @@ import {
   ListOrdered,
   Quote,
   Link as LinkIcon,
-  Image as ImageIcon,
   Minus,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
@@ -31,18 +29,11 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ value, onChange, placeholder, disabled }: RichTextEditorProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isUploadingRef = useRef(false);
-
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
-      }),
-      Image.configure({
-        inline: false,
-        allowBase64: false,
       }),
       Link.configure({
         openOnClick: false,
@@ -60,7 +51,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
     editable: !disabled,
     onUpdate({ editor }) {
       const html = editor.getHTML();
-      // Treat empty editor as empty string
+      // Treat a single empty paragraph as empty string
       onChange(html === '<p></p>' ? '' : html);
     },
   });
@@ -87,33 +78,6 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
       editor.chain().focus().setLink({ href: url }).run();
     }
   }, [editor]);
-
-  const handleImageUpload = useCallback(
-    async (file: File) => {
-      if (!editor || isUploadingRef.current) return;
-      isUploadingRef.current = true;
-      try {
-        const formData = new FormData();
-        formData.append('images', file);
-        const response = await fetch('/api/uploads/images', {
-          method: 'POST',
-          body: formData,
-        });
-        if (!response.ok) throw new Error('Upload failed');
-        const data = await response.json();
-        const url: string = data?.files?.[0]?.url ?? data?.urls?.[0] ?? data?.url;
-        if (url) {
-          editor.chain().focus().setImage({ src: url, alt: file.name }).run();
-        }
-      } catch {
-        // silently fail — user can try again
-      } finally {
-        isUploadingRef.current = false;
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    },
-    [editor],
-  );
 
   if (!editor) return null;
 
@@ -224,16 +188,6 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
           <LinkIcon className="w-4 h-4" />
         </button>
 
-        <button
-          type="button"
-          title="Insert image"
-          disabled={disabled}
-          onClick={() => fileInputRef.current?.click()}
-          className={btnClass(false)}
-        >
-          <ImageIcon className="w-4 h-4" />
-        </button>
-
         <span className="w-px h-4 bg-amber-200 mx-1" />
 
         <button
@@ -257,22 +211,10 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
         </button>
       </div>
 
-      {/* Hidden file input for image uploads */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleImageUpload(file);
-        }}
-      />
-
       {/* Editor area */}
       <EditorContent
         editor={editor}
-        className="min-h-[180px] px-3 py-2 text-sm text-amber-900 [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[160px] [&_.ProseMirror_p]:mb-3 [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:text-amber-900 [&_.ProseMirror_h2]:mt-4 [&_.ProseMirror_h2]:mb-2 [&_.ProseMirror_h3]:text-base [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_h3]:text-amber-900 [&_.ProseMirror_h3]:mt-3 [&_.ProseMirror_h3]:mb-1 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_li]:my-0.5 [&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-amber-300 [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote]:text-amber-700 [&_.ProseMirror_hr]:border-amber-200 [&_.ProseMirror_hr]:my-4 [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:rounded [&_.ProseMirror_img]:my-2 [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-amber-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+        className="min-h-[180px] px-3 py-2 text-sm text-amber-900 [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[160px] [&_.ProseMirror_p]:mb-3 [&_.ProseMirror_p]:min-h-[1em] [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:text-amber-900 [&_.ProseMirror_h2]:mt-4 [&_.ProseMirror_h2]:mb-2 [&_.ProseMirror_h3]:text-base [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_h3]:text-amber-900 [&_.ProseMirror_h3]:mt-3 [&_.ProseMirror_h3]:mb-1 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_li]:my-0.5 [&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-amber-300 [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:italic [&_.ProseMirror_blockquote]:text-amber-700 [&_.ProseMirror_hr]:border-amber-200 [&_.ProseMirror_hr]:my-4 [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-amber-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
       />
     </div>
   );
