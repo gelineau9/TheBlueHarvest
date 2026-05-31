@@ -82,7 +82,7 @@ export function LikeButton({ type, id, initialLikeCount, initialLikedByMe, passi
       aria-label={liked ? 'Unlike' : 'Like'}
       aria-pressed={liked}
       className={`
-        inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+        inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium
         transition-colors duration-150 select-none
         ${
           liked
@@ -93,7 +93,7 @@ export function LikeButton({ type, id, initialLikeCount, initialLikedByMe, passi
       `}
     >
       <Heart
-        className={`h-3.5 w-3.5 transition-transform duration-150 ${liked ? 'fill-amber-600 text-amber-600 scale-110' : ''}`}
+        className={`h-5 w-5 transition-transform duration-150 ${liked ? 'fill-amber-600 text-amber-600 scale-110' : ''}`}
         aria-hidden="true"
       />
       <span>{likeCount}</span>
