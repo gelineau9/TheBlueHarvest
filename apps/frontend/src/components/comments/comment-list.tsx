@@ -341,7 +341,7 @@ export function CommentList({ postId }: CommentListProps) {
                     ? f === 'ic'
                       ? 'bg-emerald-600 text-white'
                       : f === 'ooc'
-                        ? 'bg-sky-600 text-white'
+                        ? 'bg-amber-800 text-white'
                         : 'bg-amber-800 text-white'
                     : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                 }`}

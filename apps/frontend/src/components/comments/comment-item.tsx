@@ -140,13 +140,13 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
 
   const cardClass = isIC
     ? 'p-4 bg-emerald-50 rounded-lg border border-emerald-200 border-l-4 border-l-emerald-500'
-    : 'p-4 bg-sky-50 rounded-lg border border-sky-200 border-l-4 border-l-sky-400';
+    : 'p-4 bg-amber-50 rounded-lg border border-amber-200 border-l-4 border-l-amber-500';
 
   const avatarClass = isIC
     ? 'flex-shrink-0 w-8 h-8 bg-emerald-200 rounded-full flex items-center justify-center'
-    : 'flex-shrink-0 w-8 h-8 bg-sky-200 rounded-full flex items-center justify-center';
+    : 'flex-shrink-0 w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center';
 
-  const avatarIconClass = isIC ? 'w-4 h-4 text-emerald-700' : 'w-4 h-4 text-sky-700';
+  const avatarIconClass = isIC ? 'w-4 h-4 text-emerald-700' : 'w-4 h-4 text-amber-700';
 
   if (comment.is_deleted) {
     return (
@@ -165,7 +165,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isIC ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'}`}>
+              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isIC ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                 {isIC ? 'IC' : 'OOC'}
               </span>
               <span className="font-semibold text-amber-900">
