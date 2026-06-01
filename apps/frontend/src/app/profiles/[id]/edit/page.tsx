@@ -228,6 +228,8 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   // ── Character-only fields ─────────────────────────────────────────────────
   const [race, setRace] = useState('');
+  const [raceDropdown, setRaceDropdown] = useState('');
+  const [customRace, setCustomRace] = useState('');
   const [characterType, setCharacterType] = useState('');
   const [occupation, setOccupation] = useState('');
   const [age, setAge] = useState('');
@@ -352,7 +354,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     isPublished !== originalIsPublished ||
     JSON.stringify(avatar) !== JSON.stringify(originalAvatar) ||
     JSON.stringify(banner) !== JSON.stringify(originalBanner) ||
-    race !== originalRace ||
+    (raceDropdown === 'Other' ? customRace.trim() : race) !== originalRace ||
     characterType !== originalCharacterType ||
     occupation !== originalOccupation ||
     age !== originalAge ||
@@ -413,6 +415,14 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
         if (data.profile_type_id === 1) {
           const initialRace = d?.race || '';
+          const STANDARD_RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
+          if (STANDARD_RACES.includes(initialRace)) {
+            setRaceDropdown(initialRace);
+            setRace(initialRace);
+          } else if (initialRace) {
+            setRaceDropdown('Other');
+            setCustomRace(initialRace);
+          }
           const initialCharacterType = d?.character_type || '';
           const initialOccupation = d?.occupation || '';
           const initialAge = d?.age || '';
@@ -430,7 +440,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           setInGameName(initialInGameName);
           setAppearance(initialAppearance);
 
-          setOriginalRace(initialRace);
+          setOriginalRace(initialRace); // stores the actual race string (e.g. 'Ainur', not 'Other')
           setOriginalCharacterType(initialCharacterType);
           setOriginalOccupation(initialOccupation);
           setOriginalAge(initialAge);
@@ -671,7 +681,8 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       };
 
       if (isCharacter) {
-        if (race) details.race = race;
+        const effectiveRace = raceDropdown === 'Other' ? customRace.trim() : race;
+        if (effectiveRace) details.race = effectiveRace;
         if (characterType) details.character_type = characterType;
         if (occupation.trim()) details.occupation = occupation.trim();
         if (age.trim()) details.age = age.trim();
@@ -745,7 +756,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalIsPublished(isPublished);
       setOriginalAvatar(avatar);
       setOriginalBanner(banner);
-      setOriginalRace(race);
+      setOriginalRace(raceDropdown === 'Other' ? customRace.trim() : race);
       setOriginalCharacterType(characterType);
       setOriginalOccupation(occupation.trim());
       setOriginalAge(age.trim());
@@ -878,17 +889,34 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                      <Label htmlFor="race" className="text-amber-900 font-medium">
                        Race
                      </Label>
-                     <select
-                       id="race"
-                       value={race}
-                       onChange={(e) => setRace(e.target.value)}
-                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-                     >
-                       <option value="">Select a race…</option>
-                       {['Man', 'Elf', 'Dwarf', 'Hobbit'].map((r) => (
-                         <option key={r} value={r}>{r}</option>
-                       ))}
-                     </select>
+                      <select
+                        id="race"
+                        value={raceDropdown}
+                        onChange={(e) => {
+                          setRaceDropdown(e.target.value);
+                          if (e.target.value !== 'Other') {
+                            setRace(e.target.value);
+                            setCustomRace('');
+                          } else {
+                            setRace('');
+                          }
+                        }}
+                        className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      >
+                        <option value="">Select a race…</option>
+                        {['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'].map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      {raceDropdown === 'Other' && (
+                        <input
+                          type="text"
+                          placeholder="Enter race…"
+                          value={customRace}
+                          onChange={(e) => setCustomRace(e.target.value)}
+                          className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                        />
+                      )}
                    </div>
                    <div className="space-y-2">
                      <Label htmlFor="character_type" className="text-amber-900 font-medium">
@@ -900,9 +928,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                        onChange={(e) => setCharacterType(e.target.value)}
                        className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
                      >
-                       <option value="">Select PC or NPC…</option>
-                       <option value="PC">PC — Player Character</option>
-                       <option value="NPC">NPC — Non-Player Character</option>
+                       <option value="">Select type…</option>
+                       <option value="PC">Player Character</option>
+                       <option value="NPC">Non-Player Character</option>
                      </select>
                    </div>
                   <div className="space-y-2">

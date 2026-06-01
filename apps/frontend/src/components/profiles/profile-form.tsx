@@ -167,6 +167,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
   // Character-specific fields (only used when profileTypeId === 1)
   const [race, setRace] = useState('');
+  const [raceDropdown, setRaceDropdown] = useState('');
+  const [customRace, setCustomRace] = useState('');
   const [characterType, setCharacterType] = useState('');
   const [residence, setResidence] = useState('');
   const [inGameName, setInGameName] = useState('');
@@ -331,8 +333,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
   const onSubmit = async (data: CreateProfileInput) => {
     // Race and character type are required for characters
-    if (isCharacter && !race) {
-      setError('Race is required for characters.');
+    const effectiveRace = raceDropdown === 'Other' ? customRace.trim() : race;
+    if (isCharacter && !effectiveRace) {
+      setError(raceDropdown === 'Other' ? 'Please enter a custom race.' : 'Race is required for characters.');
       return;
     }
     if (isCharacter && !characterType) {
@@ -349,7 +352,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
       if (isCharacter) {
         details.description = background || undefined;
         details.appearance = appearance.trim() || undefined;
-        if (race) details.race = race;
+        if (effectiveRace) details.race = effectiveRace;
         if (characterType) details.character_type = characterType;
         if (residence.trim()) details.residence = residence.trim();
         if (characterType !== 'NPC' && inGameName.trim()) details.in_game_name = inGameName.trim();
@@ -614,21 +617,40 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               </Label>
               <select
                 id="race"
-                value={race}
+                value={raceDropdown}
                 onChange={(e) => {
-                  setRace(e.target.value);
-                  if (error === 'Race is required for characters.') setError(null);
+                  setRaceDropdown(e.target.value);
+                  if (e.target.value !== 'Other') {
+                    setRace(e.target.value);
+                    setCustomRace('');
+                  } else {
+                    setRace('');
+                  }
+                  if (error === 'Race is required for characters.' || error === 'Please enter a custom race.') setError(null);
                 }}
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
               >
                 <option value="">Select a race…</option>
-                {['Man', 'Elf', 'Dwarf', 'Hobbit'].map((r) => (
+                {['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'].map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-              {!race && error === 'Race is required for characters.' && (
+              {raceDropdown === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Enter race…"
+                  value={customRace}
+                  onChange={(e) => setCustomRace(e.target.value)}
+                  disabled={isSubmitting}
+                  className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                />
+              )}
+              {error === 'Race is required for characters.' && !raceDropdown && (
                 <p className="text-sm text-red-600">Race is required</p>
+              )}
+              {error === 'Please enter a custom race.' && (
+                <p className="text-sm text-red-600">Please enter a custom race</p>
               )}
             </div>
 
@@ -646,9 +668,9 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
               >
-                <option value="">Select PC or NPC…</option>
-                <option value="PC">PC — Player Character</option>
-                <option value="NPC">NPC — Non-Player Character</option>
+                <option value="">Select type…</option>
+                <option value="PC">Player Character</option>
+                <option value="NPC">Non-Player Character</option>
               </select>
               {!characterType && error === 'Please select PC or NPC.' && (
                 <p className="text-sm text-red-600">Character type is required</p>

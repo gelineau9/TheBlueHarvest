@@ -284,9 +284,13 @@ router.get('/public', async (req: Request, res: Response) => {
   const validAccountId = accountIdFilter && !isNaN(accountIdFilter) ? accountIdFilter : null;
 
   // Parse race filter — JSONB filter on details->>'race' (characters only)
-  const VALID_RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
+  // 'Other' is a special value that matches any race not in the standard list.
+  const STANDARD_RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
   const raceParam = req.query.race as string;
-  const raceFilter = raceParam && VALID_RACES.includes(raceParam.trim()) ? raceParam.trim() : null;
+  const raceFilter =
+    raceParam && (STANDARD_RACES.includes(raceParam.trim()) || raceParam.trim() === 'Other')
+      ? raceParam.trim()
+      : null;
 
   // Parse character_type filter — JSONB filter on details->>'character_type' (characters only)
   const VALID_CHARACTER_TYPES = ['PC', 'NPC'];
@@ -352,9 +356,11 @@ router.get('/public', async (req: Request, res: Response) => {
     // Build account_id filter fragment
     const accountFilterFragment = validAccountId ? sql.fragment`AND p.account_id = ${validAccountId}` : sql.fragment``;
 
-    // Build race filter fragment — JSONB filter for character race
+    // Build race filter fragment — exact match for standard races, NOT IN for 'Other'
     const raceFilterFragment = raceFilter
-      ? sql.fragment`AND p.details->>'race' = ${raceFilter}`
+      ? raceFilter === 'Other'
+        ? sql.fragment`AND p.details->>'race' NOT IN ('Man', 'Elf', 'Dwarf', 'Hobbit')`
+        : sql.fragment`AND p.details->>'race' = ${raceFilter}`
       : sql.fragment``;
 
     // Build character_type filter fragment — JSONB filter for PC/NPC

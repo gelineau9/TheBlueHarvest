@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const LIMIT = 48;
-const RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
+const RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'];
 
 interface Profile {
   profile_id: number;
