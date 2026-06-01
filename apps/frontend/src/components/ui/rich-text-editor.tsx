@@ -40,6 +40,8 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  allowImages?: boolean;
+  allowH1?: boolean;
 }
 
 // Curated colour palette for the Brandy Hall Archives
@@ -62,7 +64,7 @@ const TEXT_COLOURS = [
   { label: 'Silver', value: '#6b7280' },
 ];
 
-export function RichTextEditor({ value, onChange, placeholder, disabled }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, placeholder, disabled, allowImages = true, allowH1 = true }: RichTextEditorProps) {
   const [showColourPicker, setShowColourPicker] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -71,8 +73,8 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        hardBreak: false, // managed manually below
+        heading: { levels: allowH1 ? [1, 2, 3] : [2, 3] },
+        hardBreak: false,
       }),
       // Enter = <br>; Enter again on a line that ends with <br> = new paragraph
       HardBreak.extend({
@@ -255,11 +257,13 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
         {sep}
 
         {/* --- Headings --- */}
-        <button type="button" title="Heading 1" disabled={disabled}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={btnClass(editor.isActive('heading', { level: 1 }))}>
-          <Heading1 className="w-4 h-4" />
-        </button>
+        {allowH1 && (
+          <button type="button" title="Heading 1" disabled={disabled}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            className={btnClass(editor.isActive('heading', { level: 1 }))}>
+            <Heading1 className="w-4 h-4" />
+          </button>
+        )}
 
         <button type="button" title="Heading 2" disabled={disabled}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -396,24 +400,28 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: RichT
         {sep}
 
         {/* --- Insert image --- */}
-        <button
-          type="button"
-          title="Insert image"
-          disabled={disabled || isUploadingImage}
-          onClick={() => imageInputRef.current?.click()}
-          className={btnClass(false)}
-        >
-          {isUploadingImage
-            ? <span className="w-4 h-4 border-2 border-amber-800 border-t-transparent rounded-full animate-spin inline-block" />
-            : <ImagePlus className="w-4 h-4" />}
-        </button>
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageFileSelect}
-        />
+        {allowImages && (
+          <>
+            <button
+              type="button"
+              title="Insert image"
+              disabled={disabled || isUploadingImage}
+              onClick={() => imageInputRef.current?.click()}
+              className={btnClass(false)}
+            >
+              {isUploadingImage
+                ? <span className="w-4 h-4 border-2 border-amber-800 border-t-transparent rounded-full animate-spin inline-block" />
+                : <ImagePlus className="w-4 h-4" />}
+            </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFileSelect}
+            />
+          </>
+        )}
       </div>
 
       {/* Editor area */}

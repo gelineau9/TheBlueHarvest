@@ -242,6 +242,8 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
                 value={editContent}
                 onChange={setEditContent}
                 disabled={isSubmitting}
+                allowImages={false}
+                allowH1={false}
               />
               {editError && <p className="text-red-600 text-xs">{editError}</p>}
               <div className="flex gap-2">
