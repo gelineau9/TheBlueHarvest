@@ -866,23 +866,38 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               ) : relationships.length === 0 ? (
                 <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
               ) : (
-                <div className="space-y-4">
-                  {(
-                    [
-                      {
-                        label: 'Friends & Allies',
-                        color: 'text-emerald-600',
-                        filter: (t: string) => t === 'friend' || t === 'ally',
-                      },
-                      {
-                        label: 'Rivals & Enemies',
-                        color: 'text-red-600',
-                        filter: (t: string) => t === 'rival' || t === 'enemy',
-                      },
-                    ] as const
-                  ).map(({ label: groupLabel, color, filter }) => {
-                    const group = relationships.filter((r) => filter(r.type_name));
-                    if (group.length === 0) return null;
+                 <div className="space-y-4">
+                   {(
+                     [
+                       {
+                         label: 'Friends',
+                         color: 'text-emerald-600',
+                         filter: (t: string) => t === 'friend',
+                       },
+                       {
+                         label: 'Allies',
+                         color: 'text-teal-600',
+                         filter: (t: string) => t === 'ally',
+                       },
+                       {
+                         label: 'Relatives',
+                         color: 'text-blue-600',
+                         filter: (t: string) => t === 'relative',
+                       },
+                       {
+                         label: 'Rivals',
+                         color: 'text-orange-600',
+                         filter: (t: string) => t === 'rival',
+                       },
+                       {
+                         label: 'Enemies',
+                         color: 'text-red-600',
+                         filter: (t: string) => t === 'enemy',
+                       },
+                     ]
+                   ).map(({ label: groupLabel, color, filter }) => {
+                     const group = relationships.filter((r) => filter(r.type_name));
+                     if (group.length === 0) return null;
                     return (
                       <div key={groupLabel}>
                         <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wide ${color}`}>{groupLabel}</h4>
@@ -1062,15 +1077,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             ) : (
               <div className="space-y-6">
                 {(
-                  [
-                     { label: 'Friends & Allies', color: 'text-emerald-600', filter: (t: string) => t === 'friend' || t === 'ally' },
-                    { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
-                    {
-                      label: 'Rivals & Enemies',
-                      color: 'text-red-600',
-                      filter: (t: string) => t === 'rival' || t === 'enemy',
-                    },
-                  ] as const
+                   [
+                     { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                     { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
+                     { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
+                     { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
+                     { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
+                   ]
                 ).map(({ label: groupLabel, color, filter }) => {
                   const group = relationships.filter((r) => filter(r.type_name));
                   if (group.length === 0) return null;
