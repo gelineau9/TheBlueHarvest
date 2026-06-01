@@ -283,6 +283,19 @@ router.get('/public', async (req: Request, res: Response) => {
   const accountIdFilter = accountIdParam ? parseInt(accountIdParam, 10) : null;
   const validAccountId = accountIdFilter && !isNaN(accountIdFilter) ? accountIdFilter : null;
 
+  // Parse race filter — JSONB filter on details->>'race' (characters only)
+  const VALID_RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
+  const raceParam = req.query.race as string;
+  const raceFilter = raceParam && VALID_RACES.includes(raceParam.trim()) ? raceParam.trim() : null;
+
+  // Parse character_type filter — JSONB filter on details->>'character_type' (characters only)
+  const VALID_CHARACTER_TYPES = ['PC', 'NPC'];
+  const characterTypeParam = req.query.character_type as string;
+  const characterTypeFilter =
+    characterTypeParam && VALID_CHARACTER_TYPES.includes(characterTypeParam.trim())
+      ? characterTypeParam.trim()
+      : null;
+
   try {
     const db = await getPool();
 
@@ -331,6 +344,16 @@ router.get('/public', async (req: Request, res: Response) => {
     // Build account_id filter fragment
     const accountFilterFragment = validAccountId ? sql.fragment`AND p.account_id = ${validAccountId}` : sql.fragment``;
 
+    // Build race filter fragment — JSONB filter for character race
+    const raceFilterFragment = raceFilter
+      ? sql.fragment`AND p.details->>'race' = ${raceFilter}`
+      : sql.fragment``;
+
+    // Build character_type filter fragment — JSONB filter for PC/NPC
+    const characterTypeFilterFragment = characterTypeFilter
+      ? sql.fragment`AND p.details->>'character_type' = ${characterTypeFilter}`
+      : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -362,6 +385,8 @@ router.get('/public', async (req: Request, res: Response) => {
       ${startsWithFilterFragment}
       ${parentProfileFilterFragment}
       ${accountFilterFragment}
+      ${raceFilterFragment}
+      ${characterTypeFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -380,6 +405,8 @@ router.get('/public', async (req: Request, res: Response) => {
       ${startsWithFilterFragment}
       ${parentProfileFilterFragment}
       ${accountFilterFragment}
+      ${raceFilterFragment}
+      ${characterTypeFilterFragment}
     `,
     );
 

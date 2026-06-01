@@ -44,6 +44,7 @@ interface ProfileDetails {
   avatar?: { url: string; filename: string };
   banner?: { url: string; filename: string };
   race?: string;
+  character_type?: string;
   occupation?: string;
   age?: string;
   kinship?: string;
@@ -624,8 +625,25 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div>
-                  <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
-                    {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
+                      {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                    </div>
+                    {isCharacter && d?.race && (
+                      <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">
+                        {d.race}
+                      </div>
+                    )}
+                    {isCharacter && d?.character_type && (
+                      <div className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${d.character_type === 'NPC' ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-800'}`}>
+                        {d.character_type}
+                      </div>
+                    )}
+                    {isKinship && d?.kinship_type && (
+                      <div className="inline-block px-3 py-1 bg-violet-100 text-violet-800 text-sm font-semibold rounded-full">
+                        {d.kinship_type}
+                      </div>
+                    )}
                   </div>
                   <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
                 </div>

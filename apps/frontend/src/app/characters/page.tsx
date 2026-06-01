@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const LIMIT = 48;
+const RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
 
 interface Profile {
   profile_id: number;
@@ -30,6 +31,8 @@ export default function CharactersPage() {
 
   const letter = (searchParams.get('letter') || 'A').toUpperCase();
   const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+  const raceFilter = searchParams.get('race') || '';
+  const characterTypeFilter = searchParams.get('character_type') || '';
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [total, setTotal] = useState(0);
@@ -42,7 +45,11 @@ export default function CharactersPage() {
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
-      Object.entries(updates).forEach(([k, v]) => params.set(k, v));
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v) params.set(k, v);
+        else params.delete(k);
+      });
+      params.set('page', '1');
       router.push(`/characters?${params.toString()}`);
     },
     [router, searchParams],
@@ -61,6 +68,8 @@ export default function CharactersPage() {
           limit: String(LIMIT),
           offset: String(offset),
         });
+        if (raceFilter) params.set('race', raceFilter);
+        if (characterTypeFilter) params.set('character_type', characterTypeFilter);
         const res = await fetch(`/api/profiles/public?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch characters');
         const data: ProfilesResponse = await res.json();
@@ -74,10 +83,13 @@ export default function CharactersPage() {
     };
 
     fetchProfiles();
-  }, [letter, offset]);
+  }, [letter, offset, raceFilter, characterTypeFilter]);
 
   const handleLetterClick = (l: string) => {
-    router.push(`/characters?letter=${l}&page=1`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('letter', l);
+    params.set('page', '1');
+    router.push(`/characters?${params.toString()}`);
   };
 
   return (
@@ -86,6 +98,53 @@ export default function CharactersPage() {
       <div className="mb-8">
         <h1 className="font-fantasy text-3xl font-bold text-amber-900">Characters</h1>
         <p className="mt-1 text-sm text-amber-700">Browse all characters in the archives</p>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-6">
+        {/* Race filter */}
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Race</p>
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => updateParams({ race: '' })}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${!raceFilter ? 'bg-amber-800 text-amber-50' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}
+            >
+              All
+            </button>
+            {RACES.map((r) => (
+              <button
+                key={r}
+                onClick={() => updateParams({ race: raceFilter === r ? '' : r })}
+                className={`rounded px-3 py-1 text-sm font-medium transition-colors ${raceFilter === r ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* PC/NPC filter */}
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Type</p>
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => updateParams({ character_type: '' })}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${!characterTypeFilter ? 'bg-amber-800 text-amber-50' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`}
+            >
+              All
+            </button>
+            {['PC', 'NPC'].map((t) => (
+              <button
+                key={t}
+                onClick={() => updateParams({ character_type: characterTypeFilter === t ? '' : t })}
+                className={`rounded px-3 py-1 text-sm font-medium transition-colors ${characterTypeFilter === t ? (t === 'PC' ? 'bg-sky-700 text-white' : 'bg-slate-600 text-white') : (t === 'PC' ? 'bg-sky-100 text-sky-800 hover:bg-sky-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Alphabet bar */}
@@ -209,3 +268,4 @@ export default function CharactersPage() {
     </div>
   );
 }
+

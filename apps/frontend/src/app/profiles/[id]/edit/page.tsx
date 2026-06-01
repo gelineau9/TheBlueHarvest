@@ -29,6 +29,7 @@ interface ProfileDetails {
   banner?: BannerImage;
   images?: UploadedImage[];
   race?: string;
+  character_type?: string;
   occupation?: string;
   age?: string;
   kinship_profile_id?: number;
@@ -227,6 +228,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
   // ── Character-only fields ─────────────────────────────────────────────────
   const [race, setRace] = useState('');
+  const [characterType, setCharacterType] = useState('');
   const [occupation, setOccupation] = useState('');
   const [age, setAge] = useState('');
   const [residence, setResidence] = useState('');
@@ -286,6 +288,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
   const [originalAvatar, setOriginalAvatar] = useState<Avatar | null>(null);
   const [originalBanner, setOriginalBanner] = useState<BannerImage | null>(null);
   const [originalRace, setOriginalRace] = useState('');
+  const [originalCharacterType, setOriginalCharacterType] = useState('');
   const [originalOccupation, setOriginalOccupation] = useState('');
   const [originalAge, setOriginalAge] = useState('');
   const [originalKinshipProfileId, setOriginalKinshipProfileId] = useState<number | null>(null);
@@ -350,6 +353,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
     JSON.stringify(avatar) !== JSON.stringify(originalAvatar) ||
     JSON.stringify(banner) !== JSON.stringify(originalBanner) ||
     race !== originalRace ||
+    characterType !== originalCharacterType ||
     occupation !== originalOccupation ||
     age !== originalAge ||
     kinshipProfileId !== originalKinshipProfileId ||
@@ -409,6 +413,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
 
         if (data.profile_type_id === 1) {
           const initialRace = d?.race || '';
+          const initialCharacterType = d?.character_type || '';
           const initialOccupation = d?.occupation || '';
           const initialAge = d?.age || '';
           const initialKinshipProfileId = d?.kinship_profile_id ?? null;
@@ -417,6 +422,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           const initialAppearance = d?.appearance || '';
 
           setRace(initialRace);
+          setCharacterType(initialCharacterType);
           setOccupation(initialOccupation);
           setAge(initialAge);
           setKinshipProfileId(initialKinshipProfileId);
@@ -425,6 +431,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           setAppearance(initialAppearance);
 
           setOriginalRace(initialRace);
+          setOriginalCharacterType(initialCharacterType);
           setOriginalOccupation(initialOccupation);
           setOriginalAge(initialAge);
           setOriginalKinshipProfileId(initialKinshipProfileId);
@@ -664,12 +671,13 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       };
 
       if (isCharacter) {
-        if (race.trim()) details.race = race.trim();
+        if (race) details.race = race;
+        if (characterType) details.character_type = characterType;
         if (occupation.trim()) details.occupation = occupation.trim();
         if (age.trim()) details.age = age.trim();
         if (kinshipProfileId) details.kinship_profile_id = kinshipProfileId;
         if (residence.trim()) details.residence = residence.trim();
-        if (inGameName.trim()) details.in_game_name = inGameName.trim();
+        if (characterType !== 'NPC' && inGameName.trim()) details.in_game_name = inGameName.trim();
         if (appearance.trim()) details.appearance = appearance.trim();
       }
 
@@ -737,7 +745,8 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
       setOriginalIsPublished(isPublished);
       setOriginalAvatar(avatar);
       setOriginalBanner(banner);
-      setOriginalRace(race.trim());
+      setOriginalRace(race);
+      setOriginalCharacterType(characterType);
       setOriginalOccupation(occupation.trim());
       setOriginalAge(age.trim());
       setOriginalKinshipProfileId(kinshipProfileId);
@@ -864,20 +873,38 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Character Info */}
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Info</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="race" className="text-amber-900 font-medium">
-                      Race
-                    </Label>
-                    <Input
-                      id="race"
-                      value={race}
-                      onChange={(e) => setRace(e.target.value)}
-                      placeholder="e.g. Human, Elf, Dwarf…"
-                      maxLength={100}
-                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
-                    />
-                  </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="race" className="text-amber-900 font-medium">
+                       Race
+                     </Label>
+                     <select
+                       id="race"
+                       value={race}
+                       onChange={(e) => setRace(e.target.value)}
+                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                     >
+                       <option value="">Select a race…</option>
+                       {['Man', 'Elf', 'Dwarf', 'Hobbit'].map((r) => (
+                         <option key={r} value={r}>{r}</option>
+                       ))}
+                     </select>
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="character_type" className="text-amber-900 font-medium">
+                       Character Type
+                     </Label>
+                     <select
+                       id="character_type"
+                       value={characterType}
+                       onChange={(e) => setCharacterType(e.target.value)}
+                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                     >
+                       <option value="">Select PC or NPC…</option>
+                       <option value="PC">PC — Player Character</option>
+                       <option value="NPC">NPC — Non-Player Character</option>
+                     </select>
+                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="occupation" className="text-amber-900 font-medium">
                       Occupation
@@ -1008,19 +1035,21 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                     <p className="text-xs text-amber-600">Type to search existing kinship profiles.</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="inGameName" className="text-amber-900 font-medium">
-                      In-Game Name
-                    </Label>
-                    <Input
-                      id="inGameName"
-                      value={inGameName}
-                      onChange={(e) => setInGameName(e.target.value)}
-                      placeholder="LOTRO character name, if different"
-                      maxLength={100}
-                      className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
-                    />
-                  </div>
+                  {characterType !== 'NPC' && (
+                   <div className="space-y-2">
+                     <Label htmlFor="inGameName" className="text-amber-900 font-medium">
+                       In-Game Name
+                     </Label>
+                     <Input
+                       id="inGameName"
+                       value={inGameName}
+                       onChange={(e) => setInGameName(e.target.value)}
+                       placeholder="LOTRO character name, if different"
+                       maxLength={100}
+                       className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                     />
+                   </div>
+                  )}
 
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="residence" className="text-amber-900 font-medium">

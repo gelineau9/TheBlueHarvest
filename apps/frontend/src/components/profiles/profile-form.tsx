@@ -167,6 +167,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
   // Character-specific fields (only used when profileTypeId === 1)
   const [race, setRace] = useState('');
+  const [characterType, setCharacterType] = useState('');
   const [residence, setResidence] = useState('');
   const [inGameName, setInGameName] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -329,9 +330,13 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   }, []);
 
   const onSubmit = async (data: CreateProfileInput) => {
-    // Race is required for characters
-    if (isCharacter && !race.trim()) {
+    // Race and character type are required for characters
+    if (isCharacter && !race) {
       setError('Race is required for characters.');
+      return;
+    }
+    if (isCharacter && !characterType) {
+      setError('Please select PC or NPC.');
       return;
     }
     setIsSubmitting(true);
@@ -344,9 +349,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
       if (isCharacter) {
         details.description = background || undefined;
         details.appearance = appearance.trim() || undefined;
-        if (race.trim()) details.race = race.trim();
+        if (race) details.race = race;
+        if (characterType) details.character_type = characterType;
         if (residence.trim()) details.residence = residence.trim();
-        if (inGameName.trim()) details.in_game_name = inGameName.trim();
+        if (characterType !== 'NPC' && inGameName.trim()) details.in_game_name = inGameName.trim();
         if (occupation.trim()) details.occupation = occupation.trim();
         if (age.trim()) details.age = age.trim();
         // Store kinship_profile_id instead of free-text kinship
@@ -606,21 +612,46 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               <Label htmlFor="race" className="text-amber-900 font-medium">
                 Race *
               </Label>
-              <Input
+              <select
                 id="race"
-                type="text"
                 value={race}
                 onChange={(e) => {
                   setRace(e.target.value);
                   if (error === 'Race is required for characters.') setError(null);
                 }}
-                placeholder="e.g. Human, Elf, Dwarf…"
-                maxLength={100}
                 disabled={isSubmitting}
-                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-              />
-              {!race.trim() && error === 'Race is required for characters.' && (
+                className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+              >
+                <option value="">Select a race…</option>
+                {['Man', 'Elf', 'Dwarf', 'Hobbit'].map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              {!race && error === 'Race is required for characters.' && (
                 <p className="text-sm text-red-600">Race is required</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="character_type" className="text-amber-900 font-medium">
+                Character Type *
+              </Label>
+              <select
+                id="character_type"
+                value={characterType}
+                onChange={(e) => {
+                  setCharacterType(e.target.value);
+                  if (error === 'Please select PC or NPC.') setError(null);
+                }}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+              >
+                <option value="">Select PC or NPC…</option>
+                <option value="PC">PC — Player Character</option>
+                <option value="NPC">NPC — Non-Player Character</option>
+              </select>
+              {!characterType && error === 'Please select PC or NPC.' && (
+                <p className="text-sm text-red-600">Character type is required</p>
               )}
             </div>
 
@@ -755,6 +786,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
               <p className="text-xs text-amber-600">Type to search existing kinship profiles.</p>
             </div>
 
+            {characterType !== 'NPC' && (
             <div className="space-y-2">
               <Label htmlFor="inGameName" className="text-amber-900 font-medium">
                 In-Game Name
@@ -770,6 +802,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                 className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
               />
             </div>
+            )}
 
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="residence" className="text-amber-900 font-medium">
