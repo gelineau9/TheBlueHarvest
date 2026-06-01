@@ -29,7 +29,7 @@ export default function CharactersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const letter = (searchParams.get('letter') || 'A').toUpperCase();
+  const letter = (searchParams.get('letter') || '').toUpperCase();
   const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
   const raceFilter = searchParams.get('race') || '';
   const characterTypeFilter = searchParams.get('character_type') || '';
@@ -62,12 +62,12 @@ export default function CharactersPage() {
       try {
         const params = new URLSearchParams({
           profile_type_id: '1',
-          startsWith: letter,
           sortBy: 'name',
           order: 'asc',
           limit: String(LIMIT),
           offset: String(offset),
         });
+        if (letter) params.set('startsWith', letter);
         if (raceFilter) params.set('race', raceFilter);
         if (characterTypeFilter) params.set('character_type', characterTypeFilter);
         const res = await fetch(`/api/profiles/public?${params.toString()}`);
@@ -87,7 +87,8 @@ export default function CharactersPage() {
 
   const handleLetterClick = (l: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('letter', l);
+    if (l) params.set('letter', l);
+    else params.delete('letter');
     params.set('page', '1');
     router.push(`/characters?${params.toString()}`);
   };
@@ -149,6 +150,14 @@ export default function CharactersPage() {
 
       {/* Alphabet bar */}
       <div className="mb-6 flex flex-wrap gap-1">
+        <button
+          onClick={() => handleLetterClick('')}
+          className={`rounded px-3 py-1 text-sm font-semibold transition-colors ${
+            !letter ? 'bg-amber-800 text-amber-50' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+          }`}
+        >
+          All
+        </button>
         {ALPHABET.map((l) => (
           <button
             key={l}
@@ -170,8 +179,8 @@ export default function CharactersPage() {
           ) : (
             <>
               {total === 0
-                ? `No characters found starting with "${letter}"`
-                : `${total} character${total === 1 ? '' : 's'} starting with "${letter}"`}
+                ? letter ? `No characters found starting with "${letter}"` : 'No characters found'
+                : letter ? `${total} character${total === 1 ? '' : 's'} starting with "${letter}"` : `${total} character${total === 1 ? '' : 's'}`}
             </>
           )}
         </span>
@@ -217,7 +226,7 @@ export default function CharactersPage() {
         <div className="py-20 text-center">
           <p className="text-lg font-semibold text-amber-800">No characters found</p>
           <p className="mt-1 text-sm text-amber-600">
-            There are no published characters starting with &ldquo;{letter}&rdquo; yet.
+            {letter ? <>There are no published characters starting with &ldquo;{letter}&rdquo; yet.</> : 'There are no published characters yet.'}
           </p>
         </div>
       )}

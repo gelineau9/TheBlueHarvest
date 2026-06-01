@@ -29,7 +29,7 @@ export default function KinshipsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const letter = (searchParams.get('letter') || 'A').toUpperCase();
+  const letter = (searchParams.get('letter') || '').toUpperCase();
   const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
   const typeFilter = searchParams.get('kinship_type') || '';
 
@@ -61,25 +61,18 @@ export default function KinshipsPage() {
       try {
         const params = new URLSearchParams({
           profile_type_id: '3',
-          startsWith: letter,
           sortBy: 'name',
           order: 'asc',
           limit: String(LIMIT),
           offset: String(offset),
         });
-        // Kinship type is stored in details->>'kinship_type', not race/character_type
-        // We filter client-side after fetch for now since backend doesn't have kinship_type filter yet
+        if (letter) params.set('startsWith', letter);
+        if (typeFilter) params.set('kinship_type', typeFilter);
         const res = await fetch(`/api/profiles/public?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch kinships');
         const data: ProfilesResponse = await res.json();
-        const filtered = typeFilter
-          ? data.profiles.filter((p) => {
-              const d = p.details as { kinship_type?: string } | null;
-              return d?.kinship_type === typeFilter;
-            })
-          : data.profiles;
-        setProfiles(filtered);
-        setTotal(typeFilter ? filtered.length : data.total);
+        setProfiles(data.profiles);
+        setTotal(data.total);
       } catch {
         setError('Failed to load kinships. Please try again.');
       } finally {
@@ -92,7 +85,8 @@ export default function KinshipsPage() {
 
   const handleLetterClick = (l: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('letter', l);
+    if (l) params.set('letter', l);
+    else params.delete('letter');
     params.set('page', '1');
     router.push(`/kinships?${params.toString()}`);
   };
@@ -129,6 +123,14 @@ export default function KinshipsPage() {
 
       {/* Alphabet bar */}
       <div className="mb-6 flex flex-wrap gap-1">
+        <button
+          onClick={() => handleLetterClick('')}
+          className={`rounded px-3 py-1 text-sm font-semibold transition-colors ${
+            !letter ? 'bg-amber-800 text-amber-50' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+          }`}
+        >
+          All
+        </button>
         {ALPHABET.map((l) => (
           <button
             key={l}
@@ -150,8 +152,8 @@ export default function KinshipsPage() {
           ) : (
             <>
               {total === 0
-                ? `No kinships found starting with "${letter}"`
-                : `${total} kinship${total === 1 ? '' : 's'} starting with "${letter}"`}
+                ? letter ? `No kinships found starting with "${letter}"` : 'No kinships found'
+                : letter ? `${total} kinship${total === 1 ? '' : 's'} starting with "${letter}"` : `${total} kinship${total === 1 ? '' : 's'}`}
             </>
           )}
         </span>
@@ -197,7 +199,7 @@ export default function KinshipsPage() {
         <div className="py-20 text-center">
           <p className="text-lg font-semibold text-amber-800">No kinships found</p>
           <p className="mt-1 text-sm text-amber-600">
-            There are no published kinships starting with &ldquo;{letter}&rdquo; yet.
+            {letter ? <>There are no published kinships starting with &ldquo;{letter}&rdquo; yet.</> : 'There are no published kinships yet.'}
           </p>
         </div>
       )}

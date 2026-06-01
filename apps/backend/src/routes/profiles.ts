@@ -296,6 +296,14 @@ router.get('/public', async (req: Request, res: Response) => {
       ? characterTypeParam.trim()
       : null;
 
+  // Parse kinship_type filter — JSONB filter on details->>'kinship_type' (kinships only)
+  const VALID_KINSHIP_TYPES = ['Mixed', 'Elf', 'Man', 'Hobbit', 'Dwarf'];
+  const kinshipTypeParam = req.query.kinship_type as string;
+  const kinshipTypeFilter =
+    kinshipTypeParam && VALID_KINSHIP_TYPES.includes(kinshipTypeParam.trim())
+      ? kinshipTypeParam.trim()
+      : null;
+
   try {
     const db = await getPool();
 
@@ -354,6 +362,11 @@ router.get('/public', async (req: Request, res: Response) => {
       ? sql.fragment`AND p.details->>'character_type' = ${characterTypeFilter}`
       : sql.fragment``;
 
+    // Build kinship_type filter fragment — JSONB filter for kinship type
+    const kinshipTypeFilterFragment = kinshipTypeFilter
+      ? sql.fragment`AND p.details->>'kinship_type' = ${kinshipTypeFilter}`
+      : sql.fragment``;
+
     // Get profiles with limit and offset for pagination (2.2.6)
     const profiles = await db.any(
       sql.type(
@@ -387,6 +400,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${accountFilterFragment}
       ${raceFilterFragment}
       ${characterTypeFilterFragment}
+      ${kinshipTypeFilterFragment}
       ${orderByFragment}
       LIMIT ${limit}
       OFFSET ${offset}
@@ -407,6 +421,7 @@ router.get('/public', async (req: Request, res: Response) => {
       ${accountFilterFragment}
       ${raceFilterFragment}
       ${characterTypeFilterFragment}
+      ${kinshipTypeFilterFragment}
     `,
     );
 
