@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Heart,
   Swords,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,6 +45,7 @@ interface ProfileDetails {
   avatar?: { url: string; filename: string };
   banner?: { url: string; filename: string };
   race?: string;
+  character_type?: string;
   occupation?: string;
   age?: string;
   kinship?: string;
@@ -624,8 +626,25 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div>
-                  <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
-                    {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
+                      {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
+                    </div>
+                    {isCharacter && d?.race && (
+                      <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">
+                        {d.race}
+                      </div>
+                    )}
+                    {isCharacter && d?.character_type && (
+                      <div className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${d.character_type === 'NPC' ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-800'}`}>
+                        {d.character_type}
+                      </div>
+                    )}
+                    {isKinship && d?.kinship_type && (
+                      <div className="inline-block px-3 py-1 bg-violet-100 text-violet-800 text-sm font-semibold rounded-full">
+                        {d.kinship_type}
+                      </div>
+                    )}
                   </div>
                   <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
                 </div>
@@ -866,23 +885,38 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               ) : relationships.length === 0 ? (
                 <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
               ) : (
-                <div className="space-y-4">
-                  {(
-                    [
-                      {
-                        label: 'Friends & Allies',
-                        color: 'text-emerald-600',
-                        filter: (t: string) => t === 'friend' || t === 'ally',
-                      },
-                      {
-                        label: 'Rivals & Enemies',
-                        color: 'text-red-600',
-                        filter: (t: string) => t === 'rival' || t === 'enemy',
-                      },
-                    ] as const
-                  ).map(({ label: groupLabel, color, filter }) => {
-                    const group = relationships.filter((r) => filter(r.type_name));
-                    if (group.length === 0) return null;
+                 <div className="space-y-4">
+                   {(
+                     [
+                       {
+                         label: 'Friends',
+                         color: 'text-emerald-600',
+                         filter: (t: string) => t === 'friend',
+                       },
+                       {
+                         label: 'Allies',
+                         color: 'text-teal-600',
+                         filter: (t: string) => t === 'ally',
+                       },
+                       {
+                         label: 'Relatives',
+                         color: 'text-blue-600',
+                         filter: (t: string) => t === 'relative',
+                       },
+                       {
+                         label: 'Rivals',
+                         color: 'text-orange-600',
+                         filter: (t: string) => t === 'rival',
+                       },
+                       {
+                         label: 'Enemies',
+                         color: 'text-red-600',
+                         filter: (t: string) => t === 'enemy',
+                       },
+                     ]
+                   ).map(({ label: groupLabel, color, filter }) => {
+                     const group = relationships.filter((r) => filter(r.type_name));
+                     if (group.length === 0) return null;
                     return (
                       <div key={groupLabel}>
                         <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wide ${color}`}>{groupLabel}</h4>
@@ -1062,15 +1096,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             ) : (
               <div className="space-y-6">
                 {(
-                  [
-                    { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
-                    { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
-                    {
-                      label: 'Rivals & Enemies',
-                      color: 'text-red-600',
-                      filter: (t: string) => t === 'rival' || t === 'enemy',
-                    },
-                  ] as const
+                   [
+                     { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                     { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
+                     { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
+                     { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
+                     { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
+                   ]
                 ).map(({ label: groupLabel, color, filter }) => {
                   const group = relationships.filter((r) => filter(r.type_name));
                   if (group.length === 0) return null;
@@ -1179,7 +1211,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {itemsLoading ? (
                 <p className="text-amber-600 text-sm">Loading items…</p>
               ) : items.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/profiles/create" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Create an Item profile
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                   {items.map((item) => (
@@ -1207,7 +1246,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1235,7 +1286,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1325,7 +1383,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1353,7 +1423,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1385,7 +1462,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1412,7 +1501,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1443,9 +1539,21 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             {galleryLoading ? (
               <p className="text-amber-600 text-sm">Loading gallery…</p>
             ) : galleryPosts.length === 0 ? (
-              <p className="text-amber-600 text-sm italic">
-                {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
-              </p>
+              <div className="text-center py-4 space-y-2">
+                <p className="text-amber-600 text-sm italic">
+                  {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
+                </p>
+                {profile.can_edit && (
+                  <div className="flex justify-center gap-4">
+                    <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Post artwork
+                    </Link>
+                    <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Post media
+                    </Link>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {galleryPosts.map((post) => (

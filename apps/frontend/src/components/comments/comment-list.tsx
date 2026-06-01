@@ -278,6 +278,8 @@ export function CommentList({ postId }: CommentListProps) {
           onChange={setReplyContent}
           placeholder="Write a reply..."
           disabled={isReplySubmitting}
+          allowImages={false}
+          allowH1={false}
         />
         {replyError && <p className="text-red-600 text-xs">{replyError}</p>}
         <div className="flex items-center justify-between gap-4">
@@ -362,6 +364,8 @@ export function CommentList({ postId }: CommentListProps) {
               onChange={setNewComment}
               placeholder="Write a comment..."
               disabled={isSubmitting}
+              allowImages={false}
+              allowH1={false}
             />
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
