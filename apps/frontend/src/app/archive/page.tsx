@@ -105,14 +105,16 @@ export default function ArchivePage() {
   const [isSearching, setIsSearching] = useState(false);
 
   // Get current filters from URL params
-  const contentType = (searchParams.get('contentType') as 'all' | 'profiles' | 'posts') || 'all';
+  const postTypesParam = searchParams.get('postTypes') || '';
+  const profileTypesParam = searchParams.get('profileTypes') || '';
+  const contentType = (searchParams.get('contentType') as 'all' | 'profiles' | 'posts')
+    || (postTypesParam ? 'posts' : profileTypesParam ? 'profiles' : 'all');
   const sortBy = searchParams.get('sortBy') || 'created_at';
   const order = searchParams.get('order') || 'desc';
   const currentSort = `${sortBy}:${order}`;
   const searchQuery = searchParams.get('search') || '';
 
   // Profile type filters
-  const profileTypesParam = searchParams.get('profileTypes') || '';
   const selectedProfileTypes = profileTypesParam
     ? profileTypesParam
         .split(',')
@@ -121,7 +123,6 @@ export default function ArchivePage() {
     : [];
 
   // Post type filters
-  const postTypesParam = searchParams.get('postTypes') || '';
   const selectedPostTypes = postTypesParam
     ? postTypesParam
         .split(',')

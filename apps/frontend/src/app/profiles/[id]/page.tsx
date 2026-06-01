@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Heart,
   Swords,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -1210,7 +1211,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {itemsLoading ? (
                 <p className="text-amber-600 text-sm">Loading items…</p>
               ) : items.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/profiles/create" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Create an Item profile
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                   {items.map((item) => (
@@ -1238,7 +1246,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1266,7 +1286,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1356,7 +1383,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1384,7 +1423,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1416,7 +1462,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {galleryLoading ? (
                 <p className="text-amber-600 text-sm">Loading gallery…</p>
               ) : galleryPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
+                  {profile.can_edit && (
+                    <div className="flex justify-center gap-4">
+                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post artwork
+                      </Link>
+                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                        <PlusCircle className="w-4 h-4" /> Post media
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {galleryPosts.map((post) => (
@@ -1443,7 +1501,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {writingLoading ? (
                 <p className="text-amber-600 text-sm">Loading writing…</p>
               ) : writingPosts.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
+                  {profile.can_edit && (
+                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Write a post
+                    </Link>
+                  )}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {writingPosts.map((post) => (
@@ -1474,9 +1539,21 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             {galleryLoading ? (
               <p className="text-amber-600 text-sm">Loading gallery…</p>
             ) : galleryPosts.length === 0 ? (
-              <p className="text-amber-600 text-sm italic">
-                {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
-              </p>
+              <div className="text-center py-4 space-y-2">
+                <p className="text-amber-600 text-sm italic">
+                  {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
+                </p>
+                {profile.can_edit && (
+                  <div className="flex justify-center gap-4">
+                    <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Post artwork
+                    </Link>
+                    <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <PlusCircle className="w-4 h-4" /> Post media
+                    </Link>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {galleryPosts.map((post) => (

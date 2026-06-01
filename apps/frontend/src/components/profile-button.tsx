@@ -49,14 +49,14 @@ export function ProfileButton() {
             ) : isLoggedIn ? (
               <>
                 <AvatarImage src={avatarUrl} alt={username} />
-                <AvatarFallback className="bg-amber-100 text-amber-900">
+                <AvatarFallback className="bg-amber-100 text-amber-900 text-2xl font-semibold">
                   {username?.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </>
             ) : (
               <>
                 <AvatarFallback className="bg-amber-100 text-amber-900">
-                  <User className="h-5 w-5" />
+                  <User className="h-16 w-16" />
                 </AvatarFallback>
               </>
             )}
