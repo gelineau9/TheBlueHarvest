@@ -1063,7 +1063,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <div className="space-y-6">
                 {(
                   [
-                    { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                     { label: 'Friends & Allies', color: 'text-emerald-600', filter: (t: string) => t === 'friend' || t === 'ally' },
                     { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
                     {
                       label: 'Rivals & Enemies',
