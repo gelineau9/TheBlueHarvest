@@ -102,7 +102,7 @@ afterEach(async () => {
 });
 
 describe('Unique Profile Names - Commit 2.1.3', () => {
-  describe('Character Names - Global Uniqueness', () => {
+  describe('Character Names - Per-Account Uniqueness', () => {
     it('should create a character with unique name successfully', async () => {
       const response = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
@@ -133,12 +133,10 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       });
 
       expect(response2.status).toBe(409);
-      expect(response2.body.error).toBe(
-        'This character name is already taken. Character names must be unique across all users.',
-      );
+      expect(response2.body.error).toBe('You already have a character with this name. Please choose a different name.');
     });
 
-    it('should prevent duplicate character name from DIFFERENT account (global uniqueness)', async () => {
+    it('should allow duplicate character name from DIFFERENT account (per-account uniqueness)', async () => {
       // Account 1 creates character
       const response1 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
@@ -154,10 +152,9 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
         name: 'Gandalf',
       });
 
-      expect(response2.status).toBe(409);
-      expect(response2.body.message).toBe(
-        'This character name is already taken. Character names must be unique across all users.',
-      );
+      expect(response2.status).toBe(201);
+      expect(response2.body.name).toBe('Gandalf');
+      createdProfileIds.push(response2.body.profile_id);
     });
 
     it('should allow reusing character name after soft delete', async () => {
@@ -187,7 +184,7 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       createdProfileIds.push(response2.body.profile_id);
     });
 
-    it('should treat character names as case-insensitive', async () => {
+    it('should treat character names as case-insensitive within same account', async () => {
       // Create "Legolas"
       const response1 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
@@ -198,16 +195,14 @@ describe('Unique Profile Names - Commit 2.1.3', () => {
       createdProfileIds.push(response1.body.profile_id);
 
       // Try to create "legolas" (different case) - should fail due to case-insensitive uniqueness
-      const response2 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken2}`).send({
+      const response2 = await request(app).post('/api/profiles').set('Authorization', `Bearer ${validToken1}`).send({
         profile_type_id: 1,
         name: 'legolas',
       });
 
       // Should fail (case-insensitive uniqueness)
       expect(response2.status).toBe(409);
-      expect(response2.body.message).toBe(
-        'This character name is already taken. Character names must be unique across all users.',
-      );
+      expect(response2.body.error).toBe('You already have a character with this name. Please choose a different name.');
     });
   });
 
