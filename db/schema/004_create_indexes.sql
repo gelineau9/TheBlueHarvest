@@ -25,8 +25,8 @@ CREATE INDEX idx_profiles_details ON profiles USING GIN (details);
 CREATE INDEX idx_profiles_parent ON profiles (parent_profile_id) WHERE deleted = false AND parent_profile_id IS NOT NULL;
 
 -- Profile name uniqueness scopes
--- Characters: globally unique among characters only (allows cross-type duplicates)
-CREATE UNIQUE INDEX character_names ON profiles (LOWER(name)) 
+-- Characters: unique per account (allows same name across different accounts)
+CREATE UNIQUE INDEX character_names ON profiles (account_id, LOWER(name)) 
     WHERE profile_type_id = 1 AND deleted = false;
 
 -- Locations: unique per account (multiple users can have same location name)
