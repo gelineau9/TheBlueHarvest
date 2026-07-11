@@ -86,13 +86,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       },
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       return NextResponse.json({ message: data.error || 'Failed to delete profile' }, { status: response.status });
     }
 
-    return NextResponse.json(data);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Profile deletion error:', error);
     return NextResponse.json({ message: 'An error occurred while deleting the profile' }, { status: 500 });
