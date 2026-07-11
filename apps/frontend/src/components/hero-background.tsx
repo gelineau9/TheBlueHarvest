@@ -2,15 +2,14 @@ import Image from 'next/image';
 
 export function HeroBackground() {
   return (
-    <div className="w-full h-full">
-      <Image
-        src="/BHA_Alpha_Logo_Resized.png"
-        alt="The Brandy Hall Archives"
-        width={1387}
-        height={304}
-        className="w-full h-full object-contain block"
-        priority
-      />
-    </div>
+    <Image
+      src="/BHAalpha.png"
+      alt="The Brandy Hall Archives"
+      width={2494}
+      height={964}
+      className="w-4/5 sm:w-3/5 h-auto block"
+      style={{ maxWidth: '800px' }}
+      priority
+    />
   );
 }

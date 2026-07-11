@@ -12,12 +12,15 @@ import { ProfileButton } from '@/components/profile-button';
  */
 export function Banner() {
   return (
-    <header aria-label="The Brandy Hall Archives site banner" className="relative w-full h-[315px] shrink-0 mb-3 shadow-[0_4px_12px_rgba(0,0,0,0.25)] border-b border-amber-800/30">
+    <header
+      aria-label="The Brandy Hall Archives site banner"
+      className="relative w-full shrink-0 mb-3 shadow-[0_4px_12px_rgba(0,0,0,0.25)] border-b border-amber-800/30 flex items-center justify-center py-6"
+    >
       {/* Full-bleed hero background image + gradient overlay */}
       <HeroBackground />
 
       {/* ProfileButton — client component, floated to top-right */}
-      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6 hidden lg:block">
         <ProfileButton />
       </div>
     </header>
