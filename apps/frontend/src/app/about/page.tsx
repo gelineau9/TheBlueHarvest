@@ -7,7 +7,7 @@ export default function AboutPage() {
         <section>
           <h2 className="mb-2 text-xl font-semibold text-amber-800">About The Brandy Hall Archives</h2>
           <p className="leading-relaxed text-amber-900/80">
-          <em>The Brandy Hall Archives</em>{' '}is a space for the writers, artists, and roleplayers of The Lord of the
+            <em>The Brandy Hall Archives</em> is a space for the writers, artists, and roleplayers of The Lord of the
             Rings Online&apos;s official roleplay server, Meriadoc, to share their original artwork and writing,
             advertise roleplaying events, and connect with other members of the community.
           </p>
@@ -20,7 +20,6 @@ export default function AboutPage() {
             your content is appropriate for the community.
           </p>
         </section>
-
       </div>
     </div>
   );

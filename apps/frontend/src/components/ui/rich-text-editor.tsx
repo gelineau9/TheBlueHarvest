@@ -64,7 +64,14 @@ const TEXT_COLOURS = [
   { label: 'Silver', value: '#6b7280' },
 ];
 
-export function RichTextEditor({ value, onChange, placeholder, disabled, allowImages = true, allowH1 = true }: RichTextEditorProps) {
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  allowImages = true,
+  allowH1 = true,
+}: RichTextEditorProps) {
   const [showColourPicker, setShowColourPicker] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,15 +166,18 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
     }
   }, [editor]);
 
-  const handleColourSelect = useCallback((colour: string) => {
-    if (!editor) return;
-    if (colour === '') {
-      editor.chain().focus().unsetColor().run();
-    } else {
-      editor.chain().focus().setColor(colour).run();
-    }
-    setShowColourPicker(false);
-  }, [editor]);
+  const handleColourSelect = useCallback(
+    (colour: string) => {
+      if (!editor) return;
+      if (colour === '') {
+        editor.chain().focus().unsetColor().run();
+      } else {
+        editor.chain().focus().setColor(colour).run();
+      }
+      setShowColourPicker(false);
+    },
+    [editor],
+  );
 
   const handleImageFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,7 +202,11 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
         });
 
         let data: { error?: string; files?: { url: string }[] };
-        try { data = await response.json(); } catch { data = {}; }
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
 
         if (!response.ok || !data.files?.[0]?.url) {
           alert(data.error || 'Image upload failed. Please try again.');
@@ -228,29 +242,44 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
     >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-amber-200 bg-amber-50">
-
         {/* --- Formatting --- */}
-        <button type="button" title="Bold" disabled={disabled}
+        <button
+          type="button"
+          title="Bold"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={btnClass(editor.isActive('bold'))}>
+          className={btnClass(editor.isActive('bold'))}
+        >
           <Bold className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Italic" disabled={disabled}
+        <button
+          type="button"
+          title="Italic"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={btnClass(editor.isActive('italic'))}>
+          className={btnClass(editor.isActive('italic'))}
+        >
           <Italic className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Underline" disabled={disabled}
+        <button
+          type="button"
+          title="Underline"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={btnClass(editor.isActive('underline'))}>
+          className={btnClass(editor.isActive('underline'))}
+        >
           <UnderlineIcon className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Strikethrough" disabled={disabled}
+        <button
+          type="button"
+          title="Strikethrough"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={btnClass(editor.isActive('strike'))}>
+          className={btnClass(editor.isActive('strike'))}
+        >
           <Strikethrough className="w-4 h-4" />
         </button>
 
@@ -258,94 +287,146 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
 
         {/* --- Headings --- */}
         {allowH1 && (
-          <button type="button" title="Heading 1" disabled={disabled}
+          <button
+            type="button"
+            title="Heading 1"
+            disabled={disabled}
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={btnClass(editor.isActive('heading', { level: 1 }))}>
+            className={btnClass(editor.isActive('heading', { level: 1 }))}
+          >
             <Heading1 className="w-4 h-4" />
           </button>
         )}
 
-        <button type="button" title="Heading 2" disabled={disabled}
+        <button
+          type="button"
+          title="Heading 2"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={btnClass(editor.isActive('heading', { level: 2 }))}>
+          className={btnClass(editor.isActive('heading', { level: 2 }))}
+        >
           <Heading2 className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Heading 3" disabled={disabled}
+        <button
+          type="button"
+          title="Heading 3"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={btnClass(editor.isActive('heading', { level: 3 }))}>
+          className={btnClass(editor.isActive('heading', { level: 3 }))}
+        >
           <Heading3 className="w-4 h-4" />
         </button>
 
         {sep}
 
         {/* --- Alignment --- */}
-        <button type="button" title="Align left" disabled={disabled}
+        <button
+          type="button"
+          title="Align left"
+          disabled={disabled}
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          className={btnClass(editor.isActive({ textAlign: 'left' }))}>
+          className={btnClass(editor.isActive({ textAlign: 'left' }))}
+        >
           <AlignLeft className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Align center" disabled={disabled}
+        <button
+          type="button"
+          title="Align center"
+          disabled={disabled}
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          className={btnClass(editor.isActive({ textAlign: 'center' }))}>
+          className={btnClass(editor.isActive({ textAlign: 'center' }))}
+        >
           <AlignCenter className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Align right" disabled={disabled}
+        <button
+          type="button"
+          title="Align right"
+          disabled={disabled}
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          className={btnClass(editor.isActive({ textAlign: 'right' }))}>
+          className={btnClass(editor.isActive({ textAlign: 'right' }))}
+        >
           <AlignRight className="w-4 h-4" />
         </button>
 
         {sep}
 
         {/* --- Lists & blocks --- */}
-        <button type="button" title="Bullet list" disabled={disabled}
+        <button
+          type="button"
+          title="Bullet list"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={btnClass(editor.isActive('bulletList'))}>
+          className={btnClass(editor.isActive('bulletList'))}
+        >
           <List className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Ordered list" disabled={disabled}
+        <button
+          type="button"
+          title="Ordered list"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={btnClass(editor.isActive('orderedList'))}>
+          className={btnClass(editor.isActive('orderedList'))}
+        >
           <ListOrdered className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Blockquote" disabled={disabled}
+        <button
+          type="button"
+          title="Blockquote"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={btnClass(editor.isActive('blockquote'))}>
+          className={btnClass(editor.isActive('blockquote'))}
+        >
           <Quote className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Horizontal rule" disabled={disabled}
+        <button
+          type="button"
+          title="Horizontal rule"
+          disabled={disabled}
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          className={btnClass(false)}>
+          className={btnClass(false)}
+        >
           <Minus className="w-4 h-4" />
         </button>
 
         {sep}
 
         {/* --- Link --- */}
-        <button type="button" title={editor.isActive('link') ? 'Remove link' : 'Add link'}
-          disabled={disabled} onClick={handleLinkToggle}
-          className={btnClass(editor.isActive('link'))}>
+        <button
+          type="button"
+          title={editor.isActive('link') ? 'Remove link' : 'Add link'}
+          disabled={disabled}
+          onClick={handleLinkToggle}
+          className={btnClass(editor.isActive('link'))}
+        >
           <LinkIcon className="w-4 h-4" />
         </button>
 
         {sep}
 
         {/* --- Sub / Super --- */}
-        <button type="button" title="Subscript" disabled={disabled}
+        <button
+          type="button"
+          title="Subscript"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleSubscript().run()}
-          className={btnClass(editor.isActive('subscript'))}>
+          className={btnClass(editor.isActive('subscript'))}
+        >
           <SubscriptIcon className="w-4 h-4" />
         </button>
 
-        <button type="button" title="Superscript" disabled={disabled}
+        <button
+          type="button"
+          title="Superscript"
+          disabled={disabled}
           onClick={() => editor.chain().focus().toggleSuperscript().run()}
-          className={btnClass(editor.isActive('superscript'))}>
+          className={btnClass(editor.isActive('superscript'))}
+        >
           <SuperscriptIcon className="w-4 h-4" />
         </button>
 
@@ -357,15 +438,12 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
             type="button"
             title="Text colour"
             disabled={disabled}
-            onClick={() => setShowColourPicker(v => !v)}
+            onClick={() => setShowColourPicker((v) => !v)}
             className={btnClass(showColourPicker || !!activeColour)}
           >
             <span className="flex flex-col items-center gap-0.5">
               <Palette className="w-4 h-4" />
-              <span
-                className="w-4 h-0.5 rounded-full"
-                style={{ backgroundColor: activeColour || '#b45309' }}
-              />
+              <span className="w-4 h-0.5 rounded-full" style={{ backgroundColor: activeColour || '#b45309' }} />
             </span>
           </button>
 
@@ -379,9 +457,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
                     title={label}
                     onClick={() => handleColourSelect(value)}
                     className={`w-8 h-8 rounded border-2 transition-transform hover:scale-110 ${
-                      (activeColour ?? '') === value
-                        ? 'border-amber-600 scale-110'
-                        : 'border-transparent'
+                      (activeColour ?? '') === value ? 'border-amber-600 scale-110' : 'border-transparent'
                     }`}
                     style={{
                       backgroundColor: value || '#ffffff',
@@ -391,7 +467,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
                 ))}
               </div>
               <p className="text-xs text-amber-600 mt-1.5 text-center">
-                {TEXT_COLOURS.find(c => c.value === (activeColour ?? ''))?.label ?? 'Default'}
+                {TEXT_COLOURS.find((c) => c.value === (activeColour ?? ''))?.label ?? 'Default'}
               </p>
             </div>
           )}
@@ -409,9 +485,11 @@ export function RichTextEditor({ value, onChange, placeholder, disabled, allowIm
               onClick={() => imageInputRef.current?.click()}
               className={btnClass(false)}
             >
-              {isUploadingImage
-                ? <span className="w-4 h-4 border-2 border-amber-800 border-t-transparent rounded-full animate-spin inline-block" />
-                : <ImagePlus className="w-4 h-4" />}
+              {isUploadingImage ? (
+                <span className="w-4 h-4 border-2 border-amber-800 border-t-transparent rounded-full animate-spin inline-block" />
+              ) : (
+                <ImagePlus className="w-4 h-4" />
+              )}
             </button>
             <input
               ref={imageInputRef}

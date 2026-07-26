@@ -391,9 +391,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">
-          Description *
-        </Label>
+        <Label className="text-amber-900 font-semibold">Description *</Label>
         <RichTextEditor
           value={watch('description')}
           onChange={(html) => setValue('description', html, { shouldValidate: true })}

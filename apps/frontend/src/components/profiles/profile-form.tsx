@@ -626,14 +626,17 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
                   } else {
                     setRace('');
                   }
-                  if (error === 'Race is required for characters.' || error === 'Please enter a custom race.') setError(null);
+                  if (error === 'Race is required for characters.' || error === 'Please enter a custom race.')
+                    setError(null);
                 }}
                 disabled={isSubmitting}
                 className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
               >
                 <option value="">Select a race…</option>
                 {['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'].map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
               </select>
               {raceDropdown === 'Other' && (
@@ -809,21 +812,21 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             </div>
 
             {characterType !== 'NPC' && (
-            <div className="space-y-2">
-              <Label htmlFor="inGameName" className="text-amber-900 font-medium">
-                In-Game Name
-              </Label>
-              <Input
-                id="inGameName"
-                type="text"
-                value={inGameName}
-                onChange={(e) => setInGameName(e.target.value)}
-                placeholder="LOTRO character name, if different"
-                maxLength={100}
-                disabled={isSubmitting}
-                className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="inGameName" className="text-amber-900 font-medium">
+                  In-Game Name
+                </Label>
+                <Input
+                  id="inGameName"
+                  type="text"
+                  value={inGameName}
+                  onChange={(e) => setInGameName(e.target.value)}
+                  placeholder="LOTRO character name, if different"
+                  maxLength={100}
+                  disabled={isSubmitting}
+                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                />
+              </div>
             )}
 
             <div className="space-y-2 sm:col-span-2">

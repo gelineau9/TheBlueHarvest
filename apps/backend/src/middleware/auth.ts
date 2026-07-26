@@ -9,14 +9,68 @@ export interface AuthRequest extends Request {
   userRoleId?: number;
 }
 
-// Optional auth - sets req.userId and req.userRoleId if valid token exists, but doesn't reject if missing/invalid
-export const optionalAuthenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+interface DecodedToken {
+  userId: number;
+  roleId: number;
+  jti?: string;
+  iat?: number;
+}
+
+type TokenStatus = 'valid' | 'banned' | 'suspended' | 'revoked';
+
+// Shared account/token validation used by both middlewares: bans, suspensions,
+// password-reset revocation (tokens_valid_after), and the jti blocklist.
+async function checkAccountToken(decoded: DecodedToken): Promise<TokenStatus> {
+  const pool = await getPool();
+
+  // Slonik's default type parser returns timestamptz columns as epoch ms numbers
+  const account = await pool.maybeOne(
+    sql.type(
+      z.object({
+        is_banned: z.boolean(),
+        suspended_until: z.number().nullable(),
+        tokens_valid_after: z.number().nullable(),
+      }),
+    )`
+      SELECT is_banned, suspended_until, tokens_valid_after
+      FROM accounts
+      WHERE account_id = ${decoded.userId}
+    `,
+  );
+
+  if (account?.is_banned) return 'banned';
+  if (account?.suspended_until && account.suspended_until > Date.now()) return 'suspended';
+
+  // Tokens issued before a password reset are revoked
+  if (account?.tokens_valid_after && decoded.iat !== undefined && decoded.iat * 1000 < account.tokens_valid_after) {
+    return 'revoked';
+  }
+
+  // Token blocklist (only for tokens that carry a jti — older tokens without one are allowed through)
+  if (decoded.jti) {
+    const revoked = await pool.maybeOne(
+      sql.type(z.object({ jti: z.string() }))`
+        SELECT jti FROM revoked_tokens WHERE jti = ${decoded.jti}
+      `,
+    );
+    if (revoked) return 'revoked';
+  }
+
+  return 'valid';
+}
+
+// Optional auth - sets req.userId and req.userRoleId if a valid, non-revoked
+// token from an account in good standing exists; continues anonymously otherwise
+export const optionalAuthenticateToken = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number; roleId: number };
-      req.userId = decoded.userId;
-      req.userRoleId = decoded.roleId;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
+      const status = await checkAccountToken(decoded);
+      if (status === 'valid') {
+        req.userId = decoded.userId;
+        req.userRoleId = decoded.roleId;
+      }
     }
   } catch {
     // Token invalid or expired - continue without userId
@@ -33,59 +87,23 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      userId: number;
-      roleId: number;
-      jti?: string;
-      iat?: number;
-    };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
     req.userId = decoded.userId;
     req.userRoleId = decoded.roleId;
 
-    // Check if the account is banned on every authenticated request
-    const pool = await getPool();
-    // Slonik's default type parser returns timestamptz columns as epoch ms numbers
-    const account = await pool.maybeOne(
-      sql.type(
-        z.object({
-          is_banned: z.boolean(),
-          suspended_until: z.number().nullable(),
-          tokens_valid_after: z.number().nullable(),
-        }),
-      )`
-        SELECT is_banned, suspended_until, tokens_valid_after
-        FROM accounts
-        WHERE account_id = ${req.userId}
-      `,
-    );
+    const status = await checkAccountToken(decoded);
 
-    if (account?.is_banned) {
+    if (status === 'banned') {
       res.status(401).json({ error: 'account_suspended' });
       return;
     }
-
-    if (account?.suspended_until && account.suspended_until > Date.now()) {
+    if (status === 'suspended') {
       res.status(403).json({ error: 'account_suspended' });
       return;
     }
-
-    // Reject tokens issued before a password reset (accounts.tokens_valid_after)
-    if (account?.tokens_valid_after && decoded.iat !== undefined && decoded.iat * 1000 < account.tokens_valid_after) {
+    if (status === 'revoked') {
       res.status(401).json({ error: 'Token has been revoked' });
       return;
-    }
-
-    // Check token blocklist (only for tokens that carry a jti — older tokens without one are allowed through)
-    if (decoded.jti) {
-      const revoked = await pool.maybeOne(
-        sql.type(z.object({ jti: z.string() }))`
-          SELECT jti FROM revoked_tokens WHERE jti = ${decoded.jti}
-        `,
-      );
-      if (revoked) {
-        res.status(401).json({ error: 'Token has been revoked' });
-        return;
-      }
     }
 
     next();

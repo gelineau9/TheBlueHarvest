@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
-import path from 'path';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import { sql } from 'slonik';
 
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
@@ -87,7 +87,10 @@ app.use(
   }),
 );
 
-// Body parsing — 50 kb limit prevents oversized JSON payloads
+// Body parsing — content routes carry rich-text JSONB (long stories, bios)
+// and get a larger limit; everything else stays tightly bounded at 50 kb.
+// The first matching parser wins; the global one skips already-parsed bodies.
+app.use(['/api/posts', '/api/profiles', '/api/collections'], express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
@@ -153,21 +156,6 @@ const uploadLimiter = rateLimit({
   keyGenerator: accountOrIpKey,
   message: { error: 'Too many uploads, please try again later.' },
 });
-
-// ─────────────────────────────────────────────────────────
-// Static file serving
-// ─────────────────────────────────────────────────────────
-app.use(
-  '/uploads',
-  express.static(path.join(process.cwd(), 'uploads'), {
-    dotfiles: 'deny',
-    setHeaders: (res) => {
-      // Uploaded files are content-addressed (timestamp + random suffix),
-      // so they're safe to cache aggressively.
-      res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    },
-  }),
-);
 
 // ─────────────────────────────────────────────────────────
 // Health check — no auth, no rate limiting, first in chain
@@ -244,6 +232,23 @@ async function start() {
   const server = app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
   });
+
+  // ─────────────────────────────────────────────────────────
+  // Periodic cleanup: purge expired auth token rows
+  // ─────────────────────────────────────────────────────────
+  async function purgeExpiredTokens() {
+    try {
+      const pool = await getPool();
+      await pool.query(sql.unsafe`DELETE FROM revoked_tokens WHERE expires_at < NOW()`);
+      await pool.query(sql.unsafe`DELETE FROM email_verification_tokens WHERE expires_at < NOW()`);
+      await pool.query(sql.unsafe`DELETE FROM password_reset_tokens WHERE expires_at < NOW()`);
+    } catch (err) {
+      logger.error({ message: 'Expired token purge failed', error: err });
+    }
+  }
+  purgeExpiredTokens();
+  const purgeTimer = setInterval(purgeExpiredTokens, 6 * 60 * 60 * 1000); // every 6 hours
+  purgeTimer.unref(); // never keep the process alive just for cleanup
 
   // ─────────────────────────────────────────────────────────
   // Graceful shutdown

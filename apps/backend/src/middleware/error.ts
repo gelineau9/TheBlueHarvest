@@ -18,5 +18,11 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
     return;
   }
 
+  // body-parser rejects oversized payloads with type 'entity.too.large'
+  if ('type' in err && (err as { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({ error: 'Content is too large to save. Please shorten it and try again.' });
+    return;
+  }
+
   res.status(500).json({ error: 'Internal server error' });
 }

@@ -190,18 +190,28 @@
 }
 
 /* Text alignment */
-.rte-content [style*="text-align: center"],
-.ProseMirror [style*="text-align: center"] { text-align: center; }
+.rte-content [style*='text-align: center'],
+.ProseMirror [style*='text-align: center'] {
+  text-align: center;
+}
 
-.rte-content [style*="text-align: right"],
-.ProseMirror [style*="text-align: right"] { text-align: right; }
+.rte-content [style*='text-align: right'],
+.ProseMirror [style*='text-align: right'] {
+  text-align: right;
+}
 
-.rte-content [style*="text-align: left"],
-.ProseMirror [style*="text-align: left"] { text-align: left; }
+.rte-content [style*='text-align: left'],
+.ProseMirror [style*='text-align: left'] {
+  text-align: left;
+}
 
 /* Underline and strikethrough in rendered output */
-.rte-content u { text-decoration: underline; }
-.rte-content s { text-decoration: line-through; }
+.rte-content u {
+  text-decoration: underline;
+}
+.rte-content s {
+  text-decoration: line-through;
+}
 
 /* Images in rendered output */
 .rte-content img {

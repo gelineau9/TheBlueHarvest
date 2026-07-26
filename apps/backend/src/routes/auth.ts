@@ -28,7 +28,9 @@ router.post(
       return;
     }
 
-    const { email, username, password } = req.body;
+    const { username, password } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     if (!email || !username || !password) {
       res.status(400).json({ message: 'Email, username, and password are required' });
@@ -190,7 +192,8 @@ router.post(
       return;
     }
 
-    const { email } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     const genericResponse = {
       message: 'If an unverified account with that email exists, a new verification email has been sent.',
@@ -205,7 +208,7 @@ router.post(
             account_id: z.number(),
             username: z.string(),
             is_banned: z.boolean(),
-            email_verified_at: z.string().nullable(),
+            email_verified_at: z.number().nullable(),
           }),
         )`
           SELECT account_id, username, is_banned, email_verified_at
@@ -269,7 +272,9 @@ router.post(
       return;
     }
 
-    const { email, password } = req.body;
+    const { password } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     if (!email || !password) {
       res.status(400).json({ message: 'Email and password are required' });
@@ -289,10 +294,11 @@ router.post(
             user_role_id: z.number(),
             is_banned: z.boolean(),
             banned_reason: z.string().nullable(),
-            email_verified_at: z.string().nullable(),
+            suspended_until: z.number().nullable(),
+            email_verified_at: z.number().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, email_verified_at
+          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, suspended_until, email_verified_at
           FROM accounts
           WHERE email = ${email}
         `,
@@ -303,9 +309,26 @@ router.post(
         return;
       }
 
-      // Check if account is banned before verifying password
+      // Verify the password FIRST — account status (banned, suspended,
+      // unverified) must not be revealed to callers without credentials.
+      const isValid = await argon2.verify(user.hashed_password as string, password);
+      if (!isValid) {
+        res.status(401).json({ message: 'Invalid email or password' });
+        return;
+      }
+
       if (user.is_banned) {
         res.status(403).json({ error: 'account_suspended', reason: user.banned_reason ?? null });
+        return;
+      }
+
+      if (user.suspended_until && user.suspended_until > Date.now()) {
+        const until = new Date(user.suspended_until).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        res.status(403).json({ error: 'account_suspended', reason: `suspended until ${until}` });
         return;
       }
 
@@ -315,13 +338,6 @@ router.post(
           error: 'email_not_verified',
           message: 'Please verify your email before logging in.',
         });
-        return;
-      }
-
-      // Verify password
-      const isValid = await argon2.verify(user.hashed_password as string, password);
-      if (!isValid) {
-        res.status(401).json({ message: 'Invalid email or password' });
         return;
       }
 
@@ -473,7 +489,8 @@ router.post(
       return;
     }
 
-    const { email } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     // Generic response used in all paths to prevent email enumeration
     const genericResponse = {

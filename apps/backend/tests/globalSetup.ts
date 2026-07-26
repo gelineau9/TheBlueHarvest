@@ -200,6 +200,11 @@ export async function setup(): Promise<void> {
     ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tokens_valid_after TIMESTAMPTZ DEFAULT NULL;
   `);
 
+  // Migration 0012: lowercase email uniqueness
+  await client.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower_idx ON accounts (LOWER(email));
+  `);
+
   await client.end();
   console.log('[globalSetup] Test database schema applied.');
 }

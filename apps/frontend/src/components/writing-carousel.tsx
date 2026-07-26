@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { User, Users, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { NestedLink } from '@/components/ui/nested-link';
 import { ContentCarousel } from '@/components/content-carousel';
 import { LikeButton } from '@/components/likes/LikeButton';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
@@ -43,13 +44,9 @@ function WritingCard({ post }: { post: PublicPost }) {
           )}
           <span className="flex items-center gap-1">
             <User className="h-3 w-3" aria-hidden="true" />
-            <Link
-              href={`/users/${post.username}`}
-              onClick={(e) => e.stopPropagation()}
-              className="max-w-[80px] truncate hover:underline"
-            >
+            <NestedLink href={`/users/${post.username}`} className="max-w-[80px] truncate hover:underline">
               {post.username}
-            </Link>
+            </NestedLink>
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" aria-hidden="true" />

@@ -165,7 +165,9 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isIC ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              <span
+                className={`text-xs font-bold px-1.5 py-0.5 rounded ${isIC ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+              >
                 {isIC ? 'IC' : 'OOC'}
               </span>
               <span className="font-semibold text-amber-900">

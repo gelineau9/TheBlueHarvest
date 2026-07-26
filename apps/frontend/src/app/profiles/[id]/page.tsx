@@ -636,7 +636,9 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       </div>
                     )}
                     {isCharacter && d?.character_type && (
-                      <div className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${d.character_type === 'NPC' ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-800'}`}>
+                      <div
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${d.character_type === 'NPC' ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-800'}`}
+                      >
                         {d.character_type}
                       </div>
                     )}
@@ -731,7 +733,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {isCharacter && (
           <Card className="p-6 bg-white border-amber-300 mb-6">
             <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
-            {d && (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence || d.in_game_name) ? (
+            {d &&
+            (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence || d.in_game_name) ? (
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 {d?.race && (
                   <div>
@@ -885,38 +888,36 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               ) : relationships.length === 0 ? (
                 <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
               ) : (
-                 <div className="space-y-4">
-                   {(
-                     [
-                       {
-                         label: 'Friends',
-                         color: 'text-emerald-600',
-                         filter: (t: string) => t === 'friend',
-                       },
-                       {
-                         label: 'Allies',
-                         color: 'text-teal-600',
-                         filter: (t: string) => t === 'ally',
-                       },
-                       {
-                         label: 'Relatives',
-                         color: 'text-blue-600',
-                         filter: (t: string) => t === 'relative',
-                       },
-                       {
-                         label: 'Rivals',
-                         color: 'text-orange-600',
-                         filter: (t: string) => t === 'rival',
-                       },
-                       {
-                         label: 'Enemies',
-                         color: 'text-red-600',
-                         filter: (t: string) => t === 'enemy',
-                       },
-                     ]
-                   ).map(({ label: groupLabel, color, filter }) => {
-                     const group = relationships.filter((r) => filter(r.type_name));
-                     if (group.length === 0) return null;
+                <div className="space-y-4">
+                  {[
+                    {
+                      label: 'Friends',
+                      color: 'text-emerald-600',
+                      filter: (t: string) => t === 'friend',
+                    },
+                    {
+                      label: 'Allies',
+                      color: 'text-teal-600',
+                      filter: (t: string) => t === 'ally',
+                    },
+                    {
+                      label: 'Relatives',
+                      color: 'text-blue-600',
+                      filter: (t: string) => t === 'relative',
+                    },
+                    {
+                      label: 'Rivals',
+                      color: 'text-orange-600',
+                      filter: (t: string) => t === 'rival',
+                    },
+                    {
+                      label: 'Enemies',
+                      color: 'text-red-600',
+                      filter: (t: string) => t === 'enemy',
+                    },
+                  ].map(({ label: groupLabel, color, filter }) => {
+                    const group = relationships.filter((r) => filter(r.type_name));
+                    if (group.length === 0) return null;
                     return (
                       <div key={groupLabel}>
                         <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wide ${color}`}>{groupLabel}</h4>
@@ -1095,15 +1096,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
             ) : (
               <div className="space-y-6">
-                {(
-                   [
-                     { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
-                     { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
-                     { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
-                     { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
-                     { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
-                   ]
-                ).map(({ label: groupLabel, color, filter }) => {
+                {[
+                  { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                  { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
+                  { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
+                  { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
+                  { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
+                ].map(({ label: groupLabel, color, filter }) => {
                   const group = relationships.filter((r) => filter(r.type_name));
                   if (group.length === 0) return null;
                   return (
@@ -1214,7 +1213,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <div className="text-center py-4 space-y-2">
                   <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
                   {profile.can_edit && (
-                    <Link href="/profiles/create" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/profiles/create"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Create an Item profile
                     </Link>
                   )}
@@ -1250,10 +1252,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
                   {profile.can_edit && (
                     <div className="flex justify-center gap-4">
-                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/art"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post artwork
                       </Link>
-                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/media"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post media
                       </Link>
                     </div>
@@ -1289,7 +1297,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <div className="text-center py-4 space-y-2">
                   <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
                   {profile.can_edit && (
-                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/posts/create/writing"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Write a post
                     </Link>
                   )}
@@ -1387,10 +1398,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
                   {profile.can_edit && (
                     <div className="flex justify-center gap-4">
-                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/art"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post artwork
                       </Link>
-                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/media"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post media
                       </Link>
                     </div>
@@ -1426,7 +1443,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <div className="text-center py-4 space-y-2">
                   <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
                   {profile.can_edit && (
-                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/posts/create/writing"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Write a post
                     </Link>
                   )}
@@ -1466,10 +1486,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
                   {profile.can_edit && (
                     <div className="flex justify-center gap-4">
-                      <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/art"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post artwork
                       </Link>
-                      <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                      <Link
+                        href="/posts/create/media"
+                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                      >
                         <PlusCircle className="w-4 h-4" /> Post media
                       </Link>
                     </div>
@@ -1504,7 +1530,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <div className="text-center py-4 space-y-2">
                   <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
                   {profile.can_edit && (
-                    <Link href="/posts/create/writing" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/posts/create/writing"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Write a post
                     </Link>
                   )}
@@ -1545,10 +1574,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 </p>
                 {profile.can_edit && (
                   <div className="flex justify-center gap-4">
-                    <Link href="/posts/create/art" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/posts/create/art"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Post artwork
                     </Link>
-                    <Link href="/posts/create/media" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">
+                    <Link
+                      href="/posts/create/media"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
                       <PlusCircle className="w-4 h-4" /> Post media
                     </Link>
                   </div>

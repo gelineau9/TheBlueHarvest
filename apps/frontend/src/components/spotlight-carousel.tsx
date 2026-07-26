@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { NestedLink } from '@/components/ui/nested-link';
 import NextImage from 'next/image';
 import { User, Users, Calendar } from 'lucide-react';
 import {
@@ -169,13 +170,9 @@ function MetaRow({ item, date, light }: { item: SpotlightItem; date: string; lig
       )}
       <span className="flex items-center gap-1">
         <User className="h-3 w-3" aria-hidden="true" />
-        <Link
-          href={`/users/${item.username}`}
-          onClick={(e) => e.stopPropagation()}
-          className={`max-w-[100px] truncate ${linkHover} hover:underline`}
-        >
+        <NestedLink href={`/users/${item.username}`} className={`max-w-[100px] truncate ${linkHover} hover:underline`}>
           {item.username}
-        </Link>
+        </NestedLink>
       </span>
       <span className="flex items-center gap-1">
         <Calendar className="h-3 w-3" aria-hidden="true" />

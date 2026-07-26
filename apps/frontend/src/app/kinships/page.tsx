@@ -152,8 +152,12 @@ export default function KinshipsPage() {
           ) : (
             <>
               {total === 0
-                ? letter ? `No kinships found starting with "${letter}"` : 'No kinships found'
-                : letter ? `${total} kinship${total === 1 ? '' : 's'} starting with "${letter}"` : `${total} kinship${total === 1 ? '' : 's'}`}
+                ? letter
+                  ? `No kinships found starting with "${letter}"`
+                  : 'No kinships found'
+                : letter
+                  ? `${total} kinship${total === 1 ? '' : 's'} starting with "${letter}"`
+                  : `${total} kinship${total === 1 ? '' : 's'}`}
             </>
           )}
         </span>
@@ -199,7 +203,11 @@ export default function KinshipsPage() {
         <div className="py-20 text-center">
           <p className="text-lg font-semibold text-amber-800">No kinships found</p>
           <p className="mt-1 text-sm text-amber-600">
-            {letter ? <>There are no published kinships starting with &ldquo;{letter}&rdquo; yet.</> : 'There are no published kinships yet.'}
+            {letter ? (
+              <>There are no published kinships starting with &ldquo;{letter}&rdquo; yet.</>
+            ) : (
+              'There are no published kinships yet.'
+            )}
           </p>
         </div>
       )}

@@ -229,8 +229,7 @@ cp env.example .env
 Edit `.env` so that `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 point to your Postgres instance, and set `DATABASE_URL` accordingly.
 
-Also update `BACKEND_INTERNAL_URL=http://localhost:4000` and
-`NEXT_PUBLIC_BACKEND_HOSTNAME=localhost`.
+Also update `BACKEND_INTERNAL_URL=http://localhost:4000`.
 
 ### 3. Apply schema
 
@@ -300,7 +299,6 @@ All configuration lives in a **single root `.env` file** (never committed). See
 | Variable                        | Example               | Description                                                                                                                                        |
 | ------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BACKEND_INTERNAL_URL`          | `http://backend:4000` | URL the Next.js server uses to reach the backend (server-to-server). Use `http://backend:4000` inside Docker, `http://localhost:4000` for bare dev |
-| `NEXT_PUBLIC_BACKEND_HOSTNAME`  | `localhost`           | Backend hostname baked into the JS bundle at build time (no protocol). Used to whitelist the image remote pattern in `next.config.ts`              |
 | `NEXT_PUBLIC_SUPABASE_HOSTNAME` | `<ref>.supabase.co`   | Supabase Storage hostname (no protocol) — whitelists the image CDN in `next.config.ts`. Baked in at build time                                     |
 | `NODE_ENV`                      | `development`         | Runtime environment                                                                                                                                |
 
@@ -428,7 +426,7 @@ Runs ESLint and Prettier checks across the monorepo.
 ### Deployment
 
 - **Frontend (Vercel):** Auto-deploys on push to the tracked branch.
-  `NEXT_PUBLIC_BACKEND_HOSTNAME` must be set in the Vercel project environment.
+  `NEXT_PUBLIC_SUPABASE_HOSTNAME` must be set in the Vercel project environment.
 - **Backend (Render):** Auto-deploys on push. All `DB_*`, `JWT_SECRET`,
   `BACKEND_URL`, and `ALLOWED_ORIGINS` variables must be set in the Render
   service environment.
@@ -444,7 +442,6 @@ The Next.js app is deployed to Vercel with `output: 'standalone'` configured in
 
 Required Vercel environment variables:
 
-- `NEXT_PUBLIC_BACKEND_HOSTNAME` — hostname of the backend (no protocol)
 - `NEXT_PUBLIC_SUPABASE_HOSTNAME` — Supabase Storage hostname (no protocol)
 - `BACKEND_INTERNAL_URL` — full URL the server-side Next.js code uses to reach
   the backend
