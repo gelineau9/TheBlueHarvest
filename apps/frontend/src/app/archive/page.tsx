@@ -107,8 +107,9 @@ export default function ArchivePage() {
   // Get current filters from URL params
   const postTypesParam = searchParams.get('postTypes') || '';
   const profileTypesParam = searchParams.get('profileTypes') || '';
-  const contentType = (searchParams.get('contentType') as 'all' | 'profiles' | 'posts')
-    || (postTypesParam ? 'posts' : profileTypesParam ? 'profiles' : 'all');
+  const contentType =
+    (searchParams.get('contentType') as 'all' | 'profiles' | 'posts') ||
+    (postTypesParam ? 'posts' : profileTypesParam ? 'profiles' : 'all');
   const sortBy = searchParams.get('sortBy') || 'created_at';
   const order = searchParams.get('order') || 'desc';
   const currentSort = `${sortBy}:${order}`;

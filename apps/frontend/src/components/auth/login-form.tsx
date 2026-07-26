@@ -12,12 +12,29 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // 'idle' → not shown; 'available' → show resend button; 'sending'/'sent' → progress states
+  const [resendState, setResendState] = useState<'idle' | 'available' | 'sending' | 'sent'>('idle');
   const closeRef = useRef<HTMLButtonElement>(null);
+
+  const handleResend = async () => {
+    setResendState('sending');
+    try {
+      await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      // Response is intentionally generic — treat any outcome as sent
+    }
+    setResendState('sent');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setResendState('idle');
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -37,6 +54,7 @@ export function LoginForm() {
           );
         }
         if (data.errorCode === 'email_not_verified') {
+          setResendState('available');
           throw new Error('Please verify your email before logging in. Check your inbox for a verification link.');
         }
         throw new Error(data.error || 'Login failed');
@@ -86,6 +104,22 @@ export function LoginForm() {
         <p className="text-xs text-amber-600">Minimum 8 characters required</p>
       </div>
       {error && <div className="text-sm text-red-500">{error}</div>}
+      {resendState !== 'idle' &&
+        (resendState === 'sent' ? (
+          <p className="text-sm text-amber-700">
+            If an unverified account with that email exists, a new verification email has been sent.
+          </p>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full text-amber-900"
+            onClick={handleResend}
+            disabled={resendState === 'sending'}
+          >
+            {resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+          </Button>
+        ))}
       <Button type="submit" className="w-full bg-amber-900 text-amber-50" disabled={isLoading}>
         {isLoading ? 'Logging in...' : 'Login'}
       </Button>

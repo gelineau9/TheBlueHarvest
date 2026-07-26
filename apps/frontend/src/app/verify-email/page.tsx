@@ -91,15 +91,11 @@ export default function VerifyEmailPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-amber-700 text-center">
-            Verification links expire after 24 hours. If yours has expired, please register again.
+            Verification links expire after 24 hours. If yours has expired, try logging in — you&apos;ll be offered a
+            button to resend a fresh verification email.
           </p>
-          <Link href="/register">
-            <Button className="w-full bg-amber-900 text-amber-50">Back to Register</Button>
-          </Link>
           <Link href="/">
-            <Button variant="outline" className="w-full border-amber-900 text-amber-900">
-              Go to Homepage
-            </Button>
+            <Button className="w-full bg-amber-900 text-amber-50">Go to Homepage</Button>
           </Link>
         </CardContent>
       </Card>

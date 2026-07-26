@@ -28,7 +28,9 @@ router.post(
       return;
     }
 
-    const { email, username, password } = req.body;
+    const { username, password } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     if (!email || !username || !password) {
       res.status(400).json({ message: 'Email, username, and password are required' });
@@ -179,6 +181,83 @@ router.get('/verify-email', async (req: Request, res: Response) => {
   }
 });
 
+// Resend verification email — always returns the same response to prevent email enumeration
+router.post(
+  '/resend-verification',
+  [body('email').isEmail().withMessage('Please enter a valid email address.')],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+
+    const genericResponse = {
+      message: 'If an unverified account with that email exists, a new verification email has been sent.',
+    };
+
+    try {
+      const pool = await getPool();
+
+      const account = await pool.maybeOne(
+        sql.type(
+          z.object({
+            account_id: z.number(),
+            username: z.string(),
+            is_banned: z.boolean(),
+            email_verified_at: z.number().nullable(),
+          }),
+        )`
+          SELECT account_id, username, is_banned, email_verified_at
+          FROM accounts
+          WHERE email = ${email}
+            AND deleted = false
+        `,
+      );
+
+      // Unknown, banned, or already-verified — return generic response, do nothing else
+      if (!account || account.is_banned || account.email_verified_at) {
+        res.status(200).json(genericResponse);
+        return;
+      }
+
+      // Invalidate any outstanding tokens, then issue a fresh one
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      await pool.transaction(async (tx) => {
+        await tx.query(sql.unsafe`
+          UPDATE email_verification_tokens
+          SET used_at = NOW()
+          WHERE account_id = ${account.account_id} AND used_at IS NULL
+        `);
+        await tx.query(sql.unsafe`
+          INSERT INTO email_verification_tokens (token_hash, account_id, expires_at)
+          VALUES (${tokenHash}, ${account.account_id}, NOW() + INTERVAL '24 hours')
+        `);
+      });
+
+      // Best-effort email send — log failures but never leak them to the caller
+      try {
+        await sendVerificationEmail(email, account.username, rawToken);
+      } catch (emailErr) {
+        logger.error('[resend-verification] Failed to send verification email', {
+          emailErr,
+          accountId: account.account_id,
+        });
+      }
+
+      res.status(200).json(genericResponse);
+    } catch (err) {
+      logger.error('[resend-verification] Unexpected error', { err });
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
 // Login route
 router.post(
   '/login',
@@ -193,7 +272,9 @@ router.post(
       return;
     }
 
-    const { email, password } = req.body;
+    const { password } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     if (!email || !password) {
       res.status(400).json({ message: 'Email and password are required' });
@@ -213,10 +294,11 @@ router.post(
             user_role_id: z.number(),
             is_banned: z.boolean(),
             banned_reason: z.string().nullable(),
-            email_verified_at: z.string().nullable(),
+            suspended_until: z.number().nullable(),
+            email_verified_at: z.number().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, email_verified_at
+          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, suspended_until, email_verified_at
           FROM accounts
           WHERE email = ${email}
         `,
@@ -227,9 +309,26 @@ router.post(
         return;
       }
 
-      // Check if account is banned before verifying password
+      // Verify the password FIRST — account status (banned, suspended,
+      // unverified) must not be revealed to callers without credentials.
+      const isValid = await argon2.verify(user.hashed_password as string, password);
+      if (!isValid) {
+        res.status(401).json({ message: 'Invalid email or password' });
+        return;
+      }
+
       if (user.is_banned) {
         res.status(403).json({ error: 'account_suspended', reason: user.banned_reason ?? null });
+        return;
+      }
+
+      if (user.suspended_until && user.suspended_until > Date.now()) {
+        const until = new Date(user.suspended_until).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        res.status(403).json({ error: 'account_suspended', reason: `suspended until ${until}` });
         return;
       }
 
@@ -239,13 +338,6 @@ router.post(
           error: 'email_not_verified',
           message: 'Please verify your email before logging in.',
         });
-        return;
-      }
-
-      // Verify password
-      const isValid = await argon2.verify(user.hashed_password as string, password);
-      if (!isValid) {
-        res.status(401).json({ message: 'Invalid email or password' });
         return;
       }
 
@@ -397,7 +489,8 @@ router.post(
       return;
     }
 
-    const { email } = req.body;
+    // Emails are stored and compared lowercase (see migration 0012)
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     // Generic response used in all paths to prevent email enumeration
     const genericResponse = {
@@ -522,9 +615,11 @@ router.post(
       const hashedPassword = await argon2.hash(newPassword);
 
       await pool.transaction(async (tx) => {
+        // tokens_valid_after = NOW() revokes every JWT issued before this reset
         await tx.query(sql.unsafe`
           UPDATE accounts
-          SET hashed_password = ${hashedPassword}
+          SET hashed_password = ${hashedPassword},
+              tokens_valid_after = NOW()
           WHERE account_id = ${account.account_id}
         `);
         await tx.query(sql.unsafe`

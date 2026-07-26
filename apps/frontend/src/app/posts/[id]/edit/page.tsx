@@ -499,11 +499,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   <Label htmlFor="body" className="text-amber-900 font-semibold">
                     Content
                   </Label>
-                  <RichTextEditor
-                    value={body}
-                    onChange={setBody}
-                    placeholder="Write your post content..."
-                  />
+                  <RichTextEditor value={body} onChange={setBody} placeholder="Write your post content..." />
                 </div>
               </>
             )}
@@ -594,11 +590,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   <Label htmlFor="description" className="text-amber-900 font-semibold">
                     Description
                   </Label>
-                  <RichTextEditor
-                    value={description}
-                    onChange={setDescription}
-                    placeholder="Enter a description..."
-                  />
+                  <RichTextEditor value={description} onChange={setDescription} placeholder="Enter a description..." />
                 </div>
               </>
             )}

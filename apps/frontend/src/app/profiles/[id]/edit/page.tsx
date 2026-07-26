@@ -884,55 +884,57 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
               {/* Character Info */}
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <h2 className="text-amber-900 font-semibold text-sm uppercase tracking-wide">Character Info</h2>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                     <Label htmlFor="race" className="text-amber-900 font-medium">
-                       Race
-                     </Label>
-                      <select
-                        id="race"
-                        value={raceDropdown}
-                        onChange={(e) => {
-                          setRaceDropdown(e.target.value);
-                          if (e.target.value !== 'Other') {
-                            setRace(e.target.value);
-                            setCustomRace('');
-                          } else {
-                            setRace('');
-                          }
-                        }}
-                        className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-                      >
-                        <option value="">Select a race…</option>
-                        {['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'].map((r) => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
-                      {raceDropdown === 'Other' && (
-                        <input
-                          type="text"
-                          placeholder="Enter race…"
-                          value={customRace}
-                          onChange={(e) => setCustomRace(e.target.value)}
-                          className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-                        />
-                      )}
-                   </div>
-                   <div className="space-y-2">
-                     <Label htmlFor="character_type" className="text-amber-900 font-medium">
-                       Character Type
-                     </Label>
-                     <select
-                       id="character_type"
-                       value={characterType}
-                       onChange={(e) => setCharacterType(e.target.value)}
-                       className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-                     >
-                       <option value="">Select type…</option>
-                       <option value="PC">Player Character</option>
-                       <option value="NPC">Non-Player Character</option>
-                     </select>
-                   </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="race" className="text-amber-900 font-medium">
+                      Race
+                    </Label>
+                    <select
+                      id="race"
+                      value={raceDropdown}
+                      onChange={(e) => {
+                        setRaceDropdown(e.target.value);
+                        if (e.target.value !== 'Other') {
+                          setRace(e.target.value);
+                          setCustomRace('');
+                        } else {
+                          setRace('');
+                        }
+                      }}
+                      className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                    >
+                      <option value="">Select a race…</option>
+                      {['Man', 'Elf', 'Dwarf', 'Hobbit', 'Other'].map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    {raceDropdown === 'Other' && (
+                      <input
+                        type="text"
+                        placeholder="Enter race…"
+                        value={customRace}
+                        onChange={(e) => setCustomRace(e.target.value)}
+                        className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="character_type" className="text-amber-900 font-medium">
+                      Character Type
+                    </Label>
+                    <select
+                      id="character_type"
+                      value={characterType}
+                      onChange={(e) => setCharacterType(e.target.value)}
+                      className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                    >
+                      <option value="">Select type…</option>
+                      <option value="PC">Player Character</option>
+                      <option value="NPC">Non-Player Character</option>
+                    </select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="occupation" className="text-amber-900 font-medium">
                       Occupation
@@ -941,7 +943,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                       id="occupation"
                       value={occupation}
                       onChange={(e) => setOccupation(e.target.value)}
-                      placeholder="e.g. Blacksmith, Mage…"
+                      placeholder="e.g. Blacksmith, Warden…"
                       maxLength={100}
                       className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
                     />
@@ -1064,19 +1066,19 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
                   </div>
 
                   {characterType !== 'NPC' && (
-                   <div className="space-y-2">
-                     <Label htmlFor="inGameName" className="text-amber-900 font-medium">
-                       In-Game Name
-                     </Label>
-                     <Input
-                       id="inGameName"
-                       value={inGameName}
-                       onChange={(e) => setInGameName(e.target.value)}
-                       placeholder="LOTRO character name, if different"
-                       maxLength={100}
-                       className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
-                     />
-                   </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inGameName" className="text-amber-900 font-medium">
+                        In-Game Name
+                      </Label>
+                      <Input
+                        id="inGameName"
+                        value={inGameName}
+                        onChange={(e) => setInGameName(e.target.value)}
+                        placeholder="LOTRO character name, if different"
+                        maxLength={100}
+                        className="border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                      />
+                    </div>
                   )}
 
                   <div className="space-y-2 sm:col-span-2">

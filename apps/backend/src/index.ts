@@ -1,8 +1,9 @@
 import express, { Request, Response } from 'express';
-import path from 'path';
 import helmet from 'helmet';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import { sql } from 'slonik';
 
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
@@ -62,6 +63,10 @@ if (process.env.JWT_SECRET!.length < 32) {
 const app = express();
 const PORT = Number(process.env.BACKEND_PORT ?? 4000);
 
+// Render terminates TLS at its proxy and sets X-Forwarded-For; trust that
+// single hop so req.ip resolves to the immediate caller instead of the proxy.
+app.set('trust proxy', 1);
+
 // Security headers — must be the first middleware
 app.use(helmet());
 
@@ -82,55 +87,75 @@ app.use(
   }),
 );
 
-// Body parsing — 50 kb limit prevents oversized JSON payloads
+// Body parsing — content routes carry rich-text JSONB (long stories, bios)
+// and get a larger limit; everything else stays tightly bounded at 50 kb.
+// The first matching parser wins; the global one skips already-parsed bodies.
+app.use(['/api/posts', '/api/profiles', '/api/collections'], express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
 // ─────────────────────────────────────────────────────────
 // Rate limiting
+//
+// All browser traffic reaches this API through the Next.js frontend on
+// Vercel, so req.ip is a shared Vercel egress IP — never the real client.
+// Limiters therefore key on the authenticated account (or, for credential
+// endpoints, the targeted email) and only fall back to IP for anonymous
+// or direct traffic.
 // ─────────────────────────────────────────────────────────
 
-// Stricter limit on auth endpoints to slow brute-force attempts
+const ipFallbackKey = (req: Request): string => ipKeyGenerator(req.ip ?? '');
+
+// Key by account when the request carries a valid JWT
+const accountOrIpKey = (req: Request): string => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+      return `account:${decoded.userId}`;
+    } catch {
+      // Invalid token — fall back to IP
+    }
+  }
+  return ipFallbackKey(req);
+};
+
+// Key by the targeted email so brute force against one account is limited
+// regardless of source IP, and one shared proxy IP can't lock out everyone
+const emailOrIpKey = (req: Request): string => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  return email ? `email:${email}` : ipFallbackKey(req);
+};
+
+// Stricter limit on credential endpoints to slow brute-force attempts
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: emailOrIpKey,
   message: { error: 'Too many requests, please try again later.' },
 });
 
-// General API limit — generous enough for normal usage
+// General API limit — per account; anonymous traffic shares proxy-IP buckets
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: accountOrIpKey,
 });
 
 // Tight limit on file uploads — prevents storage exhaustion
-// 20 uploads per 15 minutes per IP
+// 20 uploads per 15 minutes per account
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: accountOrIpKey,
   message: { error: 'Too many uploads, please try again later.' },
 });
-
-// ─────────────────────────────────────────────────────────
-// Static file serving
-// ─────────────────────────────────────────────────────────
-app.use(
-  '/uploads',
-  express.static(path.join(process.cwd(), 'uploads'), {
-    dotfiles: 'deny',
-    setHeaders: (res) => {
-      // Uploaded files are content-addressed (timestamp + random suffix),
-      // so they're safe to cache aggressively.
-      res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    },
-  }),
-);
 
 // ─────────────────────────────────────────────────────────
 // Health check — no auth, no rate limiting, first in chain
@@ -142,7 +167,20 @@ app.get('/health', (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────
 // Apply rate limiters before route handlers
 // ─────────────────────────────────────────────────────────
-app.use('/api/auth', authLimiter);
+
+// Only the brute-forceable credential endpoints get the strict limiter;
+// authenticated auth routes (/me, /logout, /account) fall under apiLimiter.
+app.use(
+  [
+    '/api/auth/login',
+    '/api/auth/signup',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-email',
+    '/api/auth/resend-verification',
+  ],
+  authLimiter,
+);
 app.use('/api/uploads', uploadLimiter);
 app.use('/api', apiLimiter);
 
@@ -194,6 +232,23 @@ async function start() {
   const server = app.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
   });
+
+  // ─────────────────────────────────────────────────────────
+  // Periodic cleanup: purge expired auth token rows
+  // ─────────────────────────────────────────────────────────
+  async function purgeExpiredTokens() {
+    try {
+      const pool = await getPool();
+      await pool.query(sql.unsafe`DELETE FROM revoked_tokens WHERE expires_at < NOW()`);
+      await pool.query(sql.unsafe`DELETE FROM email_verification_tokens WHERE expires_at < NOW()`);
+      await pool.query(sql.unsafe`DELETE FROM password_reset_tokens WHERE expires_at < NOW()`);
+    } catch (err) {
+      logger.error({ message: 'Expired token purge failed', error: err });
+    }
+  }
+  purgeExpiredTokens();
+  const purgeTimer = setInterval(purgeExpiredTokens, 6 * 60 * 60 * 1000); // every 6 hours
+  purgeTimer.unref(); // never keep the process alive just for cleanup
 
   // ─────────────────────────────────────────────────────────
   // Graceful shutdown

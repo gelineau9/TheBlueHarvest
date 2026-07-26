@@ -14,6 +14,7 @@ import { Router, Request, Response } from 'express';
 import { sql } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -195,7 +196,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
     res.json({ items, total: items.length });
   } catch (err) {
-    console.error('Spotlight fetch error:', err);
+    logger.error('Spotlight fetch error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

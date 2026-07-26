@@ -32,9 +32,6 @@ jobs:
 
       - name: Build frontend
         run: npm run build --workspace=apps/frontend
-        env:
-          # Provide a placeholder so next.config.ts image pattern logic doesn't error
-          NEXT_PUBLIC_BACKEND_HOSTNAME: ci-placeholder
 
   test-backend:
     name: Backend Tests

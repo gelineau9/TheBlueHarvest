@@ -65,7 +65,11 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createPost({ ...data, content: { ...data.content, body: bodyContent }, is_published: isPublished });
+      const result = await createPost({
+        ...data,
+        content: { ...data.content, body: bodyContent },
+        is_published: isPublished,
+      });
       if (!result.success) {
         setError(result.error || 'Failed to create post');
         return;
@@ -162,9 +166,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
 
       {/* Body */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">
-          Content *
-        </Label>
+        <Label className="text-amber-900 font-semibold">Content *</Label>
         <RichTextEditor
           value={bodyContent}
           onChange={(html) => {

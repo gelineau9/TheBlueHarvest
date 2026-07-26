@@ -254,9 +254,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">
-          Description (Optional)
-        </Label>
+        <Label className="text-amber-900 font-semibold">Description (Optional)</Label>
         <RichTextEditor
           value={watch('description') || ''}
           onChange={(html) => setValue('description', html)}

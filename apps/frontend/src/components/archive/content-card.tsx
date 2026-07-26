@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { NestedLink } from '@/components/ui/nested-link';
 import NextImage from 'next/image';
 import {
   Users,
@@ -147,13 +148,9 @@ export function ContentCard({
                 {/* Account username */}
                 <div className="flex items-center gap-1">
                   <User className="w-3 h-3" />
-                  <Link
-                    href={`/users/${username}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="truncate max-w-[80px] hover:underline"
-                  >
+                  <NestedLink href={`/users/${username}`} className="truncate max-w-[80px] hover:underline">
                     {username}
-                  </Link>
+                  </NestedLink>
                 </div>
 
                 {/* Date */}

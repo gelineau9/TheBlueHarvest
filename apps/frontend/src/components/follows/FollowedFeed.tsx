@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { NestedLink } from '@/components/ui/nested-link';
 import { useAuth } from '@/components/auth/auth-provider';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,13 +70,12 @@ function FeedRow({ post }: { post: FeedPost }) {
         {post.primary_author_name && (
           <span className="hidden truncate max-w-[80px] sm:inline">{post.primary_author_name}</span>
         )}
-        <Link
+        <NestedLink
           href={`/users/${post.username}`}
-          onClick={(e) => e.stopPropagation()}
           className="truncate max-w-[80px] hover:text-amber-900 hover:underline"
         >
           {post.username}
-        </Link>
+        </NestedLink>
         <span className="text-amber-400">·</span>
         <span className="whitespace-nowrap">{relativeTime(post.created_at)}</span>
       </span>

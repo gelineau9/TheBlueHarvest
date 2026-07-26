@@ -139,7 +139,7 @@ export default function CharactersPage() {
               <button
                 key={t}
                 onClick={() => updateParams({ character_type: characterTypeFilter === t ? '' : t })}
-                className={`rounded px-3 py-1 text-sm font-medium transition-colors ${characterTypeFilter === t ? (t === 'PC' ? 'bg-sky-700 text-white' : 'bg-slate-600 text-white') : (t === 'PC' ? 'bg-sky-100 text-sky-800 hover:bg-sky-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')}`}
+                className={`rounded px-3 py-1 text-sm font-medium transition-colors ${characterTypeFilter === t ? (t === 'PC' ? 'bg-sky-700 text-white' : 'bg-slate-600 text-white') : t === 'PC' ? 'bg-sky-100 text-sky-800 hover:bg-sky-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
               >
                 {t}
               </button>
@@ -179,8 +179,12 @@ export default function CharactersPage() {
           ) : (
             <>
               {total === 0
-                ? letter ? `No characters found starting with "${letter}"` : 'No characters found'
-                : letter ? `${total} character${total === 1 ? '' : 's'} starting with "${letter}"` : `${total} character${total === 1 ? '' : 's'}`}
+                ? letter
+                  ? `No characters found starting with "${letter}"`
+                  : 'No characters found'
+                : letter
+                  ? `${total} character${total === 1 ? '' : 's'} starting with "${letter}"`
+                  : `${total} character${total === 1 ? '' : 's'}`}
             </>
           )}
         </span>
@@ -226,7 +230,11 @@ export default function CharactersPage() {
         <div className="py-20 text-center">
           <p className="text-lg font-semibold text-amber-800">No characters found</p>
           <p className="mt-1 text-sm text-amber-600">
-            {letter ? <>There are no published characters starting with &ldquo;{letter}&rdquo; yet.</> : 'There are no published characters yet.'}
+            {letter ? (
+              <>There are no published characters starting with &ldquo;{letter}&rdquo; yet.</>
+            ) : (
+              'There are no published characters yet.'
+            )}
           </p>
         </div>
       )}
@@ -277,4 +285,3 @@ export default function CharactersPage() {
     </div>
   );
 }
-

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { NestedLink } from '@/components/ui/nested-link';
 import NextImage from 'next/image';
 import { Users, Sword, Package, Building2, MapPin, User, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -65,13 +66,9 @@ export function ProfileCard({
             <div className="space-y-1 text-sm text-amber-700">
               <div className="flex items-center gap-2">
                 <User className="w-3 h-3" />
-                <Link
-                  href={`/users/${username}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="truncate hover:underline"
-                >
+                <NestedLink href={`/users/${username}`} className="truncate hover:underline">
                   {username}
-                </Link>
+                </NestedLink>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-3 h-3" />

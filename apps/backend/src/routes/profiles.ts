@@ -288,25 +288,19 @@ router.get('/public', async (req: Request, res: Response) => {
   const STANDARD_RACES = ['Man', 'Elf', 'Dwarf', 'Hobbit'];
   const raceParam = req.query.race as string;
   const raceFilter =
-    raceParam && (STANDARD_RACES.includes(raceParam.trim()) || raceParam.trim() === 'Other')
-      ? raceParam.trim()
-      : null;
+    raceParam && (STANDARD_RACES.includes(raceParam.trim()) || raceParam.trim() === 'Other') ? raceParam.trim() : null;
 
   // Parse character_type filter — JSONB filter on details->>'character_type' (characters only)
   const VALID_CHARACTER_TYPES = ['PC', 'NPC'];
   const characterTypeParam = req.query.character_type as string;
   const characterTypeFilter =
-    characterTypeParam && VALID_CHARACTER_TYPES.includes(characterTypeParam.trim())
-      ? characterTypeParam.trim()
-      : null;
+    characterTypeParam && VALID_CHARACTER_TYPES.includes(characterTypeParam.trim()) ? characterTypeParam.trim() : null;
 
   // Parse kinship_type filter — JSONB filter on details->>'kinship_type' (kinships only)
   const VALID_KINSHIP_TYPES = ['Mixed', 'Elf', 'Man', 'Hobbit', 'Dwarf'];
   const kinshipTypeParam = req.query.kinship_type as string;
   const kinshipTypeFilter =
-    kinshipTypeParam && VALID_KINSHIP_TYPES.includes(kinshipTypeParam.trim())
-      ? kinshipTypeParam.trim()
-      : null;
+    kinshipTypeParam && VALID_KINSHIP_TYPES.includes(kinshipTypeParam.trim()) ? kinshipTypeParam.trim() : null;
 
   try {
     const db = await getPool();

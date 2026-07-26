@@ -47,20 +47,25 @@ TheBlueHarvest/
 
 Express 5 API server. Handles authentication, profiles, posts, collections,
 comments, file uploads, kinship relationships, and the archive. Connects to
-PostgreSQL via the Slonik client. Uploads are served as static files from
-`uploads/` (local disk; S3 planned).
+PostgreSQL via the Slonik client. Images and avatars are stored in **Supabase
+Storage** (`images` and `avatars` buckets); avatars are resized to 400×400 WebP
+with Sharp. Verification and password-reset emails go through **Resend** in
+production (logged instead of sent in development).
 
-Rate limits: **20 requests / 15 min** on auth endpoints; **300 requests / 15
-min** on all other endpoints.
+Rate limits (15-minute windows): **20 requests** per targeted email on
+credential endpoints (login, signup, verification, password reset); **1000
+requests** per authenticated account elsewhere; **20 uploads** per account.
+Limits are keyed on account/email rather than IP because all browser traffic
+arrives through the Vercel proxy.
 
 Key directories:
 
 ```
 src/
-├── config/       # Database pool (Slonik + pg-driver), app config
+├── config/       # Database pool (Slonik + pg-driver), Supabase Storage client
 ├── middleware/   # JWT auth, error handling
 ├── routes/       # One file per site resource (auth, profiles, posts, collections, …)
-└── utils/        # Logger (Winston), helpers
+└── utils/        # Logger (Winston), email (Resend), helpers
 ```
 
 ### `apps/frontend`
@@ -106,14 +111,15 @@ Key page routes:
 | Database         | PostgreSQL 17                                 |
 | Migrations       | node-pg-migrate                               |
 | Auth             | JWT (jsonwebtoken), Argon2 password hashing   |
-| File uploads     | Multer 2, Sharp (image processing)            |
+| File uploads     | Multer 2, Sharp, Supabase Storage             |
+| Email            | Resend                                        |
 | Security         | Helmet, express-rate-limit, express-validator |
 | Logging          | Winston                                       |
 | Testing          | Vitest (unit, integration), Cypress (E2E)     |
 | CI               | GitHub Actions                                |
 | Frontend hosting | Vercel                                        |
 | Backend hosting  | Render                                        |
-| Database hosting | Supabase (PostgreSQL)                         |
+| Database hosting | Supabase (PostgreSQL + Storage)               |
 
 ---
 
@@ -223,8 +229,7 @@ cp env.example .env
 Edit `.env` so that `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 point to your Postgres instance, and set `DATABASE_URL` accordingly.
 
-Also update `BACKEND_INTERNAL_URL=http://localhost:4000` and
-`NEXT_PUBLIC_BACKEND_HOSTNAME=localhost`.
+Also update `BACKEND_INTERNAL_URL=http://localhost:4000`.
 
 ### 3. Apply schema
 
@@ -262,34 +267,40 @@ All configuration lives in a **single root `.env` file** (never committed). See
 
 ### Database
 
-| Variable            | Example                                    | Description                                                       |
-| ------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
-| `POSTGRES_USER`     | `merry`                                    | User created by the Postgres Docker image on first init           |
-| `POSTGRES_PASSWORD` | `secondbreakfast`                          | Password for above user                                           |
-| `POSTGRES_DB`       | `bha_db`                                   | Database created on first init                                    |
-| `DB_HOST`           | `postgres` (Docker) / `localhost` (bare)   | Postgres host for the backend                                     |
-| `DB_PORT`           | `5432`                                     | Postgres port (internal Docker network uses 5432; host uses 5433) |
-| `DB_USER`           | `merry`                                    | Must match `POSTGRES_USER`                                        |
-| `DB_PASSWORD`       | `secondbreakfast`                          | Must match `POSTGRES_PASSWORD`                                    |
-| `DB_NAME`           | `bha_db`                                   | Must match `POSTGRES_DB`                                          |
-| `DATABASE_URL`      | `postgres://merry:…@localhost:5433/bha_db` | Full connection URL for migrations                                |
+| Variable            | Example                                    | Description                                                           |
+| ------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| `POSTGRES_USER`     | `merry`                                    | User created by the Postgres Docker image on first init               |
+| `POSTGRES_PASSWORD` | `secondbreakfast`                          | Password for above user                                               |
+| `POSTGRES_DB`       | `bha_db`                                   | Database created on first init                                        |
+| `DB_HOST`           | `postgres` (Docker) / `localhost` (bare)   | Postgres host for the backend                                         |
+| `DB_PORT`           | `5432`                                     | Postgres port (internal Docker network uses 5432; host uses 5433)     |
+| `DB_USER`           | `merry`                                    | Must match `POSTGRES_USER`                                            |
+| `DB_PASSWORD`       | `secondbreakfast`                          | Must match `POSTGRES_PASSWORD`                                        |
+| `DB_NAME`           | `bha_db`                                   | Must match `POSTGRES_DB`                                              |
+| `DB_SSLMODE`        | `disable` (local) / `require` (hosted)     | SSL mode for the backend's Postgres connection; defaults to `require` |
+| `DATABASE_URL`      | `postgres://merry:…@localhost:5433/bha_db` | Full connection URL for migrations                                    |
 
 ### Auth & backend
 
-| Variable          | Example                   | Description                                                                  |
-| ----------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| `JWT_SECRET`      | _(64-char random string)_ | **Required.** Minimum 32 characters. Generate with `openssl rand -base64 48` |
-| `BACKEND_PORT`    | `4000`                    | Port the Express server binds to                                             |
-| `BACKEND_URL`     | `http://localhost:4000`   | Public-facing base URL for uploaded file URLs in API responses               |
-| `ALLOWED_ORIGINS` | `http://localhost:3000`   | Comma-separated list of CORS-allowed origins                                 |
+| Variable                    | Example                     | Description                                                                  |
+| --------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
+| `JWT_SECRET`                | _(64-char random string)_   | **Required.** Minimum 32 characters. Generate with `openssl rand -base64 48` |
+| `BACKEND_PORT`              | `4000`                      | Port the Express server binds to                                             |
+| `BACKEND_URL`               | `http://localhost:4000`     | Public-facing base URL for uploaded file URLs in API responses               |
+| `ALLOWED_ORIGINS`           | `http://localhost:3000`     | Comma-separated list of CORS-allowed origins                                 |
+| `FRONTEND_URL`              | `http://localhost:3000`     | Base URL used to build links in verification/reset emails                    |
+| `SUPABASE_URL`              | `https://<ref>.supabase.co` | **Required.** Supabase project URL for Storage uploads                       |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(service role key)_        | **Required.** Supabase Storage credentials                                   |
+| `RESEND_API_KEY`            | _(Resend secret key)_       | Production only — dev writes emails to the log instead                       |
+| `RESEND_FROM_EMAIL`         | `noreply@yourdomain.com`    | Sender address for outgoing email (production only)                          |
 
 ### Frontend
 
-| Variable                       | Example               | Description                                                                                                                                        |
-| ------------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BACKEND_INTERNAL_URL`         | `http://backend:4000` | URL the Next.js server uses to reach the backend (server-to-server). Use `http://backend:4000` inside Docker, `http://localhost:4000` for bare dev |
-| `NEXT_PUBLIC_BACKEND_HOSTNAME` | `localhost`           | Backend hostname baked into the JS bundle at build time (no protocol). Used to whitelist the image remote pattern in `next.config.ts`              |
-| `NODE_ENV`                     | `development`         | Runtime environment                                                                                                                                |
+| Variable                        | Example               | Description                                                                                                                                        |
+| ------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BACKEND_INTERNAL_URL`          | `http://backend:4000` | URL the Next.js server uses to reach the backend (server-to-server). Use `http://backend:4000` inside Docker, `http://localhost:4000` for bare dev |
+| `NEXT_PUBLIC_SUPABASE_HOSTNAME` | `<ref>.supabase.co`   | Supabase Storage hostname (no protocol) — whitelists the image CDN in `next.config.ts`. Baked in at build time                                     |
+| `NODE_ENV`                      | `development`         | Runtime environment                                                                                                                                |
 
 > **Production note:** `NEXT_PUBLIC_*` variables are baked into the Next.js
 > bundle at **build time**. They must be set as build arguments (`--build-arg`)
@@ -415,7 +426,7 @@ Runs ESLint and Prettier checks across the monorepo.
 ### Deployment
 
 - **Frontend (Vercel):** Auto-deploys on push to the tracked branch.
-  `NEXT_PUBLIC_BACKEND_HOSTNAME` must be set in the Vercel project environment.
+  `NEXT_PUBLIC_SUPABASE_HOSTNAME` must be set in the Vercel project environment.
 - **Backend (Render):** Auto-deploys on push. All `DB_*`, `JWT_SECRET`,
   `BACKEND_URL`, and `ALLOWED_ORIGINS` variables must be set in the Render
   service environment.
@@ -431,7 +442,7 @@ The Next.js app is deployed to Vercel with `output: 'standalone'` configured in
 
 Required Vercel environment variables:
 
-- `NEXT_PUBLIC_BACKEND_HOSTNAME` — hostname of the backend (no protocol)
+- `NEXT_PUBLIC_SUPABASE_HOSTNAME` — Supabase Storage hostname (no protocol)
 - `BACKEND_INTERNAL_URL` — full URL the server-side Next.js code uses to reach
   the backend
 
@@ -454,9 +465,12 @@ The production database is hosted on Supabase using the **session-mode pooler**:
 - Port: `5432`
 - User: `postgres.<project-ref>`
 
-The backend connects with `sslmode=no-verify` (configured in
-`apps/backend/src/config/database.ts`) to satisfy Supabase's SSL requirement
-without a CA certificate.
+The backend connects with `sslmode=require` — the default in
+`apps/backend/src/config/database.ts` when `DB_SSLMODE` is unset.
+
+Migrations are not run automatically on deploy. Apply pending migrations with
+`npm run migrate --workspace=apps/backend` with `DATABASE_URL` pointed at
+Supabase before deploying schema-dependent code.
 
 ## Project scripts
 
@@ -480,13 +494,11 @@ Run from the **repository root**:
 
 ## Active Development
 
-| Area                     | Notes                                                                                                                                                                                                                                                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| File uploads             | Uploaded files are stored in `apps/backend/uploads/`. This volume is not persistent on Render between deploys. Migration to S3 (or compatible object storage) is planned. Avatar uploads are already processed by Sharp (resized to 400×400, converted to WebP); general image uploads are stored unprocessed. |
-| Image optimisation       | `unoptimized: true` is set in `next.config.ts`. Will be re-enabled once uploads are behind a CDN.                                                                                                                                                                                                              |
-| E2E test coverage        | Cypress test coverage is currently in-progress                                                                                                                                                                                                                                                                 |
-| Collection post ordering | Posts within a collection can be manually reordered (`PUT /:collectionId/posts/reorder`) — frontend reorder UI is planned.                                                                                                                                                                                     |
-| Future Features          | Robust front-end changes are planned, with additional homepage content and data feeds.                                                                                                                                                                                                                         |
+| Area                     | Notes                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Test coverage            | Frontend unit tests and Cypress E2E coverage are still to be written; backend integration tests exist.                     |
+| Collection post ordering | Posts within a collection can be manually reordered (`PUT /:collectionId/posts/reorder`) — frontend reorder UI is planned. |
+| Future Features          | Robust front-end changes are planned, with additional homepage content and data feeds.                                     |
 
 ---
 
