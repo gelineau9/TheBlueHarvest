@@ -241,8 +241,12 @@ export async function getSession() {
     });
 
     if (!response.ok) {
-      // Token is invalid or expired — clear the stale cookie
-      await cookieStore.set('auth_token', '', CLEAR_COOKIE);
+      // Only clear the cookie when the backend actually rejected the token.
+      // Transient failures (429 rate limit, 5xx, cold start) must not log
+      // the user out — report logged-out for this render and retry later.
+      if (response.status === 401 || response.status === 403) {
+        await cookieStore.set('auth_token', '', CLEAR_COOKIE);
+      }
       return { isLoggedIn: false };
     }
 

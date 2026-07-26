@@ -33,15 +33,27 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number; roleId: number; jti?: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      userId: number;
+      roleId: number;
+      jti?: string;
+      iat?: number;
+    };
     req.userId = decoded.userId;
     req.userRoleId = decoded.roleId;
 
     // Check if the account is banned on every authenticated request
     const pool = await getPool();
+    // Slonik's default type parser returns timestamptz columns as epoch ms numbers
     const account = await pool.maybeOne(
-      sql.type(z.object({ is_banned: z.boolean(), suspended_until: z.string().nullable() }))`
-        SELECT is_banned, suspended_until
+      sql.type(
+        z.object({
+          is_banned: z.boolean(),
+          suspended_until: z.number().nullable(),
+          tokens_valid_after: z.number().nullable(),
+        }),
+      )`
+        SELECT is_banned, suspended_until, tokens_valid_after
         FROM accounts
         WHERE account_id = ${req.userId}
       `,
@@ -52,8 +64,14 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return;
     }
 
-    if (account?.suspended_until && new Date(account.suspended_until) > new Date()) {
+    if (account?.suspended_until && account.suspended_until > Date.now()) {
       res.status(403).json({ error: 'account_suspended' });
+      return;
+    }
+
+    // Reject tokens issued before a password reset (accounts.tokens_valid_after)
+    if (account?.tokens_valid_after && decoded.iat !== undefined && decoded.iat * 1000 < account.tokens_valid_after) {
+      res.status(401).json({ error: 'Token has been revoked' });
       return;
     }
 

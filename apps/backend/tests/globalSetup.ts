@@ -195,6 +195,11 @@ export async function setup(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_pw_reset_tokens_account ON password_reset_tokens (account_id);
   `);
 
+  // Migration 0011: session revocation on password reset
+  await client.query(`
+    ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tokens_valid_after TIMESTAMPTZ DEFAULT NULL;
+  `);
+
   await client.end();
   console.log('[globalSetup] Test database schema applied.');
 }
