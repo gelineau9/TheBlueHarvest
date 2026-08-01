@@ -1,19 +1,30 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
 
 interface AdminUser {
   account_id: number;
   username: string;
   email: string;
-  role_name: string;
-  user_role_id: number;
+  /** Comma-joined role names; empty string for an ordinary user */
+  roles: string;
   is_banned: boolean;
   banned_reason: string | null;
   suspended_until: string | null;
   deleted: boolean;
   created_at: string;
+}
+
+/** Grantable roles, keyed by the role_id seeded in user_roles */
+const ASSIGNABLE_ROLES: { id: number; name: string; label: string }[] = [
+  { id: 2, name: 'admin', label: 'Admin' },
+  { id: 3, name: 'moderator', label: 'Moderator' },
+  { id: 4, name: 'guide_author', label: 'Guide Author' },
+];
+
+function parseRoles(roles: string): string[] {
+  return roles ? roles.split(',') : [];
 }
 
 interface UserContent {
@@ -22,13 +33,27 @@ interface UserContent {
   comments: { comment_id: number; content: string; is_deleted: boolean; created_at: string }[];
 }
 
-function RoleBadge({ roleId, roleName }: { roleId: number; roleName: string }) {
-  const styles: Record<number, string> = {
-    2: 'bg-amber-800 text-amber-50 text-xs px-2 py-0.5 rounded-full',
-    3: 'bg-amber-200 text-amber-900 text-xs px-2 py-0.5 rounded-full',
-    1: 'bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full',
+function RoleBadges({ roles }: { roles: string }) {
+  const held = parseRoles(roles);
+  const styles: Record<string, string> = {
+    admin: 'bg-amber-800 text-amber-50',
+    moderator: 'bg-amber-200 text-amber-900',
+    guide_author: 'bg-amber-100 text-amber-800 border border-amber-300',
   };
-  return <span className={styles[roleId] ?? styles[1]}>{roleName}</span>;
+
+  if (held.length === 0) {
+    return <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">user</span>;
+  }
+
+  return (
+    <span className="flex flex-wrap gap-1">
+      {held.map((role) => (
+        <span key={role} className={`text-xs px-2 py-0.5 rounded-full ${styles[role] ?? styles.guide_author}`}>
+          {role}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function isSuspended(until: string | null): boolean {
@@ -129,22 +154,28 @@ export default function AdminUsersPage() {
     fetchUsers(0, search, true, role, status, after, before);
   }
 
-  async function handleRoleChange(accountId: number, roleId: number) {
+  async function handleRoleToggle(user: AdminUser, roleName: string, roleId: number, checked: boolean) {
     setActionError(null);
+
+    // Send the full desired role set — the endpoint replaces rather than patches
+    const held = parseRoles(user.roles);
+    const nextNames = checked ? [...held, roleName] : held.filter((r) => r !== roleName);
+    const roleIds = ASSIGNABLE_ROLES.filter((r) => nextNames.includes(r.name)).map((r) => r.id);
+
     try {
-      const res = await fetch(`/api/admin/users/${accountId}/role`, {
+      const res = await fetch(`/api/admin/users/${user.account_id}/roles`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_id: roleId }),
+        body: JSON.stringify({ role_ids: roleIds }),
       });
       if (!res.ok) {
         const data = await res.json();
-        setActionError(data.error ?? 'Failed to change role.');
+        setActionError(data.error ?? 'Failed to change roles.');
         return;
       }
       refresh();
     } catch {
-      setActionError('Failed to change role.');
+      setActionError('Failed to change roles.');
     }
   }
 
@@ -351,9 +382,11 @@ export default function AdminUsersPage() {
           className="border border-amber-300 rounded px-2 py-1.5 text-sm bg-white text-amber-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
           <option value="">All roles</option>
-          <option value="1">User</option>
-          <option value="2">Admin</option>
-          <option value="3">Moderator</option>
+          {ASSIGNABLE_ROLES.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.label}
+            </option>
+          ))}
         </select>
         <select
           value={filterStatus}
@@ -419,25 +452,29 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {users.map((user) => (
-              <>
-                <tr key={user.account_id} className="border-b border-amber-100 last:border-0">
+              <Fragment key={user.account_id}>
+                <tr className="border-b border-amber-100 last:border-0">
                   <td className="px-4 py-2 text-amber-900 font-medium">
                     {user.username}
                     {user.deleted && <span className="ml-2 text-xs text-amber-500 italic">(deleted)</span>}
                   </td>
                   <td className="px-4 py-2">
                     {isAdmin && !user.deleted ? (
-                      <select
-                        value={user.user_role_id}
-                        onChange={(e) => handleRoleChange(user.account_id, parseInt(e.target.value))}
-                        className="text-sm border border-amber-300 rounded px-2 py-1 bg-white text-amber-800"
-                      >
-                        <option value={1}>User</option>
-                        <option value={2}>Admin</option>
-                        <option value={3}>Moderator</option>
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        {ASSIGNABLE_ROLES.map((role) => (
+                          <label key={role.id} className="flex items-center gap-1.5 text-xs text-amber-800">
+                            <input
+                              type="checkbox"
+                              checked={parseRoles(user.roles).includes(role.name)}
+                              onChange={(e) => handleRoleToggle(user, role.name, role.id, e.target.checked)}
+                              className="accent-amber-800"
+                            />
+                            {role.label}
+                          </label>
+                        ))}
+                      </div>
                     ) : (
-                      <RoleBadge roleId={user.user_role_id} roleName={user.role_name} />
+                      <RoleBadges roles={user.roles} />
                     )}
                   </td>
                   <td className="px-4 py-2 flex flex-wrap gap-1">
@@ -705,7 +742,7 @@ export default function AdminUsersPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

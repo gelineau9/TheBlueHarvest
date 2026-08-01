@@ -3,7 +3,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, query as queryValidator, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
-import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, requireAnyRole, hasRole, AuthRequest } from '../middleware/auth.js';
 import { writeAuditLog } from '../utils/auditLog.js';
 import { logger } from '../utils/logger.js';
 
@@ -17,8 +17,8 @@ const UserRowSchema = z.object({
   account_id: z.number(),
   username: z.string(),
   email: z.string(),
-  role_name: z.string(),
-  user_role_id: z.number(),
+  /** Comma-joined role names; empty string for an ordinary user */
+  roles: z.string(),
   is_banned: z.boolean(),
   banned_reason: z.string().nullable(),
   suspended_until: z.string().nullable(),
@@ -41,7 +41,23 @@ const AuditLogRowSchema = z.object({
 const PostExistsSchema = z.object({ post_id: z.number() });
 const ProfileExistsSchema = z.object({ profile_id: z.number() });
 const CommentExistsSchema = z.object({ comment_id: z.number() });
-const AccountRoleSchema = z.object({ user_role_id: z.number() });
+const AccountRolesSchema = z.object({ roles: z.string().nullable() });
+
+/** Role names held by an account. Empty array = ordinary user. */
+async function getAccountRoles(db: Awaited<ReturnType<typeof getPool>>, accountId: number): Promise<string[] | null> {
+  const row = await db.maybeOne(
+    sql.type(AccountRolesSchema)`
+      SELECT string_agg(ur.role_name, ',') AS roles
+      FROM accounts a
+      LEFT JOIN account_roles ar ON ar.account_id = a.account_id
+      LEFT JOIN user_roles    ur ON ur.role_id    = ar.role_id
+      WHERE a.account_id = ${accountId} AND a.deleted = false
+      GROUP BY a.account_id
+    `,
+  );
+  if (!row) return null;
+  return row.roles ? row.roles.split(',') : [];
+}
 
 const DeletedPostRowSchema = z.object({
   post_id: z.number(),
@@ -101,12 +117,12 @@ const FeaturedPostRowSchema = z.object({
 router.get(
   '/users',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     queryValidator('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     queryValidator('offset').optional().isInt({ min: 0 }).toInt(),
     queryValidator('search').optional().isString().trim(),
-    queryValidator('role').optional().isInt({ min: 1, max: 3 }).toInt(),
+    queryValidator('role').optional().isInt({ min: 1 }).toInt(),
     queryValidator('status').optional().isIn(['active', 'banned', 'suspended', 'deleted']),
     queryValidator('joined_after').optional().isISO8601(),
     queryValidator('joined_before').optional().isISO8601(),
@@ -131,7 +147,11 @@ router.get(
 
       const searchFilter = search ? sql.fragment`AND a.username ILIKE ${'%' + search + '%'}` : sql.fragment``;
 
-      const roleFilter = role !== undefined ? sql.fragment`AND a.user_role_id = ${role}` : sql.fragment``;
+      // role filter: match accounts holding the given role id
+      const roleFilter =
+        role !== undefined
+          ? sql.fragment`AND EXISTS (SELECT 1 FROM account_roles ar2 WHERE ar2.account_id = a.account_id AND ar2.role_id = ${role})`
+          : sql.fragment``;
 
       const statusFilter =
         status === 'banned'
@@ -161,14 +181,18 @@ router.get(
             a.account_id,
             a.username,
             a.email,
-            ur.role_name,
-            a.user_role_id,
+            COALESCE(
+              (SELECT string_agg(ur.role_name, ',' ORDER BY ur.role_id)
+               FROM account_roles ar
+               JOIN user_roles ur ON ur.role_id = ar.role_id
+               WHERE ar.account_id = a.account_id),
+              ''
+            ) AS roles,
             a.is_banned,
             a.banned_reason,
             a.suspended_until::text,
             a.created_at::text
           FROM accounts a
-          JOIN user_roles ur ON a.user_role_id = ur.role_id
           WHERE 1=1
           ${deletedBaseFilter}
           ${searchFilter}
@@ -206,61 +230,76 @@ router.get(
 // ─────────────────────────────────────────────────────────
 // GET /api/admin/users/:id/content
 // ─────────────────────────────────────────────────────────
-router.get('/users/:id/content', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const targetId = parseInt(String(req.params.id));
-  if (isNaN(targetId)) {
-    res.status(400).json({ error: 'Invalid user ID' });
-    return;
-  }
+router.get(
+  '/users/:id/content',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const targetId = parseInt(String(req.params.id));
+    if (isNaN(targetId)) {
+      res.status(400).json({ error: 'Invalid user ID' });
+      return;
+    }
 
-  try {
-    const db = await getPool();
+    try {
+      const db = await getPool();
 
-    const [posts, profiles, comments] = await Promise.all([
-      db.any(
-        sql.type(UserContentPostSchema)`
+      const [posts, profiles, comments] = await Promise.all([
+        db.any(
+          sql.type(UserContentPostSchema)`
           SELECT post_id, title, post_type_id, is_published, deleted, created_at::text
           FROM posts
           WHERE account_id = ${targetId}
           ORDER BY created_at DESC
           LIMIT 50
         `,
-      ),
-      db.any(
-        sql.type(UserContentProfileSchema)`
+        ),
+        db.any(
+          sql.type(UserContentProfileSchema)`
           SELECT profile_id, name, profile_type_id, is_published, deleted, created_at::text
           FROM profiles
           WHERE account_id = ${targetId}
           ORDER BY created_at DESC
           LIMIT 50
         `,
-      ),
-      db.any(
-        sql.type(UserContentCommentSchema)`
+        ),
+        db.any(
+          sql.type(UserContentCommentSchema)`
           SELECT comment_id, post_id, content, is_deleted, created_at::text
           FROM comments
           WHERE account_id = ${targetId}
           ORDER BY created_at DESC
           LIMIT 50
         `,
-      ),
-    ]);
+        ),
+      ]);
 
-    res.json({ posts, profiles, comments });
-  } catch (err) {
-    logger.error('Error fetching user content:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      res.json({ posts, profiles, comments });
+    } catch (err) {
+      logger.error('Error fetching user content:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 // ─────────────────────────────────────────────────────────
-// PUT /api/admin/users/:id/role
+// PUT /api/admin/users/:id/roles
+//
+// Replaces the account's entire role set. An empty array means an
+// ordinary user — baseline permissions are implied by holding no roles.
 // ─────────────────────────────────────────────────────────
+
+/** Roles nobody may grant or revoke on their own account (self-lockout / self-escalation guard) */
+const PRIVILEGED_ROLES = ['admin', 'moderator'];
+
 router.put(
-  '/users/:id/role',
+  '/users/:id/roles',
   authenticateToken,
-  requireRole(2),
-  [body('role_id').isInt({ min: 1, max: 3 }).withMessage('role_id must be 1, 2, or 3')],
+  requireAnyRole('admin'),
+  [
+    body('role_ids').isArray().withMessage('role_ids must be an array'),
+    body('role_ids.*').isInt({ min: 1 }).withMessage('each role id must be a positive integer'),
+  ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -274,44 +313,84 @@ router.put(
       return;
     }
 
-    if (req.userId === targetId) {
-      res.status(400).json({ error: 'Cannot change your own role' });
-      return;
-    }
-
-    const { role_id: roleId } = req.body as { role_id: number };
+    const { role_ids: roleIds } = req.body as { role_ids: number[] };
 
     try {
       const db = await getPool();
 
-      const target = await db.maybeOne(
-        sql.type(AccountRoleSchema)`
-          SELECT user_role_id FROM accounts WHERE account_id = ${targetId} AND deleted = false
-        `,
-      );
-
-      if (!target) {
+      const currentRoles = await getAccountRoles(db, targetId);
+      if (currentRoles === null) {
         res.status(404).json({ error: 'User not found' });
         return;
       }
 
-      await db.query(
-        sql.type(z.object({}))`
-          UPDATE accounts SET user_role_id = ${roleId} WHERE account_id = ${targetId}
+      // Resolve the requested ids to names so the guards below read clearly
+      const requested = await db.any(
+        sql.type(z.object({ role_id: z.number(), role_name: z.string() }))`
+          SELECT role_id, role_name FROM user_roles
+          WHERE role_id = ANY(${sql.array(roleIds, 'int4')})
         `,
       );
 
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'change_role',
-        targetType: 'account',
-        targetId,
-        metadata: { new_role_id: roleId },
+      if (requested.length !== new Set(roleIds).size) {
+        res.status(400).json({ error: 'One or more role ids do not exist' });
+        return;
+      }
+
+      const requestedNames = requested.map((r) => r.role_name);
+
+      // Self-modification: harmless roles may be self-granted, but changing your
+      // own admin/moderator status is blocked to prevent self-lockout.
+      if (req.userId === targetId) {
+        const changedPrivileged = PRIVILEGED_ROLES.filter(
+          (role) => currentRoles.includes(role) !== requestedNames.includes(role),
+        );
+        if (changedPrivileged.length > 0) {
+          res.status(400).json({ error: 'Cannot change your own admin or moderator role' });
+          return;
+        }
+      }
+
+      // Never allow removing the last admin
+      if (currentRoles.includes('admin') && !requestedNames.includes('admin')) {
+        const { count } = await db.one(
+          sql.type(CountSchema)`
+            SELECT COUNT(*)::int AS count
+            FROM account_roles ar
+            JOIN user_roles ur ON ur.role_id = ar.role_id
+            JOIN accounts a ON a.account_id = ar.account_id
+            WHERE ur.role_name = 'admin' AND a.deleted = false
+          `,
+        );
+        if (count <= 1) {
+          res.status(400).json({ error: 'Cannot remove the last remaining admin' });
+          return;
+        }
+      }
+
+      await db.transaction(async (tx) => {
+        await tx.query(sql.unsafe`DELETE FROM account_roles WHERE account_id = ${targetId}`);
+        for (const roleId of new Set(roleIds)) {
+          // ON CONFLICT keeps concurrent submissions (double-click, retry) idempotent
+          await tx.query(sql.unsafe`
+            INSERT INTO account_roles (account_id, role_id, granted_by)
+            VALUES (${targetId}, ${roleId}, ${req.userId!})
+            ON CONFLICT (account_id, role_id) DO NOTHING
+          `);
+        }
       });
 
-      res.json({ success: true });
+      await writeAuditLog({
+        actorAccountId: req.userId!,
+        actionType: 'change_roles',
+        targetType: 'account',
+        targetId,
+        metadata: { previous_roles: currentRoles, new_roles: requestedNames },
+      });
+
+      res.json({ success: true, roles: requestedNames });
     } catch (err) {
-      logger.error('Error changing user role:', err);
+      logger.error('Error changing user roles:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -323,7 +402,7 @@ router.put(
 router.put(
   '/users/:id/ban',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     body('is_banned').isBoolean().withMessage('is_banned must be a boolean'),
     body('banned_reason').optional().isString(),
@@ -354,18 +433,14 @@ router.put(
     try {
       const db = await getPool();
 
-      const target = await db.maybeOne(
-        sql.type(AccountRoleSchema)`
-          SELECT user_role_id FROM accounts WHERE account_id = ${targetId} AND deleted = false
-        `,
-      );
+      const targetRoles = await getAccountRoles(db, targetId);
 
-      if (!target) {
+      if (targetRoles === null) {
         res.status(404).json({ error: 'User not found' });
         return;
       }
 
-      if (target.user_role_id === 2 && req.userRoleId === 3) {
+      if (targetRoles.includes('admin') && !hasRole(req, 'admin')) {
         res.status(403).json({ error: 'Moderators cannot ban admins' });
         return;
       }
@@ -423,7 +498,7 @@ router.put(
 router.put(
   '/users/:id/suspend',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     body('suspended_until')
       .optional({ nullable: true })
@@ -454,18 +529,14 @@ router.put(
     try {
       const db = await getPool();
 
-      const target = await db.maybeOne(
-        sql.type(AccountRoleSchema)`
-          SELECT user_role_id FROM accounts WHERE account_id = ${targetId} AND deleted = false
-        `,
-      );
+      const targetRoles = await getAccountRoles(db, targetId);
 
-      if (!target) {
+      if (targetRoles === null) {
         res.status(404).json({ error: 'User not found' });
         return;
       }
 
-      if (target.user_role_id === 2 && req.userRoleId === 3) {
+      if (targetRoles.includes('admin') && !hasRole(req, 'admin')) {
         res.status(403).json({ error: 'Moderators cannot suspend admins' });
         return;
       }
@@ -497,7 +568,7 @@ router.put(
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/users/:id  (soft-delete account)
 // ─────────────────────────────────────────────────────────
-router.delete('/users/:id', authenticateToken, requireRole(2), async (req: AuthRequest, res: Response) => {
+router.delete('/users/:id', authenticateToken, requireAnyRole('admin'), async (req: AuthRequest, res: Response) => {
   const targetId = parseInt(String(req.params.id));
   if (isNaN(targetId)) {
     res.status(400).json({ error: 'Invalid user ID' });
@@ -512,13 +583,9 @@ router.delete('/users/:id', authenticateToken, requireRole(2), async (req: AuthR
   try {
     const db = await getPool();
 
-    const target = await db.maybeOne(
-      sql.type(AccountRoleSchema)`
-        SELECT user_role_id FROM accounts WHERE account_id = ${targetId} AND deleted = false
-      `,
-    );
+    const targetRoles = await getAccountRoles(db, targetId);
 
-    if (!target) {
+    if (targetRoles === null) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
@@ -561,55 +628,60 @@ router.delete('/users/:id', authenticateToken, requireRole(2), async (req: AuthR
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/posts/:id
 // ─────────────────────────────────────────────────────────
-router.delete('/posts/:id', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const postId = parseInt(String(req.params.id));
-  if (isNaN(postId)) {
-    res.status(400).json({ error: 'Invalid post ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const post = await db.maybeOne(
-      sql.type(PostExistsSchema)`
-        SELECT post_id FROM posts WHERE post_id = ${postId}
-      `,
-    );
-
-    if (!post) {
-      res.status(404).json({ error: 'Post not found' });
+router.delete(
+  '/posts/:id',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const postId = parseInt(String(req.params.id));
+    if (isNaN(postId)) {
+      res.status(400).json({ error: 'Invalid post ID' });
       return;
     }
 
-    const isAdmin = req.userRoleId === 2;
+    try {
+      const db = await getPool();
 
-    if (isAdmin) {
-      await db.query(sql.type(z.object({}))`DELETE FROM posts WHERE post_id = ${postId}`);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'hard_delete_post',
-        targetType: 'post',
-        targetId: postId,
-      });
-      res.json({ success: true, action: 'hard_deleted' });
-    } else {
-      await db.query(sql.type(z.object({}))`
+      const post = await db.maybeOne(
+        sql.type(PostExistsSchema)`
+        SELECT post_id FROM posts WHERE post_id = ${postId}
+      `,
+      );
+
+      if (!post) {
+        res.status(404).json({ error: 'Post not found' });
+        return;
+      }
+
+      const isAdmin = hasRole(req, 'admin');
+
+      if (isAdmin) {
+        await db.query(sql.type(z.object({}))`DELETE FROM posts WHERE post_id = ${postId}`);
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'hard_delete_post',
+          targetType: 'post',
+          targetId: postId,
+        });
+        res.json({ success: true, action: 'hard_deleted' });
+      } else {
+        await db.query(sql.type(z.object({}))`
         UPDATE posts SET is_published = false, deleted = true WHERE post_id = ${postId}
       `);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'soft_delete_post',
-        targetType: 'post',
-        targetId: postId,
-      });
-      res.json({ success: true, action: 'soft_deleted' });
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'soft_delete_post',
+          targetType: 'post',
+          targetId: postId,
+        });
+        res.json({ success: true, action: 'soft_deleted' });
+      }
+    } catch (err) {
+      logger.error('Error deleting post:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
-  } catch (err) {
-    logger.error('Error deleting post:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/posts/bulk
@@ -617,7 +689,7 @@ router.delete('/posts/:id', authenticateToken, requireRole(2, 3), async (req: Au
 router.delete(
   '/posts/bulk',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [body('ids').isArray({ min: 1, max: 100 }).withMessage('ids must be a non-empty array of up to 100')],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -632,7 +704,7 @@ router.delete(
       return;
     }
 
-    const isAdmin = req.userRoleId === 2;
+    const isAdmin = hasRole(req, 'admin');
 
     try {
       const db = await getPool();
@@ -666,97 +738,107 @@ router.delete(
 // ─────────────────────────────────────────────────────────
 // POST /api/admin/posts/:id/restore
 // ─────────────────────────────────────────────────────────
-router.post('/posts/:id/restore', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const postId = parseInt(String(req.params.id));
-  if (isNaN(postId)) {
-    res.status(400).json({ error: 'Invalid post ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const post = await db.maybeOne(
-      sql.type(PostExistsSchema)`
-        SELECT post_id FROM posts WHERE post_id = ${postId} AND deleted = true
-      `,
-    );
-
-    if (!post) {
-      res.status(404).json({ error: 'Deleted post not found' });
+router.post(
+  '/posts/:id/restore',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const postId = parseInt(String(req.params.id));
+    if (isNaN(postId)) {
+      res.status(400).json({ error: 'Invalid post ID' });
       return;
     }
 
-    await db.query(sql.type(z.object({}))`
+    try {
+      const db = await getPool();
+
+      const post = await db.maybeOne(
+        sql.type(PostExistsSchema)`
+        SELECT post_id FROM posts WHERE post_id = ${postId} AND deleted = true
+      `,
+      );
+
+      if (!post) {
+        res.status(404).json({ error: 'Deleted post not found' });
+        return;
+      }
+
+      await db.query(sql.type(z.object({}))`
       UPDATE posts SET deleted = false, is_published = true WHERE post_id = ${postId}
     `);
 
-    await writeAuditLog({
-      actorAccountId: req.userId!,
-      actionType: 'restore_post',
-      targetType: 'post',
-      targetId: postId,
-    });
+      await writeAuditLog({
+        actorAccountId: req.userId!,
+        actionType: 'restore_post',
+        targetType: 'post',
+        targetId: postId,
+      });
 
-    res.json({ success: true });
-  } catch (err) {
-    logger.error('Error restoring post:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      res.json({ success: true });
+    } catch (err) {
+      logger.error('Error restoring post:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/profiles/:id
 // ─────────────────────────────────────────────────────────
-router.delete('/profiles/:id', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const profileId = parseInt(String(req.params.id));
-  if (isNaN(profileId)) {
-    res.status(400).json({ error: 'Invalid profile ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const profile = await db.maybeOne(
-      sql.type(ProfileExistsSchema)`
-        SELECT profile_id FROM profiles WHERE profile_id = ${profileId}
-      `,
-    );
-
-    if (!profile) {
-      res.status(404).json({ error: 'Profile not found' });
+router.delete(
+  '/profiles/:id',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const profileId = parseInt(String(req.params.id));
+    if (isNaN(profileId)) {
+      res.status(400).json({ error: 'Invalid profile ID' });
       return;
     }
 
-    const isAdmin = req.userRoleId === 2;
+    try {
+      const db = await getPool();
 
-    if (isAdmin) {
-      await db.query(sql.type(z.object({}))`DELETE FROM profiles WHERE profile_id = ${profileId}`);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'hard_delete_profile',
-        targetType: 'profile',
-        targetId: profileId,
-      });
-      res.json({ success: true, action: 'hard_deleted' });
-    } else {
-      await db.query(sql.type(z.object({}))`
+      const profile = await db.maybeOne(
+        sql.type(ProfileExistsSchema)`
+        SELECT profile_id FROM profiles WHERE profile_id = ${profileId}
+      `,
+      );
+
+      if (!profile) {
+        res.status(404).json({ error: 'Profile not found' });
+        return;
+      }
+
+      const isAdmin = hasRole(req, 'admin');
+
+      if (isAdmin) {
+        await db.query(sql.type(z.object({}))`DELETE FROM profiles WHERE profile_id = ${profileId}`);
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'hard_delete_profile',
+          targetType: 'profile',
+          targetId: profileId,
+        });
+        res.json({ success: true, action: 'hard_deleted' });
+      } else {
+        await db.query(sql.type(z.object({}))`
         UPDATE profiles SET deleted = true, is_published = false WHERE profile_id = ${profileId}
       `);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'soft_delete_profile',
-        targetType: 'profile',
-        targetId: profileId,
-      });
-      res.json({ success: true, action: 'soft_deleted' });
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'soft_delete_profile',
+          targetType: 'profile',
+          targetId: profileId,
+        });
+        res.json({ success: true, action: 'soft_deleted' });
+      }
+    } catch (err) {
+      logger.error('Error deleting profile:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
-  } catch (err) {
-    logger.error('Error deleting profile:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/profiles/bulk
@@ -764,7 +846,7 @@ router.delete('/profiles/:id', authenticateToken, requireRole(2, 3), async (req:
 router.delete(
   '/profiles/bulk',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [body('ids').isArray({ min: 1, max: 100 }).withMessage('ids must be a non-empty array of up to 100')],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
@@ -779,7 +861,7 @@ router.delete(
       return;
     }
 
-    const isAdmin = req.userRoleId === 2;
+    const isAdmin = hasRole(req, 'admin');
 
     try {
       const db = await getPool();
@@ -813,98 +895,108 @@ router.delete(
 // ─────────────────────────────────────────────────────────
 // POST /api/admin/profiles/:id/restore
 // ─────────────────────────────────────────────────────────
-router.post('/profiles/:id/restore', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const profileId = parseInt(String(req.params.id));
-  if (isNaN(profileId)) {
-    res.status(400).json({ error: 'Invalid profile ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const profile = await db.maybeOne(
-      sql.type(ProfileExistsSchema)`
-        SELECT profile_id FROM profiles WHERE profile_id = ${profileId} AND deleted = true
-      `,
-    );
-
-    if (!profile) {
-      res.status(404).json({ error: 'Deleted profile not found' });
+router.post(
+  '/profiles/:id/restore',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const profileId = parseInt(String(req.params.id));
+    if (isNaN(profileId)) {
+      res.status(400).json({ error: 'Invalid profile ID' });
       return;
     }
 
-    await db.query(sql.type(z.object({}))`
+    try {
+      const db = await getPool();
+
+      const profile = await db.maybeOne(
+        sql.type(ProfileExistsSchema)`
+        SELECT profile_id FROM profiles WHERE profile_id = ${profileId} AND deleted = true
+      `,
+      );
+
+      if (!profile) {
+        res.status(404).json({ error: 'Deleted profile not found' });
+        return;
+      }
+
+      await db.query(sql.type(z.object({}))`
       UPDATE profiles SET deleted = false, is_published = true WHERE profile_id = ${profileId}
     `);
 
-    await writeAuditLog({
-      actorAccountId: req.userId!,
-      actionType: 'restore_profile',
-      targetType: 'profile',
-      targetId: profileId,
-    });
+      await writeAuditLog({
+        actorAccountId: req.userId!,
+        actionType: 'restore_profile',
+        targetType: 'profile',
+        targetId: profileId,
+      });
 
-    res.json({ success: true });
-  } catch (err) {
-    logger.error('Error restoring profile:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      res.json({ success: true });
+    } catch (err) {
+      logger.error('Error restoring profile:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // DELETE /api/admin/comments/:id
 // ─────────────────────────────────────────────────────────
-router.delete('/comments/:id', authenticateToken, requireRole(2, 3), async (req: AuthRequest, res: Response) => {
-  const commentId = parseInt(String(req.params.id));
-  if (isNaN(commentId)) {
-    res.status(400).json({ error: 'Invalid comment ID' });
-    return;
-  }
-
-  try {
-    const db = await getPool();
-
-    const comment = await db.maybeOne(
-      sql.type(CommentExistsSchema)`
-        SELECT comment_id FROM comments WHERE comment_id = ${commentId} AND is_deleted = false
-      `,
-    );
-
-    if (!comment) {
-      res.status(404).json({ error: 'Comment not found' });
+router.delete(
+  '/comments/:id',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (req: AuthRequest, res: Response) => {
+    const commentId = parseInt(String(req.params.id));
+    if (isNaN(commentId)) {
+      res.status(400).json({ error: 'Invalid comment ID' });
       return;
     }
 
-    // Admins hard-delete; mods soft-delete
-    const isAdmin = req.userRoleId === 2;
+    try {
+      const db = await getPool();
 
-    if (isAdmin) {
-      await db.query(sql.type(z.object({}))`DELETE FROM comments WHERE comment_id = ${commentId}`);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'hard_delete_comment',
-        targetType: 'comment',
-        targetId: commentId,
-      });
-      res.json({ success: true, action: 'hard_deleted' });
-    } else {
-      await db.query(sql.type(z.object({}))`
+      const comment = await db.maybeOne(
+        sql.type(CommentExistsSchema)`
+        SELECT comment_id FROM comments WHERE comment_id = ${commentId} AND is_deleted = false
+      `,
+      );
+
+      if (!comment) {
+        res.status(404).json({ error: 'Comment not found' });
+        return;
+      }
+
+      // Admins hard-delete; mods soft-delete
+      const isAdmin = hasRole(req, 'admin');
+
+      if (isAdmin) {
+        await db.query(sql.type(z.object({}))`DELETE FROM comments WHERE comment_id = ${commentId}`);
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'hard_delete_comment',
+          targetType: 'comment',
+          targetId: commentId,
+        });
+        res.json({ success: true, action: 'hard_deleted' });
+      } else {
+        await db.query(sql.type(z.object({}))`
         UPDATE comments SET is_deleted = true WHERE comment_id = ${commentId}
       `);
-      await writeAuditLog({
-        actorAccountId: req.userId!,
-        actionType: 'soft_delete_comment',
-        targetType: 'comment',
-        targetId: commentId,
-      });
-      res.json({ success: true, action: 'soft_deleted' });
+        await writeAuditLog({
+          actorAccountId: req.userId!,
+          actionType: 'soft_delete_comment',
+          targetType: 'comment',
+          targetId: commentId,
+        });
+        res.json({ success: true, action: 'soft_deleted' });
+      }
+    } catch (err) {
+      logger.error('Error deleting comment:', err);
+      res.status(500).json({ error: 'Internal server error' });
     }
-  } catch (err) {
-    logger.error('Error deleting comment:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // GET /api/admin/deleted/posts
@@ -912,7 +1004,7 @@ router.delete('/comments/:id', authenticateToken, requireRole(2, 3), async (req:
 router.get(
   '/deleted/posts',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     queryValidator('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     queryValidator('offset').optional().isInt({ min: 0 }).toInt(),
@@ -959,7 +1051,7 @@ router.get(
 router.get(
   '/deleted/profiles',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     queryValidator('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     queryValidator('offset').optional().isInt({ min: 0 }).toInt(),
@@ -1003,25 +1095,30 @@ router.get(
 // ─────────────────────────────────────────────────────────
 // GET /api/admin/featured-posts
 // ─────────────────────────────────────────────────────────
-router.get('/featured-posts', authenticateToken, requireRole(2, 3), async (_req: AuthRequest, res: Response) => {
-  try {
-    const db = await getPool();
+router.get(
+  '/featured-posts',
+  authenticateToken,
+  requireAnyRole('admin', 'moderator'),
+  async (_req: AuthRequest, res: Response) => {
+    try {
+      const db = await getPool();
 
-    const rows = await db.any(
-      sql.type(FeaturedPostRowSchema)`
+      const rows = await db.any(
+        sql.type(FeaturedPostRowSchema)`
         SELECT fp.featured_post_id, fp.post_id, p.title, fp.display_order, fp.created_at::text
         FROM featured_posts fp
         JOIN posts p ON fp.post_id = p.post_id
         ORDER BY fp.display_order ASC, fp.created_at ASC
       `,
-    );
+      );
 
-    res.json({ featured: rows });
-  } catch (err) {
-    logger.error('Error fetching featured posts:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      res.json({ featured: rows });
+    } catch (err) {
+      logger.error('Error fetching featured posts:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 // ─────────────────────────────────────────────────────────
 // POST /api/admin/featured-posts
@@ -1029,7 +1126,7 @@ router.get('/featured-posts', authenticateToken, requireRole(2, 3), async (_req:
 router.post(
   '/featured-posts',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     body('post_id').isInt({ min: 1 }).withMessage('post_id must be a positive integer'),
     body('display_order').optional().isInt({ min: 0 }).withMessage('display_order must be a non-negative integer'),
@@ -1092,7 +1189,7 @@ router.post(
 router.delete(
   '/featured-posts/:postId',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   async (req: AuthRequest, res: Response) => {
     const postId = parseInt(String(req.params.postId));
     if (isNaN(postId)) {
@@ -1140,7 +1237,7 @@ router.delete(
 router.get(
   '/audit-log',
   authenticateToken,
-  requireRole(2, 3),
+  requireAnyRole('admin', 'moderator'),
   [
     queryValidator('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     queryValidator('offset').optional().isInt({ min: 0 }).toInt(),
@@ -1160,7 +1257,9 @@ router.get(
     const targetType = req.query.target_type as string | undefined;
 
     // Moderators only see their own entries
-    const actorFilter = req.userRoleId === 3 ? sql.fragment`AND al.actor_account_id = ${req.userId!}` : sql.fragment``;
+    const actorFilter = !hasRole(req, 'admin')
+      ? sql.fragment`AND al.actor_account_id = ${req.userId!}`
+      : sql.fragment``;
 
     const actionTypeFilter = actionType ? sql.fragment`AND al.action_type = ${actionType}` : sql.fragment``;
 

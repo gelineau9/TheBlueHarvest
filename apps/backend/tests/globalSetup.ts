@@ -205,6 +205,57 @@ export async function setup(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower_idx ON accounts (LOWER(email));
   `);
 
+  // Migration 0013: stacked roles (account_roles junction + guide_author role)
+  await client.query(`
+    INSERT INTO user_roles (role_name, role_description)
+    SELECT 'guide_author', 'May write and publish guides'
+    WHERE NOT EXISTS (SELECT 1 FROM user_roles WHERE role_name = 'guide_author');
+
+    CREATE TABLE IF NOT EXISTS account_roles (
+      account_id  INT REFERENCES accounts(account_id) ON DELETE CASCADE,
+      role_id     INT REFERENCES user_roles(role_id)  ON DELETE CASCADE,
+      granted_by  INT REFERENCES accounts(account_id) ON DELETE SET NULL,
+      granted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (account_id, role_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_account_roles_account ON account_roles (account_id);
+  `);
+
+  // Migration 0014: resources + resource_types
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS resource_types (
+      type_id          SERIAL PRIMARY KEY,
+      type_name        VARCHAR(50) NOT NULL UNIQUE,
+      type_description TEXT,
+      required_role_id INT REFERENCES user_roles(role_id)
+    );
+
+    INSERT INTO resource_types (type_name, type_description, required_role_id)
+    SELECT 'guide', 'Official site guides and how-tos', (SELECT role_id FROM user_roles WHERE role_name = 'guide_author')
+    WHERE NOT EXISTS (SELECT 1 FROM resource_types WHERE type_name = 'guide');
+
+    CREATE TABLE IF NOT EXISTS resources (
+      resource_id      SERIAL PRIMARY KEY,
+      resource_type_id INT REFERENCES resource_types(type_id) NOT NULL,
+      slug             VARCHAR(120) NOT NULL,
+      title            VARCHAR(200) NOT NULL,
+      summary          TEXT,
+      content          JSONB,
+      display_order    INT NOT NULL DEFAULT 0,
+      is_published     BOOLEAN NOT NULL DEFAULT false,
+      created_by       INT REFERENCES accounts(account_id) ON DELETE SET NULL,
+      updated_by       INT REFERENCES accounts(account_id) ON DELETE SET NULL,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deleted          BOOLEAN NOT NULL DEFAULT FALSE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_slug ON resources (slug) WHERE deleted = false;
+    CREATE INDEX IF NOT EXISTS idx_resources_type_published
+      ON resources (resource_type_id, is_published, display_order) WHERE deleted = false;
+  `);
+
   await client.end();
   console.log('[globalSetup] Test database schema applied.');
 }

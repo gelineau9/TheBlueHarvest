@@ -20,7 +20,7 @@ import { sql } from 'slonik';
 import { z } from 'zod';
 import { body, validationResult } from 'express-validator';
 import { getPool } from '../config/database.js';
-import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, hasRole, AuthRequest } from '../middleware/auth.js';
 import { canEditPost } from './editors.js';
 import { getAuthorableProfile } from '../utils/postValidation.js';
 import { writeAuditLog } from '../utils/auditLog.js';
@@ -701,7 +701,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
   try {
     const db = await getPool();
-    const isAdmin = req.userRoleId !== undefined && req.userRoleId <= 2;
+    const isAdmin = hasRole(req, 'admin');
 
     // Owner or admin can delete
     const result = await db.maybeOne(
