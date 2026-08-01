@@ -57,11 +57,12 @@ router.post(
       const hashedPassword = await argon2.hash(password);
 
       // Create user
+      // New accounts hold no roles — baseline permissions are implied (see migration 0013)
       const result = await pool.one(
-        sql.type(z.object({ account_id: z.number(), user_role_id: z.number() }))`
-          INSERT INTO accounts (email, username, hashed_password, user_role_id)
-          VALUES (${email}, ${username}, ${hashedPassword}, 1)
-          RETURNING account_id, user_role_id
+        sql.type(z.object({ account_id: z.number() }))`
+          INSERT INTO accounts (email, username, hashed_password)
+          VALUES (${email}, ${username}, ${hashedPassword})
+          RETURNING account_id
         `,
       );
 
@@ -154,25 +155,10 @@ router.get('/verify-email', async (req: Request, res: Response) => {
       `);
     });
 
-    // Fetch the account to mint a JWT
-    const account = await pool.one(
-      sql.type(
-        z.object({
-          account_id: z.number(),
-          user_role_id: z.number(),
-        }),
-      )`
-        SELECT account_id, user_role_id
-        FROM accounts
-        WHERE account_id = ${tokenRow.account_id}
-      `,
-    );
-
-    const jwtToken = jwt.sign(
-      { userId: account.account_id, roleId: account.user_role_id, jti: crypto.randomUUID() },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' },
-    );
+    // Roles are resolved per-request from account_roles, so the token carries identity only
+    const jwtToken = jwt.sign({ userId: tokenRow.account_id, jti: crypto.randomUUID() }, process.env.JWT_SECRET!, {
+      expiresIn: '7d',
+    });
 
     res.status(200).json({ token: jwtToken, message: 'Email verified successfully.' });
   } catch (err) {
@@ -291,14 +277,13 @@ router.post(
             account_id: z.number(),
             hashed_password: z.string(),
             username: z.string(),
-            user_role_id: z.number(),
             is_banned: z.boolean(),
             banned_reason: z.string().nullable(),
             suspended_until: z.number().nullable(),
             email_verified_at: z.number().nullable(),
           }),
         )`
-          SELECT account_id, hashed_password, username, user_role_id, is_banned, banned_reason, suspended_until, email_verified_at
+          SELECT account_id, hashed_password, username, is_banned, banned_reason, suspended_until, email_verified_at
           FROM accounts
           WHERE email = ${email}
         `,
@@ -342,11 +327,9 @@ router.post(
       }
 
       // Create JWT
-      const token = jwt.sign(
-        { userId: user.account_id, roleId: user.user_role_id, jti: crypto.randomUUID() },
-        process.env.JWT_SECRET!,
-        { expiresIn: '7d' },
-      );
+      const token = jwt.sign({ userId: user.account_id, jti: crypto.randomUUID() }, process.env.JWT_SECRET!, {
+        expiresIn: '7d',
+      });
 
       res.json({
         token,
@@ -374,12 +357,10 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
           username: z.string(),
           email: z.string(),
           details: z.unknown().nullable(),
-          role_name: z.string(),
         }),
       )`
-        SELECT a.account_id, a.username, a.email, a.details, ur.role_name
+        SELECT a.account_id, a.username, a.email, a.details
         FROM accounts a
-        JOIN user_roles ur ON a.user_role_id = ur.role_id
         WHERE a.account_id = ${req.userId!}
       `,
     );
@@ -389,12 +370,13 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
       return;
     }
 
+    // Roles were resolved by authenticateToken; an empty list is an ordinary user
     res.json({
       id: user.account_id,
       username: user.username,
       email: user.email,
       details: user.details,
-      role: user.role_name,
+      roles: req.userRoles ?? [],
     });
   } catch (err) {
     logger.error('[me] Unexpected error', { err });

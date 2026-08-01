@@ -6,44 +6,64 @@ import { getPool } from '../config/database.js';
 
 export interface AuthRequest extends Request {
   userId?: number;
-  userRoleId?: number;
+  /** Role names held by the account, resolved from the database on every request. */
+  userRoles?: string[];
 }
 
 interface DecodedToken {
   userId: number;
-  roleId: number;
   jti?: string;
   iat?: number;
 }
 
 type TokenStatus = 'valid' | 'banned' | 'suspended' | 'revoked';
 
+interface AccountCheck {
+  status: TokenStatus;
+  roles: string[];
+}
+
 // Shared account/token validation used by both middlewares: bans, suspensions,
 // password-reset revocation (tokens_valid_after), and the jti blocklist.
-async function checkAccountToken(decoded: DecodedToken): Promise<TokenStatus> {
+//
+// Roles are resolved here rather than read from the JWT so that granting or
+// revoking a role takes effect on the next request instead of whenever the
+// token happens to expire. An account with no account_roles rows is an
+// ordinary user — baseline permissions are implied, not stored.
+async function checkAccountToken(decoded: DecodedToken): Promise<AccountCheck> {
   const pool = await getPool();
 
-  // Slonik's default type parser returns timestamptz columns as epoch ms numbers
+  // Slonik's default type parser returns timestamptz columns as epoch ms numbers.
+  // Roles come back as a comma-joined string to avoid depending on array parsing.
   const account = await pool.maybeOne(
     sql.type(
       z.object({
         is_banned: z.boolean(),
         suspended_until: z.number().nullable(),
         tokens_valid_after: z.number().nullable(),
+        roles: z.string().nullable(),
       }),
     )`
-      SELECT is_banned, suspended_until, tokens_valid_after
-      FROM accounts
-      WHERE account_id = ${decoded.userId}
+      SELECT a.is_banned,
+             a.suspended_until,
+             a.tokens_valid_after,
+             string_agg(ur.role_name, ',') AS roles
+      FROM accounts a
+      LEFT JOIN account_roles ar ON ar.account_id = a.account_id
+      LEFT JOIN user_roles    ur ON ur.role_id    = ar.role_id
+      WHERE a.account_id = ${decoded.userId}
+      GROUP BY a.account_id, a.is_banned, a.suspended_until, a.tokens_valid_after
     `,
   );
 
-  if (account?.is_banned) return 'banned';
-  if (account?.suspended_until && account.suspended_until > Date.now()) return 'suspended';
+  const roles = account?.roles ? account.roles.split(',') : [];
+
+  if (account?.is_banned) return { status: 'banned', roles };
+  if (account?.suspended_until && account.suspended_until > Date.now()) return { status: 'suspended', roles };
 
   // Tokens issued before a password reset are revoked
   if (account?.tokens_valid_after && decoded.iat !== undefined && decoded.iat * 1000 < account.tokens_valid_after) {
-    return 'revoked';
+    return { status: 'revoked', roles };
   }
 
   // Token blocklist (only for tokens that carry a jti — older tokens without one are allowed through)
@@ -53,23 +73,23 @@ async function checkAccountToken(decoded: DecodedToken): Promise<TokenStatus> {
         SELECT jti FROM revoked_tokens WHERE jti = ${decoded.jti}
       `,
     );
-    if (revoked) return 'revoked';
+    if (revoked) return { status: 'revoked', roles };
   }
 
-  return 'valid';
+  return { status: 'valid', roles };
 }
 
-// Optional auth - sets req.userId and req.userRoleId if a valid, non-revoked
+// Optional auth - sets req.userId and req.userRoles if a valid, non-revoked
 // token from an account in good standing exists; continues anonymously otherwise
 export const optionalAuthenticateToken = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-      const status = await checkAccountToken(decoded);
+      const { status, roles } = await checkAccountToken(decoded);
       if (status === 'valid') {
         req.userId = decoded.userId;
-        req.userRoleId = decoded.roleId;
+        req.userRoles = roles;
       }
     }
   } catch {
@@ -89,9 +109,9 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
     req.userId = decoded.userId;
-    req.userRoleId = decoded.roleId;
 
-    const status = await checkAccountToken(decoded);
+    const { status, roles } = await checkAccountToken(decoded);
+    req.userRoles = roles;
 
     if (status === 'banned') {
       res.status(401).json({ error: 'account_suspended' });
@@ -120,12 +140,14 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   }
 };
 
-// Usage: router.get('/admin/users', authenticateToken, requireRole(2), handler)
-// roleIds: 1=user, 2=admin, 3=moderator
-export const requireRole =
-  (...allowedRoleIds: number[]) =>
+/** True if the request's account holds the named role. */
+export const hasRole = (req: AuthRequest, role: string): boolean => req.userRoles?.includes(role) ?? false;
+
+// Usage: router.get('/admin/users', authenticateToken, requireAnyRole('admin', 'moderator'), handler)
+export const requireAnyRole =
+  (...allowedRoles: string[]) =>
   (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.userRoleId === undefined || !allowedRoleIds.includes(req.userRoleId)) {
+    if (!req.userRoles?.some((role) => allowedRoles.includes(role))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }

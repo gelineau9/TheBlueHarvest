@@ -9,9 +9,11 @@ interface AuthState {
   username?: string;
   avatarUrl?: string;
   email?: string;
-  role?: 'user' | 'admin' | 'moderator';
+  /** Role names held by the account; empty for an ordinary user */
+  roles: string[];
   isAdmin: boolean;
   isModerator: boolean;
+  isGuideAuthor: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -24,19 +26,27 @@ export interface InitialSession {
   username?: string;
   email?: string;
   details?: { avatar?: { url?: string } } | null;
-  role?: string;
+  roles?: string[];
 }
 
-const AuthContext = createContext<AuthContextType>({
+const LOGGED_OUT: AuthState = {
   isLoggedIn: false,
-  isLoading: true,
+  isLoading: false,
+  roles: [],
   isAdmin: false,
   isModerator: false,
+  isGuideAuthor: false,
+};
+
+const AuthContext = createContext<AuthContextType>({
+  ...LOGGED_OUT,
+  isLoading: true,
   refreshAuth: async () => {},
 });
 
 function sessionToAuthState(session: InitialSession): AuthState {
-  const role = session.role as 'user' | 'admin' | 'moderator' | undefined;
+  const roles = session.roles ?? [];
+  const isAdmin = roles.includes('admin');
   return {
     isLoggedIn: session.isLoggedIn,
     isLoading: false,
@@ -44,9 +54,11 @@ function sessionToAuthState(session: InitialSession): AuthState {
     username: session.username,
     avatarUrl: session.details?.avatar?.url,
     email: session.email,
-    role,
-    isAdmin: role === 'admin',
-    isModerator: role === 'moderator' || role === 'admin',
+    roles,
+    isAdmin,
+    // Admins retain every moderator capability
+    isModerator: isAdmin || roles.includes('moderator'),
+    isGuideAuthor: roles.includes('guide_author'),
   };
 }
 
@@ -65,7 +77,7 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
     if (initialSession) {
       return sessionToAuthState(initialSession);
     }
-    return { isLoggedIn: false, isLoading: true, isAdmin: false, isModerator: false };
+    return { ...LOGGED_OUT, isLoading: true };
   });
 
   const checkAuth = useCallback(async () => {
@@ -73,23 +85,12 @@ export function AuthProvider({ children, initialSession }: AuthProviderProps) {
       const response = await fetch('/api/auth/me');
       if (response.ok) {
         const data = await response.json();
-        const role = data.role as 'user' | 'admin' | 'moderator' | undefined;
-        setAuthState({
-          isLoggedIn: true,
-          isLoading: false,
-          accountId: data.id,
-          username: data.username,
-          avatarUrl: data.details?.avatar?.url,
-          email: data.email,
-          role,
-          isAdmin: role === 'admin',
-          isModerator: role === 'moderator' || role === 'admin',
-        });
+        setAuthState(sessionToAuthState({ ...data, isLoggedIn: true }));
       } else {
-        setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
+        setAuthState(LOGGED_OUT);
       }
     } catch {
-      setAuthState({ isLoggedIn: false, isLoading: false, isAdmin: false, isModerator: false });
+      setAuthState(LOGGED_OUT);
     }
   }, []);
 

@@ -257,7 +257,7 @@ export async function getSession() {
       username: data.username,
       email: data.email,
       details: data.details,
-      role: data.role as string | undefined,
+      roles: (data.roles ?? []) as string[],
     };
   } catch {
     return { isLoggedIn: false };

@@ -34,7 +34,7 @@ function targetUrl(type: string | null, id: number | null): string | null {
 const ACTION_TYPE_OPTIONS = [
   'ban_user',
   'unban_user',
-  'change_role',
+  'change_roles',
   'delete_post',
   'delete_profile',
   'delete_comment',
@@ -47,9 +47,12 @@ const ACTION_TYPE_OPTIONS = [
   'delete_account',
   'bulk_delete_posts',
   'bulk_delete_profiles',
+  'resource_created',
+  'resource_updated',
+  'resource_deleted',
 ];
 
-const TARGET_TYPE_OPTIONS = ['post', 'profile', 'account', 'comment'];
+const TARGET_TYPE_OPTIONS = ['post', 'profile', 'account', 'comment', 'resource'];
 
 export default function AdminAuditLogPage() {
   const { isAdmin, isModerator } = useAuth();

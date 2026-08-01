@@ -6,7 +6,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Server-side gate: only admins and moderators may render admin pages.
   // The backend re-checks the role on every admin API call regardless.
   const session = await getSession();
-  if (!session.isLoggedIn || (session.role !== 'admin' && session.role !== 'moderator')) {
+  const roles = session.roles ?? [];
+  if (!session.isLoggedIn || !(roles.includes('admin') || roles.includes('moderator'))) {
     redirect('/');
   }
   return <AdminShell>{children}</AdminShell>;

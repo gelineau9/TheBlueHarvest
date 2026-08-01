@@ -21,6 +21,7 @@ import followsRouter from './routes/follows.js';
 import activityRouter from './routes/activity.js';
 import adminRouter from './routes/admin.js';
 import spotlightRouter from './routes/spotlight.js';
+import resourcesRouter from './routes/resources.js';
 import {
   profileEditorRoutes,
   postEditorRoutes,
@@ -90,7 +91,7 @@ app.use(
 // Body parsing — content routes carry rich-text JSONB (long stories, bios)
 // and get a larger limit; everything else stays tightly bounded at 50 kb.
 // The first matching parser wins; the global one skips already-parsed bodies.
-app.use(['/api/posts', '/api/profiles', '/api/collections'], express.json({ limit: '2mb' }));
+app.use(['/api/posts', '/api/profiles', '/api/collections', '/api/resources'], express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
@@ -208,6 +209,7 @@ app.use('/api/follows', followsRouter);
 app.use('/api/activity', activityRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/spotlight', spotlightRouter);
+app.use('/api/resources', resourcesRouter);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to the BHA Backend!' });
