@@ -173,9 +173,15 @@ export default function ArchivePage() {
 
   // Content type change
   const handleContentTypeChange = (value: string) => {
-    // Clear subtype filters when changing content type
+    // Clear subtype filters when changing content type.
+    // Returning to 'all' must clear BOTH: contentType is derived from whichever
+    // subtype param survives, so a leftover profileTypes would silently pin the
+    // view back to 'profiles' and keep the post filters hidden.
     const updates: Record<string, string | null> = { contentType: value === 'all' ? null : value };
-    if (value === 'profiles') {
+    if (value === 'all') {
+      updates.postTypes = null;
+      updates.profileTypes = null;
+    } else if (value === 'profiles') {
       updates.postTypes = null;
     } else if (value === 'posts') {
       updates.profileTypes = null;
@@ -449,6 +455,33 @@ export default function ArchivePage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Content Type Toggle — the only way back to 'All' once a content type
+            is set, since the subtype filters for the other kind are hidden. */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {CONTENT_TYPES.map((type) => {
+            const isActive = contentType === type.value;
+            return (
+              <Button
+                key={type.value}
+                variant="outline"
+                size="sm"
+                onClick={() => handleContentTypeChange(type.value)}
+                aria-pressed={isActive}
+                className={`
+                  border-amber-300 transition-all
+                  ${
+                    isActive
+                      ? 'bg-amber-800 text-amber-50 border-amber-800 hover:bg-amber-700 hover:border-amber-700'
+                      : 'bg-white text-amber-900 hover:bg-amber-50'
+                  }
+                `}
+              >
+                {type.label}
+              </Button>
+            );
+          })}
         </div>
 
         {/* Subtype Filters */}

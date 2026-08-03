@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { NestedLink } from '@/components/ui/nested-link';
 import NextImage from 'next/image';
-import { Users, Sword, Package, Building2, MapPin, User, Calendar } from 'lucide-react';
+import { User, Calendar } from 'lucide-react';
+import { profileTypeIcon } from '@/components/profiles/profile-type-icons';
 import { Card } from '@/components/ui/card';
 
 interface ProfileCardProps {
@@ -16,14 +17,6 @@ interface ProfileCardProps {
   avatar_url?: string;
 }
 
-const typeIcons = {
-  1: Users, // Character
-  2: Sword, // Item
-  3: Package, // Kinship
-  4: Building2, // Organization
-  5: MapPin, // Location
-};
-
 export function ProfileCard({
   profile_id,
   name,
@@ -33,7 +26,7 @@ export function ProfileCard({
   username,
   avatar_url,
 }: ProfileCardProps) {
-  const Icon = typeIcons[profile_type_id as keyof typeof typeIcons] || Users;
+  const Icon = profileTypeIcon(profile_type_id);
 
   const formattedDate = new Date(created_at).toLocaleDateString('en-US', {
     year: 'numeric',

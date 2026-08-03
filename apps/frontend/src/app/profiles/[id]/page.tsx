@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { profileTypeIcon } from '@/components/profiles/profile-type-icons';
 import { useAuth } from '@/components/auth/auth-provider';
 import { FollowButton } from '@/components/follows/FollowButton';
 
@@ -620,7 +621,11 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-amber-400" />
+                      {(() => {
+                        // Default avatar matches the type icon shown on the create page
+                        const TypeIcon = profileTypeIcon(profile.profile_type_id);
+                        return <TypeIcon className="w-12 h-12 text-amber-400" />;
+                      })()}
                     </div>
                   )}
                 </div>

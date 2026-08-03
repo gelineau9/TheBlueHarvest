@@ -55,29 +55,33 @@ function FeedRow({ post }: { post: FeedPost }) {
   return (
     <Link
       href={`/posts/${post.post_id}`}
-      className="group flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-amber-100/60"
+      className="group flex items-center gap-3 rounded-md px-4 py-2.5 transition-colors hover:bg-amber-100/60"
     >
-      {/* Type badge */}
-      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>{post.type_name}</span>
+      {/* Type badge — fixed width so titles start on a common left edge */}
+      <span className={`w-[68px] shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-semibold ${badgeClass}`}>
+        {post.type_name}
+      </span>
 
       {/* Title */}
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-amber-900 group-hover:underline">
         {post.title}
       </span>
 
-      {/* Meta: character author (if any) · username · time */}
-      <span className="flex shrink-0 items-center gap-2 text-xs text-amber-600">
-        {post.primary_author_name && (
-          <span className="hidden truncate max-w-[80px] sm:inline">{post.primary_author_name}</span>
-        )}
+      {/* Meta: character author (if any) · username · time.
+          Each column is fixed-width and right-aligned so the separators and
+          timestamps line up down the list instead of drifting per row. The
+          author slot is always rendered — empty when absent — to hold the column. */}
+      <span className="flex shrink-0 items-center gap-3 text-xs text-amber-600">
+        <span className="hidden w-[100px] truncate text-right sm:inline-block">{post.primary_author_name ?? ''}</span>
         <NestedLink
           href={`/users/${post.username}`}
-          className="truncate max-w-[80px] hover:text-amber-900 hover:underline"
+          className="w-[90px] truncate text-right hover:text-amber-900 hover:underline"
         >
           {post.username}
         </NestedLink>
-        <span className="text-amber-400">·</span>
-        <span className="whitespace-nowrap">{relativeTime(post.created_at)}</span>
+        {/* Own centred column so the separator sits clear of the username and lines up down the list */}
+        <span className="w-6 shrink-0 text-center text-amber-400">·</span>
+        <span className="w-[64px] whitespace-nowrap text-right">{relativeTime(post.created_at)}</span>
       </span>
     </Link>
   );
@@ -129,7 +133,7 @@ export function FollowedFeed() {
   if (loading) return null;
 
   return (
-    <section className="mb-10">
+    <section className="mb-10 px-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-fantasy text-2xl font-semibold text-amber-900">Your Feed</h2>
         {total !== null && total > posts.length && <span className="text-xs text-amber-600">{total} total</span>}

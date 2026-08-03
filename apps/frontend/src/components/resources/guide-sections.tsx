@@ -93,7 +93,7 @@ export function GuideSections({ sections }: { sections: ResourceSection[] }) {
             {isOpen && (
               <div
                 id={`${section.key}-panel`}
-                className="prose prose-amber max-w-none border-t border-amber-800/10 px-4 py-3 text-amber-900"
+                className="prose prose-amber border-t border-amber-800/10 px-4 py-3 text-amber-900"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.body || '') }}
               />
             )}
