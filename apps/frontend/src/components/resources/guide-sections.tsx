@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import DOMPurify from 'dompurify';
+// isomorphic-dompurify, not dompurify: 'use client' components still render on the
+// server, and plain dompurify's default export has no .sanitize without a DOM —
+// which threw during SSR and silently downgraded this page to client rendering.
+import DOMPurify from 'isomorphic-dompurify';
 import { ChevronDown } from 'lucide-react';
 import type { ResourceSection } from '@/types/resources';
 
@@ -93,7 +96,9 @@ export function GuideSections({ sections }: { sections: ResourceSection[] }) {
             {isOpen && (
               <div
                 id={`${section.key}-panel`}
-                className="prose prose-amber max-w-none border-t border-amber-800/10 px-4 py-3 text-amber-900"
+                // rte-content is what actually supplies paragraph and heading spacing —
+                // `prose` is inert here because @tailwindcss/typography isn't installed.
+                className="prose prose-amber rte-content border-t border-amber-800/10 px-4 py-3 text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:max-w-full [&_img]:rounded"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.body || '') }}
               />
             )}

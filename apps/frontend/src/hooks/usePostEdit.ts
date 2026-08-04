@@ -18,6 +18,8 @@ export interface Post {
   content: {
     body?: string;
     description?: string;
+    /** Art/media only — who made the artwork */
+    credit?: string;
     images?: UploadedImage[];
     embeds?: Array<{ type: string; url: string; title?: string }>;
     eventDateTime?: string; // UTC ISO string

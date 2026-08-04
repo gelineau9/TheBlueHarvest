@@ -17,6 +17,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { htmlToPlainText } from '@/lib/html-text';
 
 interface ContentCardProps {
   id: number;
@@ -87,7 +88,7 @@ export function ContentCard({
   });
 
   // Strip any HTML tags from RTE-produced preview text
-  const plainPreview = preview ? preview.replace(/<[^>]*>/g, '').trim() : undefined;
+  const plainPreview = preview ? htmlToPlainText(preview) || undefined : undefined;
 
   const hasThumbnail = thumbnail && contentCategory === 'post' && [2, 3, 4].includes(typeId);
 

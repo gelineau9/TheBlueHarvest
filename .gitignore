@@ -14,6 +14,7 @@ AUDIT.md
 !env.example
 
 .turbo/
+.claude/
 
 node_modules
 .next

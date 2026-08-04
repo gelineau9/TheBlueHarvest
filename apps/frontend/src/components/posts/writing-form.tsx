@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPostSchema, CreatePostInput } from '@/app/lib/validations';
@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
 interface WritingFormProps {
   onSuccess: (postId: number) => void;
@@ -24,6 +26,8 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
   const [bodyContent, setBodyContent] = useState('');
+  /** Set once the post exists, so a retry doesn't create a second one */
+  const createdPostIdRef = useRef<number | null>(null);
 
   const {
     profiles: authorableProfiles,
@@ -65,27 +69,31 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createPost({
-        ...data,
-        content: { ...data.content, body: bodyContent },
-        is_published: isPublished,
-      });
-      if (!result.success) {
-        setError(result.error || 'Failed to create post');
-        return;
+      // Reuse the post if a previous attempt already created it, so retrying
+      // after a featured-profile failure doesn't post twice.
+      let postId = createdPostIdRef.current;
+
+      if (!postId) {
+        const result = await createPost({
+          ...data,
+          content: { ...data.content, body: bodyContent },
+          is_published: isPublished,
+        });
+        if (!result.success) {
+          setError(result.error || 'Failed to create post');
+          return;
+        }
+        postId = result.post?.post_id ?? null;
+        createdPostIdRef.current = postId;
       }
-      const postId = result.post?.post_id;
+
       if (postId) {
         if (featuredProfiles.length > 0) {
-          Promise.all(
-            featuredProfiles.map((p) =>
-              fetch(`/api/posts/${postId}/featured`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile_id: p.profile_id }),
-              }),
-            ),
-          ).catch((err) => console.error('Failed to save featured profiles:', err));
+          const { ok, errors } = await syncFeaturedProfiles(postId, { add: featuredProfiles });
+          if (!ok) {
+            setError(`Your post was saved, but ${errors.join(' ')} Try again, or add them later by editing the post.`);
+            return;
+          }
         }
         onSuccess(postId);
       }
@@ -107,41 +115,17 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       )}
 
       {/* Author Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-semibold">
-          Author (Optional)
-        </Label>
-        <p className="text-sm text-amber-700">Attribute this writing to one of your characters or kinships.</p>
-        {isLoadingCharacters ? (
-          <div className="text-sm text-amber-700">Loading your profiles...</div>
-        ) : (
-          <>
-            <select
-              value={selectedAuthorId || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) {
-                  setValue('primary_author_profile_id', parseInt(value), { shouldValidate: true });
-                } else {
-                  setValue('primary_author_profile_id', undefined, { shouldValidate: true });
-                }
-              }}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-            >
-              <option value="">No author</option>
-              {authorableProfiles.map((profile) => (
-                <option key={profile.profile_id} value={profile.profile_id}>
-                  {profile.name} ({profile.type_label})
-                </option>
-              ))}
-            </select>
-            {errors.primary_author_profile_id && (
-              <p className="text-sm text-red-600">{errors.primary_author_profile_id.message}</p>
-            )}
-          </>
-        )}
-      </div>
+      <AuthorSelect
+        id="primary_author_profile_id"
+        value={selectedAuthorId ? String(selectedAuthorId) : ''}
+        onChange={(value) =>
+          setValue('primary_author_profile_id', value ? parseInt(value) : undefined, { shouldValidate: true })
+        }
+        profiles={authorableProfiles}
+        isLoading={isLoadingCharacters}
+        disabled={isSubmitting}
+        error={errors.primary_author_profile_id?.message}
+      />
 
       {/* Title */}
       <div className="space-y-2">

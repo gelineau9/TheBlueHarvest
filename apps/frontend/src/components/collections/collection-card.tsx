@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { NestedLink } from '@/components/ui/nested-link';
 import { FolderOpen, BookOpen, Images, Palette, CalendarRange, User, Calendar, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { htmlToPlainText } from '@/lib/html-text';
 
 interface CollectionCardProps {
   collectionId: number;
@@ -78,7 +79,10 @@ export function CollectionCard({
               <h3 className="text-base font-bold text-amber-900 mb-1 line-clamp-2">{title}</h3>
 
               {/* Description */}
-              {description && <p className="text-sm text-amber-700 mb-2 line-clamp-2">{description}</p>}
+              {/* description is rich text — render it as plain text here, not raw HTML */}
+              {description && (
+                <p className="text-sm text-amber-700 mb-2 line-clamp-2">{htmlToPlainText(description)}</p>
+              )}
 
               {/* Meta info */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-600">

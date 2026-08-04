@@ -6,6 +6,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, BookOpen, Sparkles, Archive, ArrowLeft, Plus, Crown, PenLine, Loader2 } from 'lucide-react';
+import { htmlToPlainText } from '@/lib/html-text';
 
 interface Collection {
   collection_id: number;
@@ -252,7 +253,9 @@ export default function MyCollectionsPage() {
                       </div>
                       <h3 className="text-lg font-semibold text-amber-900 mb-2 line-clamp-2">{collection.title}</h3>
                       {collection.description && (
-                        <p className="text-sm text-amber-700 mb-3 line-clamp-2">{collection.description}</p>
+                        <p className="text-sm text-amber-700 mb-3 line-clamp-2">
+                          {htmlToPlainText(collection.description)}
+                        </p>
                       )}
                       <div className="flex items-center gap-2 text-sm text-amber-600">
                         <span className="capitalize">{collection.type_name}</span>

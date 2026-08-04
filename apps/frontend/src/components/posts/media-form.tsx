@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,9 @@ import { Upload, X } from 'lucide-react';
 import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
 interface MediaFormProps {
   onSuccess: (postId: number) => void;
@@ -35,6 +37,8 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
+  /** Set once the post exists, so a retry doesn't create a second one */
+  const createdPostIdRef = useRef<number | null>(null);
   const [authorId, setAuthorId] = useState('');
 
   const { profiles: authorableProfiles, isLoading: isLoadingProfiles } = useAuthorableProfiles();
@@ -98,25 +102,29 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
         is_published: isPublished,
       };
 
-      const result = await createPost(postData);
+      // Reuse the post if a previous attempt already created it, so retrying
+      // after a featured-profile failure doesn't post twice.
+      let postId = createdPostIdRef.current;
 
-      if (!result.success) {
-        setError(result.error || 'Failed to create post');
-        return;
+      if (!postId) {
+        const result = await createPost(postData);
+
+        if (!result.success) {
+          setError(result.error || 'Failed to create post');
+          return;
+        }
+
+        postId = result.post?.post_id ?? null;
+        createdPostIdRef.current = postId;
       }
 
-      const postId = result.post?.post_id;
       if (postId) {
         if (featuredProfiles.length > 0) {
-          Promise.all(
-            featuredProfiles.map((p) =>
-              fetch(`/api/posts/${postId}/featured`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile_id: p.profile_id }),
-              }),
-            ),
-          ).catch((err) => console.error('Failed to save featured profiles:', err));
+          const { ok, errors } = await syncFeaturedProfiles(postId, { add: featuredProfiles });
+          if (!ok) {
+            setError(`Your post was saved, but ${errors.join(' ')} Try again, or add them later by editing the post.`);
+            return;
+          }
         }
         onSuccess(postId);
       }
@@ -138,32 +146,14 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       )}
 
       {/* Author Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="media_author" className="text-amber-900 font-semibold">
-          Author (Optional)
-        </Label>
-        <p className="text-sm text-amber-700">Attribute this media to one of your characters or kinships.</p>
-        {isLoadingProfiles ? (
-          <div className="text-sm text-amber-700">Loading your profiles...</div>
-        ) : (
-          <>
-            <select
-              id="media_author"
-              value={authorId}
-              onChange={(e) => setAuthorId(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-            >
-              <option value="">No author</option>
-              {authorableProfiles.map((profile) => (
-                <option key={profile.profile_id} value={profile.profile_id}>
-                  {profile.name} ({profile.type_label})
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </div>
+      <AuthorSelect
+        id="media_author"
+        value={authorId}
+        onChange={setAuthorId}
+        profiles={authorableProfiles}
+        isLoading={isLoadingProfiles}
+        disabled={isSubmitting}
+      />
 
       {/* Image Upload */}
       <div className="space-y-2">

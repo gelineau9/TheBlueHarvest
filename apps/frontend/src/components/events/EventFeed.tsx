@@ -74,8 +74,10 @@ export function EventFeed({ events, showFullDetails = false }: EventFeedProps) {
                     {time}
                   </span>
                   {event.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
+                    // min-w-0 is what lets the inner truncate actually bite — without it
+                    // this flex item sizes to its content and the location runs off the edge
+                    <span className="flex min-w-0 items-center gap-1">
+                      <MapPin className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{event.location}</span>
                     </span>
                   )}
