@@ -8,11 +8,12 @@ import { NestedLink } from '@/components/ui/nested-link';
 import { ContentCarousel } from '@/components/content-carousel';
 import { LikeButton } from '@/components/likes/LikeButton';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { htmlToPlainText } from '@/lib/html-text';
 
 const STORAGE_KEY = 'writing-view-mode';
 
 function WritingCard({ post }: { post: PublicPost }) {
-  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 180) : '';
+  const preview = htmlToPlainText(typeof post.content?.body === 'string' ? post.content.body : '').slice(0, 180);
 
   const date = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -66,7 +67,7 @@ function WritingCard({ post }: { post: PublicPost }) {
 }
 
 function WritingListItem({ post }: { post: PublicPost }) {
-  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 120) : '';
+  const preview = htmlToPlainText(typeof post.content?.body === 'string' ? post.content.body : '').slice(0, 120);
 
   const date = new Date(post.created_at).toLocaleDateString('en-US', {
     year: 'numeric',

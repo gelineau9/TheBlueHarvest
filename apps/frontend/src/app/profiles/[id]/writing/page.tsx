@@ -6,6 +6,7 @@ import { ArrowLeft, BookOpen, User, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { htmlToPlainText } from '@/lib/html-text';
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ const ATTRIBUTION_OPTIONS: { value: AttributionFilter; label: string }[] = [
 // ─── Post card ────────────────────────────────────────────────────────────────
 
 function WritingPostCard({ post }: { post: PublicPost }) {
-  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 200) : '';
+  const preview = htmlToPlainText(typeof post.content?.body === 'string' ? post.content.body : '').slice(0, 200);
 
   return (
     <Link href={`/posts/${post.post_id}`} className="block">

@@ -66,6 +66,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   // ── Art / Media ────────────────────────────────────────────────────────────
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [description, setDescription] = useState('');
+  const [credit, setCredit] = useState('');
 
   // ── Event ──────────────────────────────────────────────────────────────────
   const [headerImage, setHeaderImage] = useState<UploadedImage | null>(null);
@@ -89,6 +90,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     authorId: '',
     images: [] as UploadedImage[],
     description: '',
+    credit: '',
     headerImage: null as UploadedImage | null,
     eventDate: '',
     eventTime: '',
@@ -112,6 +114,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     let initialAuthorId = '';
     let initialImages: UploadedImage[] = [];
     let initialDescription = '';
+    const initialCredit = (post.content?.credit as string | undefined) ?? '';
     let initialHeaderImage: UploadedImage | null = null;
     let initialEventDate = '';
     let initialEventTime = '';
@@ -160,6 +163,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     setAuthorId(initialAuthorId);
     setImages(initialImages);
     setDescription(initialDescription);
+    setCredit(initialCredit);
     setHeaderImage(initialHeaderImage);
     setEventDate(initialEventDate);
     setEventTime(initialEventTime);
@@ -176,6 +180,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       authorId: initialAuthorId,
       images: initialImages,
       description: initialDescription,
+      credit: initialCredit,
       headerImage: initialHeaderImage,
       eventDate: initialEventDate,
       eventTime: initialEventTime,
@@ -194,6 +199,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     authorId !== originalValues.authorId ||
     JSON.stringify(images) !== JSON.stringify(originalValues.images) ||
     description !== originalValues.description ||
+    credit !== originalValues.credit ||
     JSON.stringify(headerImage) !== JSON.stringify(originalValues.headerImage) ||
     eventDate !== originalValues.eventDate ||
     eventTime !== originalValues.eventTime ||
@@ -245,7 +251,13 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         setSaveError('Please upload at least one image');
         return;
       }
-      content = { description, images, tags };
+      // Credit is required for artwork only — media posts are usually the poster's own screenshots
+      if (type === POST_TYPES.ART && !credit.trim()) {
+        setSaveError('Please credit the artist');
+        return;
+      }
+      content =
+        type === POST_TYPES.ART ? { credit: credit.trim(), description, images, tags } : { description, images, tags };
       authorProfileId = authorId ? parseInt(authorId, 10) : null;
     } else if (type === POST_TYPES.EVENT) {
       if (eventDate && eventTime) {
@@ -311,6 +323,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         authorId,
         images,
         description,
+        credit,
         headerImage,
         eventDate,
         eventTime,
@@ -583,6 +596,24 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   )}
                   <p className="text-sm text-amber-700">{images.length}/10 images</p>
                 </div>
+                {type === POST_TYPES.ART && (
+                  <div className="space-y-2">
+                    <Label htmlFor="credit" className="text-amber-900 font-semibold">
+                      Artwork Credit *
+                    </Label>
+                    <p className="text-sm text-amber-700">
+                      Who made this artwork? Credit yourself, or the artist who made it for you.
+                    </p>
+                    <Input
+                      id="credit"
+                      value={credit}
+                      onChange={(e) => setCredit(e.target.value)}
+                      placeholder="Artist name, and where to find them if you like"
+                      maxLength={200}
+                      className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="description" className="text-amber-900 font-semibold">
                     Description

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { LikeButton } from '@/components/likes/LikeButton';
 import DOMPurify from 'isomorphic-dompurify';
+import { isRichTextEmpty } from '@/lib/html-text';
 
 export interface Comment {
   comment_id: number;
@@ -73,7 +74,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
   };
 
   const handleSaveEdit = async () => {
-    if (!editContent.replace(/<[^>]*>/g, '').trim()) {
+    if (isRichTextEmpty(editContent)) {
       setEditError('Comment cannot be empty');
       return;
     }
@@ -252,7 +253,7 @@ export function CommentItem({ comment, currentUserId, onCommentUpdated, onReply 
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  disabled={isSubmitting || !editContent.replace(/<[^>]*>/g, '').trim()}
+                  disabled={isSubmitting || isRichTextEmpty(editContent)}
                   className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
                 >
                   <Check className="w-3 h-3 mr-1" />

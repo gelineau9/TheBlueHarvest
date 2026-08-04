@@ -8,6 +8,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuth } from '@/components/auth/auth-provider';
 import { CommentItem, Comment } from './comment-item';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
+import { isRichTextEmpty } from '@/lib/html-text';
 
 const PAGE_SIZE = 50;
 const REPLY_PREVIEW_COUNT = 3;
@@ -191,7 +192,7 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.replace(/<[^>]*>/g, '').trim()) return;
+    if (isRichTextEmpty(newComment)) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -227,7 +228,7 @@ export function CommentList({ postId }: CommentListProps) {
 
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyContent.replace(/<[^>]*>/g, '').trim() || replyingTo === null) return;
+    if (isRichTextEmpty(replyContent) || replyingTo === null) return;
 
     setIsReplySubmitting(true);
     setReplyError(null);
@@ -314,7 +315,7 @@ export function CommentList({ postId }: CommentListProps) {
             <Button
               type="submit"
               size="sm"
-              disabled={isReplySubmitting || !replyContent.replace(/<[^>]*>/g, '').trim()}
+              disabled={isReplySubmitting || isRichTextEmpty(replyContent)}
               className="h-7 bg-amber-800 text-amber-50 hover:bg-amber-700"
             >
               <Send className="w-3 h-3 mr-1" />
@@ -387,7 +388,7 @@ export function CommentList({ postId }: CommentListProps) {
               </div>
               <Button
                 type="submit"
-                disabled={isSubmitting || !newComment.replace(/<[^>]*>/g, '').trim()}
+                disabled={isSubmitting || isRichTextEmpty(newComment)}
                 className="bg-amber-800 text-amber-50 hover:bg-amber-700"
               >
                 <Send className="w-4 h-4 mr-2" />

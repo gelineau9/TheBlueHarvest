@@ -62,6 +62,8 @@ interface Post {
       url: string;
       originalName: string;
     }>;
+    /** Art/media only — who made the artwork */
+    credit?: string;
     description?: string;
     // Event-specific fields
     eventDateTime?: string; // UTC ISO string
@@ -456,44 +458,65 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           </div>
         </Card>
 
+        {/* Artwork sits outside the content card — no surrounding box. It scales up to
+            the full column width and is bounded by the viewport so it fits on screen,
+            with the border on the image itself so the art is its own container. */}
+        {(post.post_type_id === 2 || post.post_type_id === 3) &&
+          post.content.images &&
+          post.content.images.length > 0 && (
+            <div
+              className={`mb-6 ${
+                post.content.images.length === 1
+                  ? 'flex justify-center'
+                  : 'grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2'
+              }`}
+            >
+              {post.content.images.map((image, index) => {
+                const isSingle = post.content.images!.length === 1;
+                return (
+                  <Image
+                    key={index}
+                    src={image.url}
+                    alt={image.originalName || `Image ${index + 1}`}
+                    width={2000}
+                    height={1500}
+                    sizes={isSingle ? '(max-width: 1024px) 100vw, 1024px' : '(max-width: 768px) 100vw, 50vw'}
+                    // The art is the focus: it always fills the column width, and height
+                    // follows the true ratio — a portrait piece gets taller rather than
+                    // being shrunk to fit the viewport. Dimensions aren't stored, so the
+                    // width/height props are placeholders; the real ratio is adopted on
+                    // load, which also keeps the shadow hugging the artwork exactly.
+                    className="h-auto w-full cursor-pointer rounded-md object-contain shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10 transition-shadow hover:shadow-xl hover:shadow-amber-950/30"
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      if (img.naturalWidth && img.naturalHeight) {
+                        img.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                      }
+                    }}
+                    onClick={() => {
+                      setLightboxIndex(index);
+                      setLightboxOpen(true);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+        {/* Artwork credit — art posts only; media is usually the poster's own screenshots */}
+        {post.post_type_id === 2 && post.content.credit && (
+          <p className="mb-6 -mt-2 text-center text-sm italic text-amber-700">{post.content.credit}</p>
+        )}
+
         {/* Post Content */}
         <Card className="p-8 bg-white border-amber-300 mb-6">
-          {/* Art/Media Post - Show Images */}
-          {(post.post_type_id === 2 || post.post_type_id === 3) &&
-            post.content.images &&
-            post.content.images.length > 0 && (
-              <div className="mb-6">
-                <div
-                  className={`grid gap-4 ${post.content.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}
-                >
-                  {post.content.images.map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative aspect-square rounded-lg overflow-hidden bg-amber-100 border border-amber-300"
-                    >
-                      <Image
-                        src={image.url}
-                        alt={image.originalName || `Image ${index + 1}`}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => {
-                          setLightboxIndex(index);
-                          setLightboxOpen(true);
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                {/* Art Description */}
-                {post.content.description && (
-                  <div
-                    className="mt-6 prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
-                  />
-                )}
-              </div>
-            )}
+          {/* Art/Media description */}
+          {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.description && (
+            <div
+              className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
+            />
+          )}
 
           {/* Writing Post - Show Body */}
           {post.post_type_id === 1 && (

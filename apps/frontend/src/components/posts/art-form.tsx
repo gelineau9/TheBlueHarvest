@@ -24,6 +24,8 @@ interface ArtFormProps {
 // Validation schema for art posts
 const artPostSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
+  // Required: artwork on the archive must always say who made it
+  credit: z.string().trim().min(1, 'Please credit the artist').max(200, 'Credit must be 200 characters or less'),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -55,6 +57,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
     resolver: zodResolver(artPostSchema),
     defaultValues: {
       title: '',
+      credit: '',
       description: '',
       tags: [],
     },
@@ -95,6 +98,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
             url: img.url,
             originalName: img.originalName,
           })),
+          credit: data.credit.trim(),
           description: data.description || '',
           tags: data.tags || [],
         },
@@ -257,6 +261,25 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
           maxLength={200}
         />
         {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
+      </div>
+
+      {/* Artwork credit */}
+      <div className="space-y-2">
+        <Label htmlFor="credit" className="text-amber-900 font-semibold">
+          Artwork Credit *
+        </Label>
+        <p className="text-sm text-amber-700">
+          Who made this artwork? Credit yourself, or the artist who made it for you.
+        </p>
+        <Input
+          id="credit"
+          {...register('credit')}
+          placeholder="Artist name, and where to find them if you like"
+          className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+          disabled={isSubmitting}
+          maxLength={200}
+        />
+        {errors.credit && <p className="text-sm text-red-600">{errors.credit.message}</p>}
       </div>
 
       {/* Description */}

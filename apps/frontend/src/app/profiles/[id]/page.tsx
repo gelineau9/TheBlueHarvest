@@ -37,6 +37,7 @@ import type { PublicPost, PublicPostsResponse } from '@/types/posts';
 import { profileTypeIcon } from '@/components/profiles/profile-type-icons';
 import { useAuth } from '@/components/auth/auth-provider';
 import { FollowButton } from '@/components/follows/FollowButton';
+import { htmlToPlainText } from '@/lib/html-text';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ interface LiveRelationship {
 // ─── Small inline cards ───────────────────────────────────────────────────────
 
 function WritingPostCard({ post }: { post: PublicPost }) {
-  const preview = typeof post.content?.body === 'string' ? post.content.body.replace(/<[^>]*>/g, '').slice(0, 160) : '';
+  const preview = htmlToPlainText(typeof post.content?.body === 'string' ? post.content.body : '').slice(0, 160);
 
   return (
     <Link href={`/posts/${post.post_id}`} className="block">
