@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
@@ -294,16 +295,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         const toAdd = featuredProfiles.filter((p) => !originalIds.has(p.profile_id));
         const toRemove = (post!.featured_profiles || []).filter((fp) => !currentIds.has(fp.profile_id));
 
-        await Promise.all([
-          ...toAdd.map((p) =>
-            fetch(`/api/posts/${id}/featured`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ profile_id: p.profile_id }),
-            }),
-          ),
-          ...toRemove.map((fp) => fetch(`/api/posts/${id}/featured/${fp.featured_profile_id}`, { method: 'DELETE' })),
-        ]);
+        const { ok, errors } = await syncFeaturedProfiles(id, { add: toAdd, remove: toRemove });
+        if (!ok) {
+          // The post itself saved; only the featured-profile changes failed
+          setSaveError(`Your changes were saved, but ${errors.join(' ')}`);
+          return;
+        }
       }
 
       setOriginalValues({

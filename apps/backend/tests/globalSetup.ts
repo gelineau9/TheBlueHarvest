@@ -222,6 +222,12 @@ export async function setup(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_account_roles_account ON account_roles (account_id);
   `);
 
+  // Migration 0015: unique pair required by the featured-profiles upsert
+  await client.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS featured_profiles_post_profile_key
+      ON featured_profiles (post_id, profile_id);
+  `);
+
   // Migration 0014: resources + resource_types
   await client.query(`
     CREATE TABLE IF NOT EXISTS resource_types (

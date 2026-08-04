@@ -36,8 +36,15 @@ export function LeftSidebar() {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
-        <Link href="/">
-          <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900">The Brandy Hall Archives</h1>
+        {/* Hover affordance so it reads as the home link, matching the nav items */}
+        <Link
+          href="/"
+          title="Back to home"
+          className="group block rounded-md px-3 py-2 transition-colors hover:bg-amber-100/80"
+        >
+          <h1 className="font-fantasy text-xl font-bold tracking-wide text-amber-900 transition-colors group-hover:text-amber-950">
+            The Brandy Hall Archives
+          </h1>
         </Link>
       </div>
 

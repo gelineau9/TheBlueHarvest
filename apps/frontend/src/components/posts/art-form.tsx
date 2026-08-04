@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
 interface ArtFormProps {
   onSuccess: (postId: number) => void;
@@ -35,6 +36,8 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
+  /** Set once the post exists, so a retry doesn't create a second one */
+  const createdPostIdRef = useRef<number | null>(null);
   const [authorId, setAuthorId] = useState('');
 
   const { profiles: authorableProfiles, isLoading: isLoadingProfiles } = useAuthorableProfiles();
@@ -98,25 +101,29 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
         is_published: isPublished,
       };
 
-      const result = await createPost(postData);
+      // Reuse the post if a previous attempt already created it, so retrying
+      // after a featured-profile failure doesn't post twice.
+      let postId = createdPostIdRef.current;
 
-      if (!result.success) {
-        setError(result.error || 'Failed to create post');
-        return;
+      if (!postId) {
+        const result = await createPost(postData);
+
+        if (!result.success) {
+          setError(result.error || 'Failed to create post');
+          return;
+        }
+
+        postId = result.post?.post_id ?? null;
+        createdPostIdRef.current = postId;
       }
 
-      const postId = result.post?.post_id;
       if (postId) {
         if (featuredProfiles.length > 0) {
-          Promise.all(
-            featuredProfiles.map((p) =>
-              fetch(`/api/posts/${postId}/featured`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile_id: p.profile_id }),
-              }),
-            ),
-          ).catch((err) => console.error('Failed to save featured profiles:', err));
+          const { ok, errors } = await syncFeaturedProfiles(postId, { add: featuredProfiles });
+          if (!ok) {
+            setError(`Your post was saved, but ${errors.join(' ')} Try again, or add them later by editing the post.`);
+            return;
+          }
         }
         onSuccess(postId);
       }

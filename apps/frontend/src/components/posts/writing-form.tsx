@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPostSchema, CreatePostInput } from '@/app/lib/validations';
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
 interface WritingFormProps {
   onSuccess: (postId: number) => void;
@@ -24,6 +25,8 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
   const [isPublished, setIsPublished] = useState(true);
   const [featuredProfiles, setFeaturedProfiles] = useState<FeaturedProfile[]>([]);
   const [bodyContent, setBodyContent] = useState('');
+  /** Set once the post exists, so a retry doesn't create a second one */
+  const createdPostIdRef = useRef<number | null>(null);
 
   const {
     profiles: authorableProfiles,
@@ -65,27 +68,31 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await createPost({
-        ...data,
-        content: { ...data.content, body: bodyContent },
-        is_published: isPublished,
-      });
-      if (!result.success) {
-        setError(result.error || 'Failed to create post');
-        return;
+      // Reuse the post if a previous attempt already created it, so retrying
+      // after a featured-profile failure doesn't post twice.
+      let postId = createdPostIdRef.current;
+
+      if (!postId) {
+        const result = await createPost({
+          ...data,
+          content: { ...data.content, body: bodyContent },
+          is_published: isPublished,
+        });
+        if (!result.success) {
+          setError(result.error || 'Failed to create post');
+          return;
+        }
+        postId = result.post?.post_id ?? null;
+        createdPostIdRef.current = postId;
       }
-      const postId = result.post?.post_id;
+
       if (postId) {
         if (featuredProfiles.length > 0) {
-          Promise.all(
-            featuredProfiles.map((p) =>
-              fetch(`/api/posts/${postId}/featured`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile_id: p.profile_id }),
-              }),
-            ),
-          ).catch((err) => console.error('Failed to save featured profiles:', err));
+          const { ok, errors } = await syncFeaturedProfiles(postId, { add: featuredProfiles });
+          if (!ok) {
+            setError(`Your post was saved, but ${errors.join(' ')} Try again, or add them later by editing the post.`);
+            return;
+          }
         }
         onSuccess(postId);
       }
