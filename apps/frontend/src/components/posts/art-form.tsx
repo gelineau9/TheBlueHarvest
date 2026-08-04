@@ -13,6 +13,7 @@ import { Upload, X } from 'lucide-react';
 import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
@@ -149,32 +150,14 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       )}
 
       {/* Author Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="art_author" className="text-amber-900 font-semibold">
-          Author (Optional)
-        </Label>
-        <p className="text-sm text-amber-700">Attribute this artwork to one of your characters or kinships.</p>
-        {isLoadingProfiles ? (
-          <div className="text-sm text-amber-700">Loading your profiles...</div>
-        ) : (
-          <>
-            <select
-              id="art_author"
-              value={authorId}
-              onChange={(e) => setAuthorId(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-            >
-              <option value="">No author</option>
-              {authorableProfiles.map((profile) => (
-                <option key={profile.profile_id} value={profile.profile_id}>
-                  {profile.name} ({profile.type_label})
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </div>
+      <AuthorSelect
+        id="art_author"
+        value={authorId}
+        onChange={setAuthorId}
+        profiles={authorableProfiles}
+        isLoading={isLoadingProfiles}
+        disabled={isSubmitting}
+      />
 
       {/* Image Upload */}
       <div className="space-y-2">

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 
@@ -114,41 +115,17 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       )}
 
       {/* Author Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-semibold">
-          Author (Optional)
-        </Label>
-        <p className="text-sm text-amber-700">Attribute this writing to one of your characters or kinships.</p>
-        {isLoadingCharacters ? (
-          <div className="text-sm text-amber-700">Loading your profiles...</div>
-        ) : (
-          <>
-            <select
-              value={selectedAuthorId || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) {
-                  setValue('primary_author_profile_id', parseInt(value), { shouldValidate: true });
-                } else {
-                  setValue('primary_author_profile_id', undefined, { shouldValidate: true });
-                }
-              }}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-            >
-              <option value="">No author</option>
-              {authorableProfiles.map((profile) => (
-                <option key={profile.profile_id} value={profile.profile_id}>
-                  {profile.name} ({profile.type_label})
-                </option>
-              ))}
-            </select>
-            {errors.primary_author_profile_id && (
-              <p className="text-sm text-red-600">{errors.primary_author_profile_id.message}</p>
-            )}
-          </>
-        )}
-      </div>
+      <AuthorSelect
+        id="primary_author_profile_id"
+        value={selectedAuthorId ? String(selectedAuthorId) : ''}
+        onChange={(value) =>
+          setValue('primary_author_profile_id', value ? parseInt(value) : undefined, { shouldValidate: true })
+        }
+        profiles={authorableProfiles}
+        isLoading={isLoadingCharacters}
+        disabled={isSubmitting}
+        error={errors.primary_author_profile_id?.message}
+      />
 
       {/* Title */}
       <div className="space-y-2">

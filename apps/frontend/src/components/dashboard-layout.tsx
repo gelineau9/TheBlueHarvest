@@ -66,7 +66,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* ── Three-column body ───────────────────────────────────────────── */}
-        <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col lg:flex-row">
+        {/* The cap exists so the right sidebar doesn't drift miles from the content on an
+            ultrawide. At 1600 it was tighter than the sidebars needed: 1600 − 256 − 320 − 32
+            left the content column 992px, so a page asking for max-w-5xl (1024px) never got it. */}
+        <div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col lg:flex-row">
           {/* Left sidebar — fixed-width desktop column, hidden on mobile */}
           <aside
             aria-label="Site navigation"

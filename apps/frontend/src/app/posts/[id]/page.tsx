@@ -11,7 +11,6 @@ import {
   Calendar,
   Pencil,
   Trash2,
-  FileText,
   Clock,
   MapPin,
   Users,
@@ -113,7 +112,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   // Editor management state
   const [editors, setEditors] = useState<Editor[]>([]);
   const [newEditorUsername, setNewEditorUsername] = useState('');
-  const [showAddEditorDialog, setShowAddEditorDialog] = useState(false);
+  const [showEditorsDialog, setShowEditorsDialog] = useState(false);
   const [isAddingEditor, setIsAddingEditor] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
@@ -200,7 +199,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
       }
 
       setNewEditorUsername('');
-      setShowAddEditorDialog(false);
+      setShowEditorsDialog(false);
       fetchEditors();
     } catch {
       setEditorError('An error occurred while adding editor');
@@ -324,404 +323,349 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const isEdited = updatedTime - createdTime > 60000; // More than 1 minute difference
 
   const primaryAuthor = post.authors.find((a) => a.is_primary);
-  const coAuthors = post.authors.filter((a) => !a.is_primary);
+
+  const isWriting = post.post_type_id === 1;
+  const isArt = post.post_type_id === 2;
+  const isMedia = post.post_type_id === 3;
+  const isEvent = post.post_type_id === 4;
+  const images = isArt || isMedia ? (post.content.images ?? []) : [];
+  const featuredProfiles = post.featured_profiles ?? [];
+
+  // Prose needs a real measure or it runs to ~110ch on a wide monitor; art and
+  // media want the opposite, room for the image to breathe.
+  const columnWidth = isWriting ? 'max-w-3xl' : isArt || isMedia ? 'max-w-5xl' : 'max-w-4xl';
+
+  // Back goes to the listing this post belongs to, not the homepage.
+  const backLink = isEvent
+    ? { href: '/events', label: 'Back to Events' }
+    : {
+        href: `/archive?contentType=posts&postTypes=${post.post_type_id}`,
+        label: `Back to ${post.type_name.charAt(0).toUpperCase() + post.type_name.slice(1)}`,
+      };
+
+  // The owner is already named as the poster, so the inline list is everyone else.
+  const coEditors = editors.filter((editor) => !editor.is_owner);
+  // Owners manage the list; an editor still needs a way to remove themselves.
+  const canManageEditors = !!post.is_owner || coEditors.some((editor) => editor.username === currentUsername);
+
+  const bodyContent = isWriting || !(isArt || isMedia || isEvent) ? post.content.body : undefined;
+  const descriptionContent = isArt || isMedia ? post.content.description : undefined;
+  // Without this an art post with no description renders an empty white box.
+  const hasCardContent = isEvent || !!bodyContent || !!descriptionContent || featuredProfiles.length > 0;
 
   return (
     <div className="py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className={`${columnWidth} mx-auto`}>
         {/* Back Button */}
-        <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+        <Link
+          href={backLink.href}
+          className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
+          {backLink.label}
         </Link>
 
-        {/* Post Header */}
-        <Card className="p-8 bg-white border-amber-300 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
-                <FileText className="w-4 h-4" />
-                {post.type_name.charAt(0).toUpperCase() + post.type_name.slice(1)}
-              </div>
-              <h1 className="text-4xl font-bold text-amber-900 mb-2">{post.title}</h1>
-            </div>
-            {/* Edit/Delete Buttons */}
-            <div className="flex gap-2">
-              {post.can_edit && (
-                <Button
-                  onClick={() => router.push(`/posts/${post.post_id}/edit`)}
-                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              )}
-              {isAdmin && (
-                <Button
-                  onClick={handlePin}
-                  disabled={isPinning}
-                  variant="outline"
-                  className="border-amber-600 text-amber-800 hover:bg-amber-50"
-                >
-                  {post.is_featured ? (
-                    <>
-                      <PinOff className="w-4 h-4 mr-2" />
-                      Unpin
-                    </>
-                  ) : (
-                    <>
-                      <Pin className="w-4 h-4 mr-2" />
-                      Pin
-                    </>
-                  )}
-                </Button>
-              )}
-              {(post.is_owner || isAdmin) && (
-                <Button
-                  onClick={() => setShowDeleteDialog(true)}
-                  variant="outline"
-                  className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Author and Date Info */}
-          <div className="flex flex-wrap items-center gap-6 text-sm text-amber-700">
-            {primaryAuthor && (
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>
-                  By{' '}
-                  <Link
-                    href={`/profiles/${primaryAuthor.profile_id}`}
-                    className="text-amber-900 hover:underline font-semibold"
-                  >
-                    {primaryAuthor.profile_name}
-                  </Link>
-                </span>
-              </div>
+        {/* Post Header — no card; the title carries the page and the actions stay quiet */}
+        <div className="flex items-start justify-between gap-6">
+          <h1 className="text-4xl font-bold text-amber-900">{post.title}</h1>
+          <div className="flex flex-none gap-0.5 pt-1">
+            {post.can_edit && (
+              <Button
+                onClick={() => router.push(`/posts/${post.post_id}/edit`)}
+                variant="ghost"
+                size="icon"
+                aria-label="Edit post"
+                title="Edit post"
+                className="text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
             )}
-            {coAuthors.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span>
-                  with{' '}
-                  {coAuthors.map((author, index) => (
-                    <span key={author.profile_id}>
-                      <Link
-                        href={`/profiles/${author.profile_id}`}
-                        className="text-amber-900 hover:underline font-semibold"
-                      >
-                        {author.profile_name}
-                      </Link>
-                      {index < coAuthors.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}
-                </span>
-              </div>
+            {isAdmin && (
+              <Button
+                onClick={handlePin}
+                disabled={isPinning}
+                variant="ghost"
+                size="icon"
+                aria-label={post.is_featured ? 'Unpin post' : 'Pin post'}
+                title={post.is_featured ? 'Unpin post' : 'Pin post'}
+                className="text-amber-700 hover:bg-amber-100 hover:text-amber-900"
+              >
+                {post.is_featured ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+              </Button>
             )}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>{formattedDate}</span>
-              {isEdited && <span className="text-amber-600 text-xs">(edited)</span>}
-            </div>
+            {(post.is_owner || isAdmin) && (
+              <Button
+                onClick={() => setShowDeleteDialog(true)}
+                variant="ghost"
+                size="icon"
+                aria-label="Delete post"
+                title="Delete post"
+                className="text-amber-700 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
+        </div>
 
-          {/* Featuring row */}
-          {post.post_type_id !== 4 && post.featured_profiles && post.featured_profiles.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-amber-100 text-sm text-amber-700">
-              <span className="font-medium">Featuring:</span>
-              {post.featured_profiles.map((fp) => (
-                <Link
-                  key={fp.featured_profile_id}
-                  href={`/profiles/${fp.profile_id}`}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 hover:bg-amber-200 transition-colors text-xs font-medium"
-                >
-                  {fp.name}
-                  <span className="text-amber-600">· {fp.type_name}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Account owner info (smaller, secondary) */}
-          <div className="mt-4 pt-4 border-t border-amber-200 flex items-center justify-between text-xs text-amber-600">
-            <span>
-              Posted by account:{' '}
-              <Link href={`/users/${post.username}`} className="hover:underline font-medium">
-                {post.username}
+        {/* Byline — the attributed character, then the date */}
+        <div className="mt-2 text-sm text-amber-700">
+          {primaryAuthor && (
+            <>
+              By{' '}
+              <Link
+                href={`/profiles/${primaryAuthor.profile_id}`}
+                className="text-amber-900 hover:underline font-semibold"
+              >
+                {primaryAuthor.profile_name}
               </Link>
-            </span>
+              <span className="mx-2 text-amber-800/40">·</span>
+            </>
+          )}
+          <span>{formattedDate}</span>
+          {isEdited && <span className="ml-1.5 text-amber-600 text-xs">(edited)</span>}
+        </div>
+
+        {/* Attribution — the account that posted, and who else can edit */}
+        <div className="mt-1 text-xs text-amber-600">
+          Posted by{' '}
+          <Link href={`/users/${post.username}`} className="hover:underline font-medium text-amber-700">
+            {post.username}
+          </Link>
+          {coEditors.length > 0 && (
+            <>
+              <span className="mx-2 text-amber-800/40">|</span>
+              Editors:{' '}
+              {coEditors.map((editor, index) => (
+                <span key={editor.editor_id}>
+                  <Link href={`/users/${editor.username}`} className="hover:underline text-amber-700">
+                    {editor.username}
+                  </Link>
+                  {index < coEditors.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </>
+          )}
+          {canManageEditors && (
+            <>
+              <span className="mx-2 text-amber-800/40">·</span>
+              <button
+                type="button"
+                onClick={() => setShowEditorsDialog(true)}
+                className="underline hover:text-amber-800 cursor-pointer"
+              >
+                Manage
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Tags and likes ride directly above the main content */}
+        <div className="mt-6 mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            {post.content.tags?.map((tag, index) => (
+              <span
+                key={index}
+                className="px-2.5 py-0.5 bg-amber-100/70 text-amber-800 text-xs font-medium rounded-full border border-amber-200"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
-        </Card>
+          <LikeButton
+            type="post"
+            id={post.post_id}
+            initialLikeCount={post.like_count}
+            initialLikedByMe={post.liked_by_me}
+          />
+        </div>
 
         {/* Artwork sits outside the content card — no surrounding box. It scales up to
             the full column width and is bounded by the viewport so it fits on screen,
             with the border on the image itself so the art is its own container. */}
-        {(post.post_type_id === 2 || post.post_type_id === 3) &&
-          post.content.images &&
-          post.content.images.length > 0 && (
-            <div
-              className={`mb-6 ${
-                post.content.images.length === 1
-                  ? 'flex justify-center'
-                  : 'grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2'
-              }`}
-            >
-              {post.content.images.map((image, index) => {
-                const isSingle = post.content.images!.length === 1;
-                return (
-                  <Image
-                    key={index}
-                    src={image.url}
-                    alt={image.originalName || `Image ${index + 1}`}
-                    width={2000}
-                    height={1500}
-                    sizes={isSingle ? '(max-width: 1024px) 100vw, 1024px' : '(max-width: 768px) 100vw, 50vw'}
-                    // The art is the focus: it always fills the column width, and height
-                    // follows the true ratio — a portrait piece gets taller rather than
-                    // being shrunk to fit the viewport. Dimensions aren't stored, so the
-                    // width/height props are placeholders; the real ratio is adopted on
-                    // load, which also keeps the shadow hugging the artwork exactly.
-                    className="h-auto w-full cursor-pointer rounded-md object-contain shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10 transition-shadow hover:shadow-xl hover:shadow-amber-950/30"
-                    onLoad={(e) => {
-                      const img = e.currentTarget;
-                      if (img.naturalWidth && img.naturalHeight) {
-                        img.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
-                      }
-                    }}
-                    onClick={() => {
-                      setLightboxIndex(index);
-                      setLightboxOpen(true);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
+        {images.length > 0 && (
+          <div
+            className={`mb-4 ${
+              images.length === 1 ? 'flex justify-center' : 'grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2'
+            }`}
+          >
+            {images.map((image, index) => {
+              const isSingle = images.length === 1;
+              return (
+                <Image
+                  key={index}
+                  src={image.url}
+                  alt={image.originalName || `Image ${index + 1}`}
+                  width={2000}
+                  height={1500}
+                  sizes={isSingle ? '(max-width: 1024px) 100vw, 1024px' : '(max-width: 768px) 100vw, 50vw'}
+                  // The art is the focus: it always fills the column width, and height
+                  // follows the true ratio — a portrait piece gets taller rather than
+                  // being shrunk to fit the viewport. Dimensions aren't stored, so the
+                  // width/height props are placeholders; the real ratio is adopted on
+                  // load, which also keeps the shadow hugging the artwork exactly.
+                  className="h-auto w-full cursor-pointer rounded-md object-contain shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10 transition-shadow hover:shadow-xl hover:shadow-amber-950/30"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth && img.naturalHeight) {
+                      img.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    }
+                  }}
+                  onClick={() => {
+                    setLightboxIndex(index);
+                    setLightboxOpen(true);
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* Artwork credit — art posts only; media is usually the poster's own screenshots */}
-        {post.post_type_id === 2 && post.content.credit && (
-          <p className="mb-6 -mt-2 text-center text-sm italic text-amber-700">{post.content.credit}</p>
+        {isArt && post.content.credit && (
+          <p className="mb-6 text-center text-sm italic text-amber-700">{post.content.credit}</p>
+        )}
+
+        {/* Event header image gets the same outside-the-card treatment as artwork */}
+        {isEvent && post.content.headerImage && (
+          <div className="relative mb-6 aspect-[3/1] overflow-hidden rounded-md shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10">
+            <Image
+              src={post.content.headerImage.url}
+              alt={post.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 800px"
+              className="object-cover"
+            />
+          </div>
         )}
 
         {/* Post Content */}
-        <Card className="p-8 bg-white border-amber-300 mb-6">
-          {/* Art/Media description */}
-          {(post.post_type_id === 2 || post.post_type_id === 3) && post.content.description && (
-            <div
-              className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
-            />
-          )}
-
-          {/* Writing Post - Show Body */}
-          {post.post_type_id === 1 && (
-            <div
-              className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body || '') }}
-            />
-          )}
-
-          {/* Event Post - Show Event Details */}
-          {post.post_type_id === 4 && (
-            <div className="space-y-6">
-              {/* Header Image */}
-              {post.content.headerImage && (
-                <div className="relative aspect-[3/1] rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
-                  <Image
-                    src={post.content.headerImage.url}
-                    alt={post.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 800px"
-                    className="object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Event Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Date */}
-                {post.content.eventDateTime && (
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-amber-600 font-medium">Date</p>
-                      <p className="text-amber-900">
-                        {new Date(post.content.eventDateTime).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Time */}
-                {post.content.eventDateTime && (
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-amber-600 font-medium">Time</p>
-                      <p className="text-amber-900">
-                        {new Date(post.content.eventDateTime).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Location */}
-                {post.content.location && (
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <MapPin className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-amber-600 font-medium">Location</p>
-                      <p className="text-amber-900">{post.content.location}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Max Attendees */}
-                {post.content.maxAttendees && (
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <Users className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-amber-600 font-medium">Max Attendees</p>
-                      <p className="text-amber-900">{post.content.maxAttendees}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Character Contact */}
-              {post.content.contactProfileId && (
-                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <User className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-amber-600 font-medium">Contact</p>
-                    <Link
-                      href={`/profiles/${post.content.contactProfileId}`}
-                      className="text-amber-900 hover:text-amber-700 underline"
-                    >
-                      {contactName || 'View Contact Character'}
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              {post.content.description && (
-                <div className="prose prose-amber">
-                  <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
-                  <div
-                    className="rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Fallback for other post types */}
-          {post.post_type_id !== 1 &&
-            post.post_type_id !== 2 &&
-            post.post_type_id !== 3 &&
-            post.post_type_id !== 4 &&
-            post.content.body && (
+        {hasCardContent && (
+          <Card className="p-8 bg-white/80 border-amber-300 mb-6">
+            {/* Art/Media description */}
+            {descriptionContent && (
               <div
                 className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.body) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(descriptionContent) }}
               />
             )}
 
-          <div className="mt-6 pt-4 border-t border-amber-200 flex justify-end">
-            <LikeButton
-              type="post"
-              id={post.post_id}
-              initialLikeCount={post.like_count}
-              initialLikedByMe={post.liked_by_me}
-            />
-          </div>
-        </Card>
+            {/* Writing body, and the fallback for any future post type */}
+            {bodyContent && (
+              <div
+                className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyContent) }}
+              />
+            )}
 
-        {/* Tags */}
-        {post.content.tags && post.content.tags.length > 0 && (
-          <Card className="p-6 bg-white border-amber-300">
-            <h2 className="text-lg font-semibold text-amber-900 mb-3">Tags</h2>
-            <div className="flex flex-wrap gap-2">
-              {post.content.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-amber-100 text-amber-800 text-sm rounded-full border border-amber-200"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Editors Section - Visible to all when editors exist, management controls for owner only */}
-        {(editors.length > 0 || post.is_owner) && (
-          <Card className="p-6 bg-white border-amber-300 mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-amber-900">Editors</h2>
-              {post.is_owner && (
-                <Button
-                  onClick={() => setShowAddEditorDialog(true)}
-                  size="sm"
-                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Editor
-                </Button>
-              )}
-            </div>
-
-            {editors.length === 0 ? (
-              <p className="text-amber-600 text-sm">No editors yet. Add editors to allow others to edit this post.</p>
-            ) : (
-              <ul className="space-y-2">
-                {editors.map((editor) => (
-                  <li
-                    key={editor.editor_id}
-                    className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-amber-700" />
-                      <Link href={`/users/${editor.username}`} className="text-amber-900 font-medium hover:underline">
-                        {editor.username}
-                      </Link>
-                      {editor.is_owner && (
-                        <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">
-                          Creator
-                        </span>
-                      )}
+            {/* Event Post - Show Event Details */}
+            {isEvent && (
+              <div className="space-y-6">
+                {/* Event Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Date */}
+                  {post.content.eventDateTime && (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-amber-600 font-medium">Date</p>
+                        <p className="text-amber-900">
+                          {new Date(post.content.eventDateTime).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    {/* Show remove button: owner can remove any non-owner, editors can remove themselves */}
-                    {!editor.is_owner && (post.is_owner || editor.username === currentUsername) && (
-                      <Button
-                        onClick={() => handleRemoveEditor(editor.editor_id)}
-                        disabled={removingEditorId === editor.editor_id}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  )}
+
+                  {/* Time */}
+                  {post.content.eventDateTime && (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-amber-600 font-medium">Time</p>
+                        <p className="text-amber-900">
+                          {new Date(post.content.eventDateTime).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Location */}
+                  {post.content.location && (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <MapPin className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-amber-600 font-medium">Location</p>
+                        <p className="text-amber-900">{post.content.location}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Max Attendees */}
+                  {post.content.maxAttendees && (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <Users className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-amber-600 font-medium">Max Attendees</p>
+                        <p className="text-amber-900">{post.content.maxAttendees}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Character Contact */}
+                {post.content.contactProfileId && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <User className="w-5 h-5 text-amber-700 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Contact</p>
+                      <Link
+                        href={`/profiles/${post.content.contactProfileId}`}
+                        className="text-amber-900 hover:text-amber-700 underline"
                       >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </li>
+                        {contactName || 'View Contact Character'}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {post.content.description && (
+                  <div className="prose prose-amber">
+                    <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
+                    <div
+                      className="rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Featuring — small bubbles, closing out the content rather than the header */}
+            {!isEvent && featuredProfiles.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-amber-200 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-amber-700">Featuring</span>
+                {featuredProfiles.map((fp) => (
+                  <Link
+                    key={fp.featured_profile_id}
+                    href={`/profiles/${fp.profile_id}`}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 hover:bg-amber-200 transition-colors text-xs font-medium"
+                  >
+                    {fp.name}
+                    <span className="text-amber-600">· {fp.type_name}</span>
+                  </Link>
                 ))}
-              </ul>
+              </div>
             )}
           </Card>
         )}
@@ -757,9 +701,9 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
 
       {/* Add Editor Dialog */}
       <Dialog
-        open={showAddEditorDialog}
+        open={showEditorsDialog}
         onOpenChange={(open) => {
-          setShowAddEditorDialog(open);
+          setShowEditorsDialog(open);
           if (!open) {
             setNewEditorUsername('');
             setEditorError(null);
@@ -768,57 +712,95 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
       >
         <DialogContent className="bg-white border-amber-300">
           <DialogHeader>
-            <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
+            <DialogTitle className="text-amber-900">Editors</DialogTitle>
             <DialogDescription className="text-amber-700">
-              Enter the username of the person you want to add as an editor. They will be able to edit this post.
+              Editors can change this post. The creator cannot be removed.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Username"
-              value={newEditorUsername}
-              onChange={(e) => setNewEditorUsername(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddEditor();
-                }
-              }}
-              className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
-            />
-            {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+
+          <ul className="space-y-2">
+            {editors.map((editor) => (
+              <li
+                key={editor.editor_id}
+                className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200"
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-amber-700" />
+                  <Link href={`/users/${editor.username}`} className="text-amber-900 font-medium hover:underline">
+                    {editor.username}
+                  </Link>
+                  {editor.is_owner && (
+                    <span className="text-xs bg-amber-700 text-amber-50 px-2 py-0.5 rounded-full font-medium">
+                      Creator
+                    </span>
+                  )}
+                </div>
+                {/* Owner can remove any non-owner; editors can remove themselves */}
+                {!editor.is_owner && (post.is_owner || editor.username === currentUsername) && (
+                  <Button
+                    onClick={() => handleRemoveEditor(editor.editor_id)}
+                    disabled={removingEditorId === editor.editor_id}
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Remove ${editor.username}`}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {post.is_owner && (
+            <div className="pt-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Username"
+                  value={newEditorUsername}
+                  onChange={(e) => setNewEditorUsername(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddEditor();
+                    }
+                  }}
+                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                />
+                <Button
+                  onClick={handleAddEditor}
+                  disabled={isAddingEditor || !newEditorUsername.trim()}
+                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {isAddingEditor ? 'Adding...' : 'Add'}
+                </Button>
+              </div>
+              {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
+            </div>
+          )}
+
+          <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowAddEditorDialog(false)}
-              disabled={isAddingEditor}
-              className="border-amber-600 text-amber-800 hover:bg-amber-50"
+              onClick={() => setShowEditorsDialog(false)}
+              className="border-amber-800/30 text-amber-900 hover:bg-amber-100"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddEditor}
-              disabled={isAddingEditor || !newEditorUsername.trim()}
-              className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-            >
-              {isAddingEditor ? 'Adding...' : 'Add Editor'}
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Image Lightbox for Art/Media Posts */}
-      {(post.post_type_id === 2 || post.post_type_id === 3) &&
-        post.content.images &&
-        post.content.images.length > 0 && (
-          <ImageLightbox
-            images={post.content.images}
-            currentIndex={lightboxIndex}
-            isOpen={lightboxOpen}
-            onClose={() => setLightboxOpen(false)}
-            onNavigate={setLightboxIndex}
-          />
-        )}
+      {images.length > 0 && (
+        <ImageLightbox
+          images={images}
+          currentIndex={lightboxIndex}
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          onNavigate={setLightboxIndex}
+        />
+      )}
     </div>
   );
 }

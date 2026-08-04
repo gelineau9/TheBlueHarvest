@@ -14,6 +14,7 @@ import NextImage from 'next/image';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
+import { AuthorSelect } from '@/components/posts/author-select';
 
 interface EventFormProps {
   onSuccess: (postId: number) => void;
@@ -187,32 +188,14 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       )}
 
       {/* Author Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="event_author" className="text-amber-900 font-semibold">
-          Author (Optional)
-        </Label>
-        <p className="text-sm text-amber-700">Attribute this event to one of your characters or kinships.</p>
-        {isLoadingProfiles ? (
-          <div className="text-sm text-amber-700">Loading your profiles...</div>
-        ) : (
-          <>
-            <select
-              id="event_author"
-              value={authorId}
-              onChange={(e) => setAuthorId(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
-            >
-              <option value="">No author</option>
-              {authorableProfiles.map((profile) => (
-                <option key={profile.profile_id} value={profile.profile_id}>
-                  {profile.name} ({profile.type_label})
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </div>
+      <AuthorSelect
+        id="event_author"
+        value={authorId}
+        onChange={setAuthorId}
+        profiles={authorableProfiles}
+        isLoading={isLoadingProfiles}
+        disabled={isSubmitting}
+      />
 
       {/* Header Image Upload */}
       <div className="space-y-2">

@@ -12,7 +12,7 @@ import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import {
   Bold,
   Italic,
@@ -143,16 +143,22 @@ export function RichTextEditor({
     },
   });
 
-  // Sync external value changes (e.g. when form resets or profile loads)
+  // Sync external value changes (e.g. when a form resets or a post loads).
+  //
+  // This has to run after commit rather than during render: setContent emits an
+  // update by default in Tiptap 3, which calls onChange straight back into the
+  // parent — a setState on another component in the middle of our own render.
+  // emitUpdate:false then keeps a programmatic load from registering as a user
+  // edit, which was tripping the unsaved-changes guard the moment a page opened.
   const prevValueRef = useRef(value);
-  if (editor && value !== prevValueRef.current) {
+  useEffect(() => {
+    if (!editor || value === prevValueRef.current) return;
     prevValueRef.current = value;
-    const current = editor.getHTML();
     const incoming = value || '';
-    if (current !== incoming) {
-      editor.commands.setContent(incoming);
+    if (editor.getHTML() !== incoming) {
+      editor.commands.setContent(incoming, { emitUpdate: false });
     }
-  }
+  }, [editor, value]);
 
   const handleLinkToggle = useCallback(() => {
     if (!editor) return;

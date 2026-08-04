@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { usePostEdit, POST_TYPES, POST_TYPE_NAMES, UploadedImage } from '@/hooks/usePostEdit';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
@@ -484,27 +485,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             {/* ── Writing fields ── */}
             {type === POST_TYPES.WRITING && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="authorId" className="text-amber-900 font-semibold">
-                    Author (Optional)
-                  </Label>
-                  <select
-                    id="authorId"
-                    value={authorId}
-                    onChange={(e) => setAuthorId(e.target.value)}
-                    className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
-                  >
-                    <option value="">No author</option>
-                    {authorableProfiles.map((p) => (
-                      <option key={p.profile_id} value={String(p.profile_id)}>
-                        {p.name} ({p.type_label})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-amber-600">
-                    Optionally attribute this writing to one of your characters or kinships.
-                  </p>
-                </div>
+                <AuthorSelect id="authorId" value={authorId} onChange={setAuthorId} profiles={authorableProfiles} />
                 <div className="space-y-2">
                   <Label htmlFor="body" className="text-amber-900 font-semibold">
                     Content
@@ -517,27 +498,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             {/* ── Art / Media fields ── */}
             {(type === POST_TYPES.ART || type === POST_TYPES.MEDIA) && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="artMediaAuthorId" className="text-amber-900 font-semibold">
-                    Author (Optional)
-                  </Label>
-                  <select
-                    id="artMediaAuthorId"
-                    value={authorId}
-                    onChange={(e) => setAuthorId(e.target.value)}
-                    className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
-                  >
-                    <option value="">No author</option>
-                    {authorableProfiles.map((p) => (
-                      <option key={p.profile_id} value={String(p.profile_id)}>
-                        {p.name} ({p.type_label})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-amber-600">
-                    Optionally attribute this post to one of your characters or kinships.
-                  </p>
-                </div>
+                <AuthorSelect
+                  id="artMediaAuthorId"
+                  value={authorId}
+                  onChange={setAuthorId}
+                  profiles={authorableProfiles}
+                />
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Images</Label>
                   <div
@@ -626,27 +592,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
             {/* ── Event fields ── */}
             {type === POST_TYPES.EVENT && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="eventAuthorId" className="text-amber-900 font-semibold">
-                    Author (Optional)
-                  </Label>
-                  <select
-                    id="eventAuthorId"
-                    value={authorId}
-                    onChange={(e) => setAuthorId(e.target.value)}
-                    className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-amber-900 focus:border-amber-500 focus:ring-amber-500"
-                  >
-                    <option value="">No author</option>
-                    {authorableProfiles.map((p) => (
-                      <option key={p.profile_id} value={String(p.profile_id)}>
-                        {p.name} ({p.type_label})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-amber-600">
-                    Optionally attribute this event to one of your characters or kinships.
-                  </p>
-                </div>
+                <AuthorSelect
+                  id="eventAuthorId"
+                  value={authorId}
+                  onChange={setAuthorId}
+                  profiles={authorableProfiles}
+                />
                 <div className="space-y-2">
                   <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
                   {headerImage ? (

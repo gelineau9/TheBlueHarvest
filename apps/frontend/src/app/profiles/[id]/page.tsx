@@ -8,7 +8,6 @@ import NextImage from 'next/image';
 import {
   ArrowLeft,
   User,
-  Calendar,
   Pencil,
   Trash2,
   UserPlus,
@@ -135,8 +134,8 @@ function WritingPostCard({ post }: { post: PublicPost }) {
         <span className="inline-block w-fit rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
           {post.type_name.charAt(0).toUpperCase() + post.type_name.slice(1)}
         </span>
-        <h3 className="line-clamp-2 text-sm font-semibold text-amber-900 leading-snug">{post.title}</h3>
-        {preview && <p className="line-clamp-2 text-xs text-amber-700 leading-relaxed">{preview}</p>}
+        <h3 className="line-clamp-2 text-xs font-semibold text-amber-900 leading-snug sm:text-sm">{post.title}</h3>
+        {preview && <p className="line-clamp-2 text-[11px] text-amber-700 leading-relaxed sm:text-xs">{preview}</p>}
         <p className="text-xs text-amber-500 mt-auto">
           {new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
         </p>
@@ -150,7 +149,9 @@ function GalleryPostCard({ post }: { post: PublicPost }) {
 
   return (
     <Link href={`/posts/${post.post_id}`} className="block">
-      <Card className="overflow-hidden border-amber-800/20 bg-amber-50/90 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+      {/* pb-0 cancels the base Card's pb-6, which otherwise leaves a white band
+          under the image — the other inline cards avoid it by passing p-4. */}
+      <Card className="overflow-hidden gap-0 pb-0 border-amber-800/20 bg-amber-50/90 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
         <div className="relative aspect-square w-full bg-amber-100">
           {thumbnailUrl ? (
             <NextImage
@@ -166,7 +167,9 @@ function GalleryPostCard({ post }: { post: PublicPost }) {
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-amber-900/60 to-transparent" />
-          <p className="absolute bottom-0 left-0 right-0 line-clamp-1 p-2 text-xs font-semibold text-amber-50 drop-shadow-sm">
+          {/* Inset from the edges so the ellipsis has room and doesn't run into the
+              rounded corner; truncate needs no display override, unlike line-clamp. */}
+          <p className="absolute bottom-1.5 left-1.5 right-1.5 truncate px-1 text-[11px] font-semibold text-amber-50 drop-shadow-sm sm:text-xs">
             {post.title}
           </p>
         </div>
@@ -188,9 +191,202 @@ function ItemCard({ item }: { item: ItemProfile }) {
             </div>
           )}
         </div>
-        <p className="line-clamp-2 text-sm font-semibold text-amber-900 leading-snug">{item.name}</p>
+        <p className="line-clamp-2 text-xs font-semibold text-amber-900 leading-snug sm:text-sm">{item.name}</p>
       </Card>
     </Link>
+  );
+}
+
+// ─── Shared content sections ──────────────────────────────────────────────────
+// Gallery and Writing were duplicated once per profile type — four near-identical
+// copies differing only in the noun. One implementation each, noun passed in.
+
+function SectionHeading({
+  icon: Icon,
+  title,
+  viewAllHref,
+}: {
+  icon: typeof ImageIcon;
+  title: string;
+  viewAllHref?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <Icon className="w-5 h-5 text-amber-800" />
+        <h2 className="text-xl font-bold text-amber-900">{title}</h2>
+      </div>
+      {viewAllHref && (
+        <Link
+          href={viewAllHref}
+          className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+        >
+          View all <ChevronRight className="w-4 h-4 ml-1" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function GallerySection({
+  profileId,
+  posts,
+  isLoading,
+  canEdit,
+  noun,
+  gridClass = 'grid-cols-2 sm:grid-cols-3',
+  className,
+}: {
+  profileId: string;
+  posts: PublicPost[];
+  isLoading: boolean;
+  canEdit: boolean;
+  noun: string;
+  gridClass?: string;
+  className?: string;
+}) {
+  return (
+    <section className={className}>
+      <SectionHeading icon={ImageIcon} title="Gallery" viewAllHref={`/profiles/${profileId}/gallery`} />
+      {isLoading ? (
+        <p className="text-amber-600 text-sm">Loading gallery…</p>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-4 space-y-2">
+          <p className="text-amber-600 text-sm italic">No art or media featuring this {noun} yet.</p>
+          {canEdit && (
+            <div className="flex justify-center gap-4">
+              <Link
+                href="/posts/create/art"
+                className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+              >
+                <PlusCircle className="w-4 h-4" /> Post artwork
+              </Link>
+              <Link
+                href="/posts/create/media"
+                className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+              >
+                <PlusCircle className="w-4 h-4" /> Post media
+              </Link>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={`grid ${gridClass} gap-3`}>
+          {posts.map((post) => (
+            <GalleryPostCard key={post.post_id} post={post} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WritingSection({
+  profileId,
+  posts,
+  isLoading,
+  canEdit,
+  noun,
+  className,
+}: {
+  profileId: string;
+  posts: PublicPost[];
+  isLoading: boolean;
+  canEdit: boolean;
+  noun: string;
+  className?: string;
+}) {
+  return (
+    <section className={className}>
+      <SectionHeading icon={BookOpen} title="Writing" viewAllHref={`/profiles/${profileId}/writing`} />
+      {isLoading ? (
+        <p className="text-amber-600 text-sm">Loading writing…</p>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-4 space-y-2">
+          <p className="text-amber-600 text-sm italic">No writing featuring this {noun} yet.</p>
+          {canEdit && (
+            <Link
+              href="/posts/create/writing"
+              className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+            >
+              <PlusCircle className="w-4 h-4" /> Write a post
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {posts.map((post) => (
+            <WritingPostCard key={post.post_id} post={post} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MembersSection({
+  members,
+  isLoading,
+  canEdit,
+  removingMemberId,
+  onRemove,
+  className,
+}: {
+  members: KinshipMember[];
+  isLoading: boolean;
+  canEdit: boolean;
+  removingMemberId: number | null;
+  onRemove: (characterId: number) => void;
+  className?: string;
+}) {
+  return (
+    <section className={className}>
+      <SectionHeading icon={Users} title="Members" />
+      {isLoading ? (
+        <p className="text-amber-600 text-sm">Loading members…</p>
+      ) : members.length === 0 ? (
+        <p className="text-amber-600 text-sm italic">No members have joined yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {members.map((m) => (
+            <li
+              key={m.character_id}
+              className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative w-8 h-8 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                  {m.avatar_url ? (
+                    <NextImage fill src={m.avatar_url} alt={m.character_name} sizes="32px" className="object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <User className="w-4 h-4 text-amber-400" />
+                    </div>
+                  )}
+                </div>
+                <Link
+                  href={`/profiles/${m.character_id}`}
+                  className="text-amber-900 hover:underline font-semibold text-sm"
+                >
+                  {m.character_name}
+                </Link>
+              </div>
+              {canEdit && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemove(m.character_id)}
+                  disabled={removingMemberId === m.character_id}
+                  aria-label={`Remove ${m.character_name}`}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                >
+                  {removingMemberId === m.character_id ? '…' : <X className="w-4 h-4" />}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -576,23 +772,111 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const isOrganization = profile.profile_type_id === 4;
   const d = profile.details;
 
+  // Back goes to the listing this profile belongs to, not the homepage.
+  const backLink = isCharacter
+    ? { href: '/characters', label: 'Back to Characters' }
+    : isKinship
+      ? { href: '/kinships', label: 'Back to Kinships' }
+      : {
+          href: `/archive?contentType=profiles&profileTypes=${profile.profile_type_id}`,
+          label: `Back to ${profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}s`,
+        };
+
+  const hasBanner = (isCharacter || isKinship || isOrganization) && !!d?.banner?.url;
+
+  // Identity facts read as one row of bubbles rather than a labelled table —
+  // the same treatment tags get on a post.
+  // Each chip names what it is, the way a Featuring bubble on a post does —
+  // without the qualifier "Rowantook" and "Bucklebury" are just loose words.
+  const identityChips: Array<{ key: string; label: string; qualifier: string; href?: string; tone?: string }> = [];
+  if (isCharacter) {
+    if (d?.race) identityChips.push({ key: 'race', label: d.race, qualifier: 'race', tone: 'emerald' });
+    if (d?.character_type) {
+      identityChips.push({
+        key: 'ctype',
+        label: d.character_type,
+        qualifier: 'type',
+        tone: d.character_type === 'NPC' ? 'slate' : 'sky',
+      });
+    }
+    if (d?.occupation) identityChips.push({ key: 'occupation', label: d.occupation, qualifier: 'occupation' });
+    if (d?.age) identityChips.push({ key: 'age', label: d.age, qualifier: 'age' });
+    if (d?.kinship_profile_id && kinshipProfileName) {
+      identityChips.push({
+        key: 'kinship',
+        label: kinshipProfileName,
+        qualifier: 'kinship',
+        href: `/profiles/${d.kinship_profile_id}`,
+      });
+    } else if (d?.kinship) {
+      identityChips.push({ key: 'kinship', label: d.kinship, qualifier: 'kinship' });
+    }
+    if (d?.residence) identityChips.push({ key: 'residence', label: d.residence, qualifier: 'residence' });
+    if (d?.in_game_name) identityChips.push({ key: 'ign', label: d.in_game_name, qualifier: 'in-game' });
+  }
+  if (isKinship) {
+    if (d?.kinship_type) identityChips.push({ key: 'ktype', label: d.kinship_type, qualifier: 'type', tone: 'violet' });
+    if (d?.founding_date) identityChips.push({ key: 'founded', label: d.founding_date, qualifier: 'founded' });
+    if (d?.status) identityChips.push({ key: 'status', label: d.status, qualifier: 'status' });
+  }
+  if (isLocation) {
+    if (d?.location_type) identityChips.push({ key: 'ltype', label: d.location_type, qualifier: 'type' });
+    if (d?.region) identityChips.push({ key: 'region', label: d.region, qualifier: 'region' });
+    if (d?.status) identityChips.push({ key: 'status', label: d.status, qualifier: 'status' });
+  }
+  if (isOrganization) {
+    if (d?.org_type) identityChips.push({ key: 'otype', label: d.org_type, qualifier: 'type' });
+    if (d?.founding_date) identityChips.push({ key: 'founded', label: d.founding_date, qualifier: 'founded' });
+    if (d?.area_of_operation) {
+      identityChips.push({ key: 'area', label: d.area_of_operation, qualifier: 'area of operation' });
+    }
+    if (d?.status) identityChips.push({ key: 'status', label: d.status, qualifier: 'status' });
+    // Organizations surface their parent as a contact rather than an owner
+    if (profile.parent_name) {
+      identityChips.push({
+        key: 'contact',
+        label: profile.parent_name,
+        qualifier: 'contact',
+        href: profile.parent_id ? `/profiles/${profile.parent_id}` : undefined,
+      });
+    }
+  }
+
+  const chipTone = (tone?: string) => {
+    switch (tone) {
+      case 'emerald':
+        return 'bg-emerald-100 border-emerald-200 text-emerald-800';
+      case 'sky':
+        return 'bg-sky-100 border-sky-200 text-sky-800';
+      case 'slate':
+        return 'bg-slate-100 border-slate-200 text-slate-700';
+      case 'violet':
+        return 'bg-violet-100 border-violet-200 text-violet-800';
+      default:
+        return 'bg-amber-100/70 border-amber-200 text-amber-800';
+    }
+  };
+
   return (
     <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
-        <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
+        <Link
+          href={backLink.href}
+          className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
+          {backLink.label}
         </Link>
 
-        {/* Profile Header Card */}
-        <Card className="bg-white border-amber-300 mb-6 overflow-hidden">
+        {/* Profile Header — no card; the banner and title carry the page */}
+        <div>
           {/* Banner (character + kinship + organization) */}
-          {(isCharacter || isKinship || isOrganization) && d?.banner?.url && (
-            <div className="relative h-48 w-full bg-amber-100">
+          {hasBanner && (
+            <div className="relative h-48 w-full overflow-hidden rounded-md bg-amber-100 shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10">
               <NextImage
                 fill
-                src={d.banner.url}
+                src={d!.banner!.url}
                 alt={`${profile.name} banner`}
                 sizes="(max-width: 768px) 100vw, 896px"
                 className="object-cover"
@@ -601,13 +885,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          <div className={`p-8 ${(isCharacter || isKinship || isOrganization) && d?.banner?.url ? 'pt-6' : ''}`}>
-            <div className="flex items-start justify-between mb-4">
+          <div className={hasBanner ? 'pt-0' : ''}>
+            <div className="flex items-start justify-between gap-6">
               <div className="flex items-start gap-6">
-                {/* Avatar — overlaps banner bottom-left when banner present */}
+                {/* Avatar — overlaps the banner's bottom-left when one is present */}
                 <div
                   className={`relative flex-shrink-0 ${
-                    (isCharacter || isKinship || isOrganization) && d?.banner?.url
+                    hasBanner
                       ? '-mt-14 w-24 h-24 rounded-full border-4 border-white shadow-md overflow-hidden bg-amber-100'
                       : 'w-24 h-24 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-100'
                   }`}
@@ -631,213 +915,327 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
 
-                <div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
-                      {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}
-                    </div>
-                    {isCharacter && d?.race && (
-                      <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">
-                        {d.race}
-                      </div>
+                <div className="min-w-0">
+                  <h1 className="text-4xl font-bold text-amber-900">{profile.name}</h1>
+
+                  {/* Byline — who made it, and when */}
+                  <div className="mt-2 text-sm text-amber-700">
+                    Created by{' '}
+                    <Link href={`/users/${profile.username}`} className="text-amber-900 hover:underline font-semibold">
+                      {profile.username}
+                    </Link>
+                    <span className="mx-2 text-amber-800/40">·</span>
+                    <span>{formattedDate}</span>
+                  </div>
+
+                  {/* Attribution — who else can edit, and the owning profile */}
+                  <div className="mt-1 text-xs text-amber-600">
+                    {editors.length > 0 && (
+                      <>
+                        Editors:{' '}
+                        {editors.map((editor, index) => (
+                          <span key={editor.editor_id}>
+                            <Link href={`/users/${editor.username}`} className="hover:underline text-amber-700">
+                              {editor.username}
+                            </Link>
+                            {index < editors.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </>
                     )}
-                    {isCharacter && d?.character_type && (
-                      <div
-                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${d.character_type === 'NPC' ? 'bg-slate-100 text-slate-700' : 'bg-sky-100 text-sky-800'}`}
-                      >
-                        {d.character_type}
-                      </div>
+                    {profile.can_edit && (
+                      <>
+                        {editors.length > 0 && <span className="mx-2 text-amber-800/40">·</span>}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditorError(null);
+                            setNewEditorUsername('');
+                            setShowAddEditorDialog(true);
+                          }}
+                          className="underline hover:text-amber-800 cursor-pointer"
+                        >
+                          {editors.length > 0 ? 'Manage' : 'Manage editors'}
+                        </button>
+                      </>
                     )}
-                    {isKinship && d?.kinship_type && (
-                      <div className="inline-block px-3 py-1 bg-violet-100 text-violet-800 text-sm font-semibold rounded-full">
-                        {d.kinship_type}
-                      </div>
+                    {/* Organizations surface their parent as a contact chip instead */}
+                    {!isOrganization && profile.parent_name && profile.parent_id && (
+                      <>
+                        {(editors.length > 0 || profile.can_edit) && <span className="mx-2 text-amber-800/40">|</span>}
+                        Owned by{' '}
+                        <Link href={`/profiles/${profile.parent_id}`} className="hover:underline text-amber-700">
+                          {profile.parent_name}
+                        </Link>
+                      </>
                     )}
                   </div>
-                  <h1 className="text-4xl font-bold text-amber-900 mb-2">{profile.name}</h1>
                 </div>
               </div>
 
-              {/* Edit / Delete buttons */}
-              {profile.can_edit && (
-                <div className="flex gap-2">
+              <div className="flex flex-none items-center gap-0.5 pt-1">
+                {/* Follow keeps its label — it's the visitor's action, not an owner tool */}
+                {isLoggedIn &&
+                  profile.account_id !== accountId &&
+                  (profile.profile_type_id === 1 || profile.profile_type_id === 3) &&
+                  followCheckDone && (
+                    <FollowButton type="profile" id={profile.profile_id} initialFollowing={isFollowing} />
+                  )}
+                {profile.can_edit && (
                   <Button
                     onClick={() => router.push(`/profiles/${profile.profile_id}/edit`)}
-                    className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Edit profile"
+                    title="Edit profile"
+                    className="text-amber-700 hover:bg-amber-100 hover:text-amber-900"
                   >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit
+                    <Pencil className="w-4 h-4" />
                   </Button>
-                  {profile.is_owner && (
-                    <Button
-                      onClick={() => setShowDeleteDialog(true)}
-                      variant="outline"
-                      className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              )}
-              {/* Follow button — shown to logged-in users who don't own this profile */}
-              {isLoggedIn &&
-                profile.account_id !== accountId &&
-                (profile.profile_type_id === 1 || profile.profile_type_id === 3) &&
-                followCheckDone && (
-                  <FollowButton type="profile" id={profile.profile_id} initialFollowing={isFollowing} />
                 )}
-            </div>
-
-            {/* Created by / date */}
-            <div className="flex items-center gap-6 text-sm text-amber-700">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>
-                  Created by{' '}
-                  <Link href={`/users/${profile.username}`} className="hover:underline font-medium">
-                    {profile.username}
-                  </Link>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>{formattedDate}</span>
+                {profile.is_owner && (
+                  <Button
+                    onClick={() => setShowDeleteDialog(true)}
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Delete profile"
+                    title="Delete profile"
+                    className="text-amber-700 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Parent ownership */}
-            {profile.parent_name && profile.parent_id && (
-              <div className="mt-4 pt-4 border-t border-amber-200">
-                <div className="flex items-center gap-2 text-sm text-amber-700">
-                  <User className="w-4 h-4" />
-                  <span>
-                    Owned by{' '}
+            {/* Identity chips — the same bubble treatment tags get on a post */}
+            {identityChips.length > 0 && (
+              <div className="mt-6 mb-6 flex flex-wrap gap-2">
+                {identityChips.map((chip) => {
+                  const body = (
+                    <>
+                      {chip.label}
+                      <span className="opacity-60"> · {chip.qualifier}</span>
+                    </>
+                  );
+                  return chip.href ? (
                     <Link
-                      href={`/profiles/${profile.parent_id}`}
-                      className="text-amber-900 hover:underline font-semibold"
+                      key={chip.key}
+                      href={chip.href}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:brightness-95 ${chipTone(chip.tone)}`}
                     >
-                      {profile.parent_name}
+                      {body}
                     </Link>
-                  </span>
-                </div>
+                  ) : (
+                    <span
+                      key={chip.key}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${chipTone(chip.tone)}`}
+                    >
+                      {body}
+                    </span>
+                  );
+                })}
               </div>
             )}
-          </div>
-        </Card>
 
-        {/* Item image */}
-        {isItem && d?.images?.[0]?.url && (
-          <Card className="overflow-hidden border-amber-300 mb-6">
-            <div className="relative w-full aspect-video bg-amber-50">
-              <NextImage src={d.images[0].url} alt={profile.name} fill className="object-contain" />
-            </div>
-          </Card>
-        )}
-
-        {/* Character info panel */}
-        {isCharacter && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <h2 className="text-lg font-semibold text-amber-900 mb-4">Character Info</h2>
-            {d &&
-            (d.race || d.occupation || d.age || d.kinship_profile_id || d.kinship || d.residence || d.in_game_name) ? (
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                {d?.race && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Race</dt>
-                    <dd className="text-amber-900">{d.race}</dd>
-                  </div>
-                )}
-                {d?.occupation && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Occupation</dt>
-                    <dd className="text-amber-900">{d.occupation}</dd>
-                  </div>
-                )}
-                {d?.age && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Age</dt>
-                    <dd className="text-amber-900">{d.age}</dd>
-                  </div>
-                )}
-                {(d?.kinship_profile_id || d?.kinship) && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Kinship</dt>
-                    <dd className="text-amber-900">
-                      {d.kinship_profile_id && kinshipProfileName ? (
-                        <Link
-                          href={`/profiles/${d.kinship_profile_id}`}
-                          className="text-amber-700 hover:text-amber-900 hover:underline font-medium"
-                        >
-                          {kinshipProfileName}
-                        </Link>
-                      ) : (
-                        d.kinship || '—'
-                      )}
-                    </dd>
-                  </div>
-                )}
-                {d?.residence && (
-                  <div className="col-span-2 sm:col-span-1">
-                    <dt className="text-amber-600 font-medium">Residence</dt>
-                    <dd className="text-amber-900">{d.residence}</dd>
-                  </div>
-                )}
-                {d?.in_game_name && (
-                  <div className="col-span-2 sm:col-span-1">
-                    <dt className="text-amber-600 font-medium">In-Game Name</dt>
-                    <dd className="text-amber-900">{d.in_game_name}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="text-amber-600 text-sm italic">No character info has been added yet.</p>
-            )}
-            {d?.appearance && (
-              <div className="border-t border-amber-100 mt-4 pt-4">
-                <h3 className="text-sm font-semibold text-amber-900 mb-2">Appearance</h3>
+            {/* Appearance — sits with the identity chips, not buried in the background */}
+            {isCharacter && d?.appearance && (
+              <div className="mb-6">
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-700">Appearance</h2>
                 <div
-                  className="prose prose-amber max-w-none rte-content text-amber-800 text-sm [&_a]:text-amber-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_img]:rounded [&_img]:max-w-full"
+                  className="prose prose-amber rte-content text-sm text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_img]:rounded [&_img]:max-w-full"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.appearance) }}
                 />
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Item image — bare hero, same treatment artwork gets on a post */}
+        {isItem && d?.images?.[0]?.url && (
+          <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-md bg-amber-50 shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10">
+            <NextImage src={d.images[0].url} alt={profile.name} fill className="object-contain" />
+          </div>
+        )}
+
+        {/* Location image — bare hero */}
+        {isLocation && d?.images?.[0]?.url && (
+          <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-md bg-amber-50 shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10">
+            <NextImage src={d.images[0].url} alt={profile.name} fill className="object-cover" />
+          </div>
+        )}
+
+        {/* Background / Description */}
+        {(isCharacter || isKinship || isItem || isLocation || isOrganization) && (
+          <Card className="p-8 bg-white/80 border-amber-300 mb-6">
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">
+              {isCharacter ? 'Background' : isKinship || isOrganization ? 'Background / Description' : 'Description'}
+            </h2>
+            {d?.description ? (
+              <div
+                className="prose prose-amber rte-content text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
+              />
+            ) : (
+              <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
+            )}
           </Card>
         )}
 
-        {/* Kinship info panel (with Recruiters + Relationships embedded) */}
+        {/* Fallback generic */}
+        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && d?.description && (
+          <Card className="p-8 bg-white border-amber-300 mb-6">
+            <div
+              className="prose prose-amber rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
+            />
+          </Card>
+        )}
+
+        {/* ── Character content — one card, four sections ──────────────────── */}
+        {isCharacter && (
+          <Card className="p-6 bg-white/80 border-amber-300 mb-6 divide-y divide-amber-200">
+            {/* Relationships */}
+            <section className="pb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Heart className="w-5 h-5 text-amber-800" />
+                <h2 className="text-xl font-bold text-amber-900">Relationships</h2>
+              </div>
+
+              {relationshipsLoading ? (
+                <p className="text-amber-600 text-sm">Loading relationships…</p>
+              ) : relationships.length === 0 ? (
+                <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
+              ) : (
+                <div className="space-y-6">
+                  {[
+                    { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
+                    { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
+                    { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
+                    { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
+                    { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
+                  ].map(({ label: groupLabel, color, filter }) => {
+                    const group = relationships.filter((r) => filter(r.type_name));
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={groupLabel}>
+                        <h3 className={`text-sm font-semibold mb-2 ${color}`}>{groupLabel}</h3>
+                        <ul className="space-y-2">
+                          {group.map((rel) => (
+                            <li
+                              key={rel.relationship_id}
+                              className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                                  {rel.other_profile_avatar_url ? (
+                                    <NextImage
+                                      fill
+                                      src={rel.other_profile_avatar_url}
+                                      alt={rel.other_profile_name}
+                                      sizes="28px"
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full items-center justify-center">
+                                      <User className="w-3.5 h-3.5 text-amber-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col">
+                                  <Link
+                                    href={`/profiles/${rel.other_profile_id}`}
+                                    className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
+                                  >
+                                    {rel.other_profile_name}
+                                  </Link>
+                                  {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
+                                </div>
+                              </div>
+                              {profile.can_edit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveRelationship(rel.relationship_id)}
+                                  disabled={removingRelId === rel.relationship_id}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                                >
+                                  {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
+                                </Button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {/* Owned Items */}
+            <section className="py-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Items</h2>
+                </div>
+                <Link
+                  href={`/profiles/${id}/items`}
+                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </div>
+
+              {itemsLoading ? (
+                <p className="text-amber-600 text-sm">Loading items…</p>
+              ) : items.length === 0 ? (
+                <div className="text-center py-4 space-y-2">
+                  <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
+                  {profile.can_edit && (
+                    <Link
+                      href="/profiles/create"
+                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+                    >
+                      <PlusCircle className="w-4 h-4" /> Create an Item profile
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {items.map((item) => (
+                    <ItemCard key={item.profile_id} item={item} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <GallerySection
+              className="py-6"
+              profileId={id}
+              posts={galleryPosts}
+              isLoading={galleryLoading}
+              canEdit={!!profile.can_edit}
+              noun="character"
+            />
+
+            <WritingSection
+              className="pt-6"
+              profileId={id}
+              posts={writingPosts}
+              isLoading={writingLoading}
+              canEdit={!!profile.can_edit}
+              noun="character"
+            />
+          </Card>
+        )}
+
+        {/* ── Kinship content — one card, five sections ────────────────── */}
         {isKinship && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <h2 className="text-lg font-semibold text-amber-900 mb-4">Kinship Info</h2>
-
-            {/* Founded / Type / Status */}
-            {d && (d.founding_date || d.kinship_type || d.status) ? (
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm mb-6">
-                {d.founding_date && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Founded</dt>
-                    <dd className="text-amber-900">{d.founding_date}</dd>
-                  </div>
-                )}
-                {d.kinship_type && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Type</dt>
-                    <dd className="text-amber-900">{d.kinship_type}</dd>
-                  </div>
-                )}
-                {d.status && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Status</dt>
-                    <dd className="text-amber-900">{d.status}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="text-amber-600 text-sm italic mb-6">No kinship info has been added yet.</p>
-            )}
-
+          <Card className="p-6 bg-white/80 border-amber-300 mb-6 divide-y divide-amber-200">
             {/* Recruiters */}
-            <div className="border-t border-amber-100 pt-4 mb-4">
+            <section className="pb-6">
               <div className="flex items-center gap-2 mb-3">
                 <Users className="w-4 h-4 text-amber-700" />
                 <h3 className="text-sm font-semibold text-amber-900">Recruiters</h3>
@@ -881,10 +1279,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   );
                 })()
               )}
-            </div>
+            </section>
 
             {/* Relationships (Friends & Allies / Rivals & Enemies) */}
-            <div className="border-t border-amber-100 pt-4">
+            <section className="py-6">
               <div className="flex items-center gap-2 mb-3">
                 <Swords className="w-4 h-4 text-amber-700" />
                 <h3 className="text-sm font-semibold text-amber-900">Relationships</h3>
@@ -978,659 +1376,89 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   })}
                 </div>
               )}
-            </div>
-          </Card>
-        )}
+            </section>
 
-        {/* Location info panel */}
-        {isLocation && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <h2 className="text-lg font-semibold text-amber-900 mb-4">Location Info</h2>
-            {d && (d.location_type || d.region || d.status) ? (
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                {d.location_type && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Type</dt>
-                    <dd className="text-amber-900">{d.location_type}</dd>
-                  </div>
-                )}
-                {d.region && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Region / Area</dt>
-                    <dd className="text-amber-900">{d.region}</dd>
-                  </div>
-                )}
-                {d.status && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Status</dt>
-                    <dd className="text-amber-900">{d.status}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="text-amber-600 text-sm italic">No location info has been added yet.</p>
-            )}
-          </Card>
-        )}
+            <MembersSection
+              className="py-6"
+              members={members}
+              isLoading={membersLoading}
+              canEdit={!!profile.can_edit}
+              removingMemberId={removingMemberId}
+              onRemove={handleRemoveMember}
+            />
 
-        {/* Location image */}
-        {isLocation && d?.images?.[0]?.url && (
-          <Card className="overflow-hidden border-amber-300 mb-6">
-            <div className="relative w-full aspect-video bg-amber-50">
-              <NextImage src={d.images[0].url} alt={profile.name} fill className="object-cover" />
-            </div>
-          </Card>
-        )}
+            <GallerySection
+              className="py-6"
+              profileId={id}
+              posts={galleryPosts}
+              isLoading={galleryLoading}
+              canEdit={!!profile.can_edit}
+              noun="kinship"
+            />
 
-        {/* Organization info panel */}
-        {isOrganization && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <h2 className="text-lg font-semibold text-amber-900 mb-4">Organization Info</h2>
-            {d && (d.founding_date || d.org_type || d.status || d.area_of_operation) ? (
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                {d.founding_date && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Founded</dt>
-                    <dd className="text-amber-900">{d.founding_date}</dd>
-                  </div>
-                )}
-                {d.org_type && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Organization Type</dt>
-                    <dd className="text-amber-900">{d.org_type}</dd>
-                  </div>
-                )}
-                {d.status && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Status</dt>
-                    <dd className="text-amber-900">{d.status}</dd>
-                  </div>
-                )}
-                {d.area_of_operation && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Area of Operation</dt>
-                    <dd className="text-amber-900">{d.area_of_operation}</dd>
-                  </div>
-                )}
-                {profile.parent_name && (
-                  <div>
-                    <dt className="text-amber-600 font-medium">Contact</dt>
-                    <dd className="text-amber-900">
-                      {profile.parent_id ? (
-                        <Link href={`/profiles/${profile.parent_id}`} className="hover:underline">
-                          {profile.parent_name}
-                        </Link>
-                      ) : (
-                        profile.parent_name
-                      )}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            ) : profile.parent_name ? (
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                <div>
-                  <dt className="text-amber-600 font-medium">Contact</dt>
-                  <dd className="text-amber-900">
-                    {profile.parent_id ? (
-                      <Link href={`/profiles/${profile.parent_id}`} className="hover:underline">
-                        {profile.parent_name}
-                      </Link>
-                    ) : (
-                      profile.parent_name
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            ) : (
-              <p className="text-amber-600 text-sm italic">No organization info has been added yet.</p>
-            )}
-          </Card>
-        )}
-
-        {/* Relationships (character only) */}
-        {isCharacter && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Heart className="w-5 h-5 text-amber-800" />
-              <h2 className="text-xl font-bold text-amber-900">Relationships</h2>
-            </div>
-
-            {relationshipsLoading ? (
-              <p className="text-amber-600 text-sm">Loading relationships…</p>
-            ) : relationships.length === 0 ? (
-              <p className="text-amber-600 text-sm italic">No relationships have been added yet.</p>
-            ) : (
-              <div className="space-y-6">
-                {[
-                  { label: 'Friends', color: 'text-emerald-600', filter: (t: string) => t === 'friend' },
-                  { label: 'Allies', color: 'text-teal-600', filter: (t: string) => t === 'ally' },
-                  { label: 'Relatives', color: 'text-blue-600', filter: (t: string) => t === 'relative' },
-                  { label: 'Rivals', color: 'text-orange-600', filter: (t: string) => t === 'rival' },
-                  { label: 'Enemies', color: 'text-red-600', filter: (t: string) => t === 'enemy' },
-                ].map(({ label: groupLabel, color, filter }) => {
-                  const group = relationships.filter((r) => filter(r.type_name));
-                  if (group.length === 0) return null;
-                  return (
-                    <div key={groupLabel}>
-                      <h3 className={`text-sm font-semibold mb-2 ${color}`}>{groupLabel}</h3>
-                      <ul className="space-y-2">
-                        {group.map((rel) => (
-                          <li
-                            key={rel.relationship_id}
-                            className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
-                                {rel.other_profile_avatar_url ? (
-                                  <NextImage
-                                    fill
-                                    src={rel.other_profile_avatar_url}
-                                    alt={rel.other_profile_name}
-                                    sizes="28px"
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-full items-center justify-center">
-                                    <User className="w-3.5 h-3.5 text-amber-400" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex flex-col">
-                                <Link
-                                  href={`/profiles/${rel.other_profile_id}`}
-                                  className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
-                                >
-                                  {rel.other_profile_name}
-                                </Link>
-                                {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
-                              </div>
-                            </div>
-                            {profile.can_edit && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveRelationship(rel.relationship_id)}
-                                disabled={removingRelId === rel.relationship_id}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                              >
-                                {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
-                              </Button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-        )}
-
-        {/* Background / Description */}
-        {(isCharacter || isKinship || isItem || isLocation || isOrganization) && (
-          <Card className="p-8 bg-white border-amber-300 mb-6">
-            <h2 className="text-2xl font-bold text-amber-900 mb-4">
-              {isCharacter ? 'Background' : isKinship || isOrganization ? 'Background / Description' : 'Description'}
-            </h2>
-            {d?.description ? (
-              <div
-                className="prose prose-amber max-w-none rte-content text-amber-800 [&_h2]:text-amber-900 [&_h3]:text-amber-900 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
-              />
-            ) : (
-              <p className="text-amber-700 italic">No details have been added to this profile yet.</p>
-            )}
-          </Card>
-        )}
-
-        {/* Fallback generic */}
-        {!isCharacter && !isKinship && !isItem && !isLocation && !isOrganization && d?.description && (
-          <Card className="p-8 bg-white border-amber-300 mb-6">
-            <div
-              className="prose prose-amber max-w-none rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(d.description) }}
+            <WritingSection
+              className="pt-6"
+              profileId={id}
+              posts={writingPosts}
+              isLoading={writingLoading}
+              canEdit={!!profile.can_edit}
+              noun="kinship"
             />
           </Card>
         )}
 
-        {/* ── Character bottom sections ───────────────────────────────────── */}
-        {isCharacter && (
-          <>
-            {/* Owned Items */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Items</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/items`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-
-              {itemsLoading ? (
-                <p className="text-amber-600 text-sm">Loading items…</p>
-              ) : items.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No items owned by this character yet.</p>
-                  {profile.can_edit && (
-                    <Link
-                      href="/profiles/create"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Create an Item profile
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                  {items.map((item) => (
-                    <ItemCard key={item.profile_id} item={item} />
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* Gallery (art + media) */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/gallery`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-
-              {galleryLoading ? (
-                <p className="text-amber-600 text-sm">Loading gallery…</p>
-              ) : galleryPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No art or media featuring this character yet.</p>
-                  {profile.can_edit && (
-                    <div className="flex justify-center gap-4">
-                      <Link
-                        href="/posts/create/art"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post artwork
-                      </Link>
-                      <Link
-                        href="/posts/create/media"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post media
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {galleryPosts.map((post) => (
-                    <GalleryPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* Writing */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/writing`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-
-              {writingLoading ? (
-                <p className="text-amber-600 text-sm">Loading writing…</p>
-              ) : writingPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No writing featuring this character yet.</p>
-                  {profile.can_edit && (
-                    <Link
-                      href="/posts/create/writing"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Write a post
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {writingPosts.map((post) => (
-                    <WritingPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
-          </>
-        )}
-
-        {/* ── Kinship bottom sections ──────────────────────────────────────── */}
-        {isKinship && (
-          <>
-            {/* Members */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="w-5 h-5 text-amber-800" />
-                <h2 className="text-xl font-bold text-amber-900">Members</h2>
-              </div>
-              {membersLoading ? (
-                <p className="text-amber-600 text-sm">Loading members…</p>
-              ) : members.length === 0 ? (
-                <p className="text-amber-600 text-sm italic">No members have joined yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {members.map((m) => (
-                    <li
-                      key={m.character_id}
-                      className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-8 h-8 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
-                          {m.avatar_url ? (
-                            <NextImage
-                              fill
-                              src={m.avatar_url}
-                              alt={m.character_name}
-                              sizes="32px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center">
-                              <User className="w-4 h-4 text-amber-400" />
-                            </div>
-                          )}
-                        </div>
-                        <Link
-                          href={`/profiles/${m.character_id}`}
-                          className="text-amber-900 hover:underline font-semibold text-sm"
-                        >
-                          {m.character_name}
-                        </Link>
-                      </div>
-                      {profile.can_edit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(m.character_id)}
-                          disabled={removingMemberId === m.character_id}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                        >
-                          {removingMemberId === m.character_id ? '…' : <X className="w-4 h-4" />}
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-
-            {/* Gallery (art + media) */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/gallery`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-
-              {galleryLoading ? (
-                <p className="text-amber-600 text-sm">Loading gallery…</p>
-              ) : galleryPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No art or media featuring this kinship yet.</p>
-                  {profile.can_edit && (
-                    <div className="flex justify-center gap-4">
-                      <Link
-                        href="/posts/create/art"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post artwork
-                      </Link>
-                      <Link
-                        href="/posts/create/media"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post media
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {galleryPosts.map((post) => (
-                    <GalleryPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* Writing */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/writing`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-
-              {writingLoading ? (
-                <p className="text-amber-600 text-sm">Loading writing…</p>
-              ) : writingPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No writing featuring this kinship yet.</p>
-                  {profile.can_edit && (
-                    <Link
-                      href="/posts/create/writing"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Write a post
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {writingPosts.map((post) => (
-                    <WritingPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
-          </>
-        )}
-
-        {/* ── Organization bottom sections ─────────────────────────────────── */}
+        {/* ── Organization content — one card, two sections ────────────── */}
         {isOrganization && (
-          <>
-            {/* Gallery */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/gallery`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-              {galleryLoading ? (
-                <p className="text-amber-600 text-sm">Loading gallery…</p>
-              ) : galleryPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No art or media featuring this organization yet.</p>
-                  {profile.can_edit && (
-                    <div className="flex justify-center gap-4">
-                      <Link
-                        href="/posts/create/art"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post artwork
-                      </Link>
-                      <Link
-                        href="/posts/create/media"
-                        className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                      >
-                        <PlusCircle className="w-4 h-4" /> Post media
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {galleryPosts.map((post) => (
-                    <GalleryPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
+          <Card className="p-6 bg-white/80 border-amber-300 mb-6 divide-y divide-amber-200">
+            <GallerySection
+              className="pb-6"
+              profileId={id}
+              posts={galleryPosts}
+              isLoading={galleryLoading}
+              canEdit={!!profile.can_edit}
+              noun="organization"
+            />
 
-            {/* Writing */}
-            <Card className="p-6 bg-white border-amber-300 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-amber-800" />
-                  <h2 className="text-xl font-bold text-amber-900">Writing</h2>
-                </div>
-                <Link
-                  href={`/profiles/${id}/writing`}
-                  className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-                >
-                  View all <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </div>
-              {writingLoading ? (
-                <p className="text-amber-600 text-sm">Loading writing…</p>
-              ) : writingPosts.length === 0 ? (
-                <div className="text-center py-4 space-y-2">
-                  <p className="text-amber-600 text-sm italic">No writing featuring this organization yet.</p>
-                  {profile.can_edit && (
-                    <Link
-                      href="/posts/create/writing"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Write a post
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {writingPosts.map((post) => (
-                    <WritingPostCard key={post.post_id} post={post} />
-                  ))}
-                </div>
-              )}
-            </Card>
-          </>
-        )}
-
-        {/* ── Item / Location gallery ──────────────────────────────────────── */}
-        {(isItem || isLocation) && (
-          <Card className="p-6 bg-white border-amber-300 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-amber-800" />
-                <h2 className="text-xl font-bold text-amber-900">Gallery</h2>
-              </div>
-              <Link
-                href={`/profiles/${id}/gallery`}
-                className="inline-flex items-center text-sm text-amber-700 hover:text-amber-900 transition-colors"
-              >
-                View all <ChevronRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-
-            {galleryLoading ? (
-              <p className="text-amber-600 text-sm">Loading gallery…</p>
-            ) : galleryPosts.length === 0 ? (
-              <div className="text-center py-4 space-y-2">
-                <p className="text-amber-600 text-sm italic">
-                  {isItem ? 'No art or media featuring this item yet.' : 'No art or media featuring this location yet.'}
-                </p>
-                {profile.can_edit && (
-                  <div className="flex justify-center gap-4">
-                    <Link
-                      href="/posts/create/art"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Post artwork
-                    </Link>
-                    <Link
-                      href="/posts/create/media"
-                      className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
-                    >
-                      <PlusCircle className="w-4 h-4" /> Post media
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {galleryPosts.map((post) => (
-                  <GalleryPostCard key={post.post_id} post={post} />
-                ))}
-              </div>
-            )}
+            <WritingSection
+              className="pt-6"
+              profileId={id}
+              posts={writingPosts}
+              isLoading={writingLoading}
+              canEdit={!!profile.can_edit}
+              noun="organization"
+            />
           </Card>
         )}
 
-        {/* Editors Section */}
-        <Card className="p-8 bg-white border-amber-300 mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-800" />
-              <h2 className="text-2xl font-bold text-amber-900">Editors</h2>
-            </div>
-            {profile.is_owner && (
-              <Button
-                onClick={() => {
-                  setEditorError(null);
-                  setNewEditorUsername('');
-                  setShowAddEditorDialog(true);
-                }}
-                className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Editor
-              </Button>
-            )}
-          </div>
+        {/* ── Item / Location gallery ──────────────────────────────── */}
+        {(isItem || isLocation) && (
+          <Card className="p-6 bg-white/80 border-amber-300 mb-6">
+            <GallerySection
+              profileId={id}
+              posts={galleryPosts}
+              isLoading={galleryLoading}
+              canEdit={!!profile.can_edit}
+              noun={isItem ? 'item' : 'location'}
+              gridClass="grid-cols-2 sm:grid-cols-4"
+            />
+          </Card>
+        )}
+      </div>
+
+      {/* Editors Dialog — list, add and remove, opened from the header */}
+      <Dialog open={showAddEditorDialog} onOpenChange={setShowAddEditorDialog}>
+        <DialogContent className="bg-white border-amber-300">
+          <DialogHeader>
+            <DialogTitle className="text-amber-900">Editors</DialogTitle>
+            <DialogDescription className="text-amber-700">
+              Editors can change this profile. The creator always keeps access.
+            </DialogDescription>
+          </DialogHeader>
 
           {editors.length === 0 ? (
-            <p className="text-amber-700 italic">No editors have been added to this profile yet.</p>
+            <p className="text-amber-700 text-sm italic">No editors have been added to this profile yet.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {editors.map((editor) => (
                 <li
                   key={editor.editor_id}
@@ -1656,6 +1484,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                       size="sm"
                       onClick={() => handleRemoveEditor(editor.editor_id)}
                       disabled={removingEditorId === editor.editor_id}
+                      aria-label={`Remove ${editor.username}`}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       {removingEditorId === editor.editor_id ? 'Removing…' : <X className="w-4 h-4" />}
@@ -1665,48 +1494,42 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               ))}
             </ul>
           )}
-        </Card>
-      </div>
 
-      {/* Add Editor Dialog */}
-      <Dialog open={showAddEditorDialog} onOpenChange={setShowAddEditorDialog}>
-        <DialogContent className="bg-white border-amber-300">
-          <DialogHeader>
-            <DialogTitle className="text-amber-900">Add Editor</DialogTitle>
-            <DialogDescription className="text-amber-700">
-              Enter the username of the person you want to invite as an editor.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Username"
-              value={newEditorUsername}
-              onChange={(e) => {
-                setNewEditorUsername(e.target.value);
-                setEditorError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isAddingEditor) handleAddEditor();
-              }}
-              className="border-amber-300 focus:border-amber-500"
-            />
-            {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          {profile.is_owner && (
+            <div className="pt-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Username"
+                  value={newEditorUsername}
+                  onChange={(e) => {
+                    setNewEditorUsername(e.target.value);
+                    setEditorError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isAddingEditor) handleAddEditor();
+                  }}
+                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+                />
+                <Button
+                  onClick={handleAddEditor}
+                  disabled={isAddingEditor || !newEditorUsername.trim()}
+                  className="bg-amber-800 text-amber-50 hover:bg-amber-700"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {isAddingEditor ? 'Adding…' : 'Add'}
+                </Button>
+              </div>
+              {editorError && <p className="text-red-600 text-sm mt-2">{editorError}</p>}
+            </div>
+          )}
+
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setShowAddEditorDialog(false)}
-              disabled={isAddingEditor}
-              className="border-amber-600 text-amber-800 hover:bg-amber-50"
+              className="border-amber-800/30 text-amber-900 hover:bg-amber-100"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddEditor}
-              disabled={isAddingEditor || !newEditorUsername.trim()}
-              className="bg-amber-800 text-amber-50 hover:bg-amber-700"
-            >
-              {isAddingEditor ? 'Adding…' : 'Add Editor'}
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
