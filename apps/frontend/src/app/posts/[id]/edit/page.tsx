@@ -352,9 +352,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       <div className="px-4 py-8">
         <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
+          Back to Post
         </Link>
-        <Card className="p-8 bg-white border-amber-300">
+        <Card className="p-8 bg-white/80 border-amber-300">
           <h1 className="text-2xl font-bold text-amber-900 mb-4">{error || 'Post not found'}</h1>
           <p className="text-amber-700 mb-6">
             {error === 'You do not have permission to edit this post'
@@ -470,7 +470,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           Back to Post
         </button>
 
-        <Card className="p-8 bg-white border-amber-300">
+        <Card className="p-8 bg-white/80 border-amber-300">
           <div className="mb-6">
             <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full mb-3">
               {typeName}
@@ -599,7 +599,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   profiles={authorableProfiles}
                 />
                 <div className="space-y-2">
-                  <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
+                  <Label className="text-amber-900 font-semibold">Header Image</Label>
                   {headerImage ? (
                     <div className="relative">
                       <div className="relative aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
@@ -691,7 +691,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="maxAttendees" className="text-amber-900 font-semibold">
-                      Max Attendees (Optional)
+                      Max Attendees
                     </Label>
                     <Input
                       id="maxAttendees"
@@ -706,7 +706,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactProfileId" className="text-amber-900 font-semibold">
-                    Contact Character (Optional)
+                    Contact Character
                   </Label>
                   <select
                     id="contactProfileId"

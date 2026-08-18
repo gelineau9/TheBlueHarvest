@@ -199,7 +199,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Header Image Upload */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
+        <Label className="text-amber-900 font-semibold">Header Image</Label>
 
         {headerImage ? (
           <div className="relative">
@@ -329,7 +329,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       <div className="space-y-2">
         <Label htmlFor="maxAttendees" className="text-amber-900 font-semibold flex items-center gap-2">
           <Users className="w-4 h-4" />
-          Max Attendees (Optional)
+          Max Attendees
         </Label>
         <Input
           id="maxAttendees"
@@ -346,7 +346,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       {/* Character Contact */}
       <div className="space-y-2">
         <Label htmlFor="contactProfileId" className="text-amber-900 font-semibold">
-          Character Contact (Optional)
+          Character Contact
         </Label>
         {loadingProfiles ? (
           <div className="text-amber-700 text-sm">Loading your characters...</div>
@@ -387,7 +387,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       {/* Tags */}
       <div className="space-y-2">
         <Label htmlFor="tags" className="text-amber-900 font-semibold">
-          Tags (Optional)
+          Tags
         </Label>
         <Input
           id="tags"

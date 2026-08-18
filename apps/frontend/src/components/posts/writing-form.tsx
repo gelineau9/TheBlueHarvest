@@ -166,7 +166,7 @@ export function WritingForm({ onSuccess, onCancel }: WritingFormProps) {
       {/* Tags */}
       <div className="space-y-2">
         <Label htmlFor="tags" className="text-amber-900 font-semibold">
-          Tags (Optional)
+          Tags
         </Label>
         <Input
           id="tags"

@@ -803,9 +803,9 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
             className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            Back to Profile
           </Link>
-          <Card className="p-8 bg-white border-amber-300">
+          <Card className="p-8 bg-white/80 border-amber-300">
             <h1 className="text-2xl font-bold text-amber-900 mb-4">{error || 'Profile not found'}</h1>
             <p className="text-amber-700 mb-6">
               {error === 'You do not have permission to edit this profile'
@@ -833,7 +833,7 @@ export default function EditProfilePage({ params }: { params: Promise<{ id: stri
           Back to Profile
         </button>
 
-        <Card className="p-8 bg-white border-amber-300">
+        <Card className="p-8 bg-white/80 border-amber-300">
           <div className="mb-6">
             <div className="inline-block px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full mb-3">
               {profile.type_name.charAt(0).toUpperCase() + profile.type_name.slice(1)}

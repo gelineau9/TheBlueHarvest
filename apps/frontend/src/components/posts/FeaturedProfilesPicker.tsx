@@ -122,7 +122,7 @@ export function FeaturedProfilesPicker({ value, onChange, disabled = false }: Fe
 
   return (
     <div className="space-y-3">
-      <Label className="text-amber-900 font-semibold">Featured Profiles (Optional)</Label>
+      <Label className="text-amber-900 font-semibold">Featured Profiles</Label>
 
       {/* Type filter pills */}
       <div className="flex flex-wrap gap-1.5">

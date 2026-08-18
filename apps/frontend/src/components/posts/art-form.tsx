@@ -267,7 +267,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Description (Optional)</Label>
+        <Label className="text-amber-900 font-semibold">Description</Label>
         <RichTextEditor
           value={watch('description') || ''}
           onChange={(html) => setValue('description', html)}
@@ -279,7 +279,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       {/* Tags */}
       <div className="space-y-2">
         <Label htmlFor="tags" className="text-amber-900 font-semibold">
-          Tags (Optional)
+          Tags
         </Label>
         <Input
           id="tags"

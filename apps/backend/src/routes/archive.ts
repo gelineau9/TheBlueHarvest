@@ -67,7 +67,8 @@ router.get('/public', async (req: Request, res: Response) => {
       }
 
       if (search) {
-        profileConditions.push(sql.fragment`p.name ILIKE ${'%' + search + '%'}`);
+        // f_unaccent on both sides so "Crea" matches "Créa" and vice versa
+        profileConditions.push(sql.fragment`f_unaccent(p.name) ILIKE f_unaccent(${'%' + search + '%'})`);
       }
 
       const profileQuery = sql.fragment`
@@ -101,7 +102,7 @@ router.get('/public', async (req: Request, res: Response) => {
       }
 
       if (search) {
-        postConditions.push(sql.fragment`ps.title ILIKE ${'%' + search + '%'}`);
+        postConditions.push(sql.fragment`f_unaccent(ps.title) ILIKE f_unaccent(${'%' + search + '%'})`);
       }
 
       const postQuery = sql.fragment`

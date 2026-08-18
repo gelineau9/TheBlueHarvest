@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Calendar, User } from 'lucide-react';
+import { Calendar, User, FolderOpen, Pencil } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/components/auth/auth-provider';
 import { FollowButton } from '@/components/follows/FollowButton';
@@ -13,6 +13,18 @@ interface PublicAccount {
   account_id: number;
   username: string;
   created_at: string;
+  bio: string | null;
+  banner_url: string | null;
+  featured_collections: FeaturedCollection[];
+}
+
+interface FeaturedCollection {
+  collection_id: number;
+  title: string;
+  description: string | null;
+  collection_type_id: number;
+  type_name: string;
+  post_count: number;
 }
 
 interface PublicProfile {
@@ -49,6 +61,25 @@ function ProfileCard({ profile }: { profile: PublicProfile }) {
           <p className="truncate font-semibold text-amber-900">{profile.name}</p>
           <p className="text-xs text-amber-600">{profile.type_name}</p>
         </div>
+      </Card>
+    </Link>
+  );
+}
+
+function CollectionCard({ collection }: { collection: FeaturedCollection }) {
+  return (
+    <Link href={`/collections/${collection.collection_id}`}>
+      <Card className="flex h-full flex-col gap-1 border-amber-800/20 bg-amber-50/90 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 flex-shrink-0 text-amber-700" aria-hidden="true" />
+          <p className="truncate font-semibold text-amber-900">{collection.title}</p>
+        </div>
+        {collection.description && (
+          <p className="line-clamp-2 text-xs text-amber-700 leading-relaxed">{collection.description}</p>
+        )}
+        <p className="mt-auto text-xs text-amber-600">
+          {collection.type_name} · {collection.post_count} {collection.post_count === 1 ? 'post' : 'posts'}
+        </p>
       </Card>
     </Link>
   );
@@ -146,9 +177,20 @@ export default function UserPage({ params }: { params: Promise<{ username: strin
 
   return (
     <div className="mx-auto max-w-3xl py-8 px-4">
+      {/* Banner — the one piece of the page that is purely the member's own */}
+      {account.banner_url && (
+        // eslint-disable-next-line @next/next/no-img-element -- user-supplied banner, no fixed size
+        <img
+          src={account.banner_url}
+          alt=""
+          aria-hidden="true"
+          className="mb-6 h-40 w-full rounded-md object-cover shadow-lg shadow-amber-950/25 ring-1 ring-amber-900/10 sm:h-52"
+        />
+      )}
+
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="font-fantasy text-3xl font-bold text-amber-900">{account.username}</h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-amber-600">
             <Calendar className="h-4 w-4" aria-hidden="true" />
@@ -156,10 +198,26 @@ export default function UserPage({ params }: { params: Promise<{ username: strin
           </p>
         </div>
 
-        {isLoggedIn && !isOwnProfile && followCheckDone && (
-          <FollowButton type="account" id={account.account_id} initialFollowing={isFollowing} />
-        )}
+        <div className="flex flex-none items-center gap-2">
+          {isOwnProfile && (
+            <Link
+              href="/account"
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-800/30 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Edit profile
+            </Link>
+          )}
+          {isLoggedIn && !isOwnProfile && followCheckDone && (
+            <FollowButton type="account" id={account.account_id} initialFollowing={isFollowing} />
+          )}
+        </div>
       </div>
+
+      {/* Bio — plain text, rendered with its own line breaks preserved */}
+      {account.bio && (
+        <p className="mb-8 max-w-[68ch] whitespace-pre-line text-amber-800 leading-relaxed">{account.bio}</p>
+      )}
 
       {/* Public profiles */}
       <section>
@@ -175,6 +233,19 @@ export default function UserPage({ params }: { params: Promise<{ username: strin
           </div>
         )}
       </section>
+
+      {/* Featured collections — the member picks these; this is the only place
+          collections surface outside their own page. */}
+      {account.featured_collections?.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 font-fantasy text-xl font-semibold text-amber-900">Featured collections</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {account.featured_collections.map((collection) => (
+              <CollectionCard key={collection.collection_id} collection={collection} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
