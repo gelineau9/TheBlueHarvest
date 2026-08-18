@@ -22,6 +22,7 @@ import {
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { CommentList } from '@/components/comments/comment-list';
 import { LikeButton } from '@/components/likes/LikeButton';
+import { EventRsvp } from '@/components/events/EventRsvp';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
 
 interface Author {
@@ -339,7 +340,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const bodyContent = isWriting || !(isArt || isMedia || isEvent) ? post.content.body : undefined;
   const descriptionContent = isArt || isMedia || isEvent ? post.content.description : undefined;
   // Without this an art post with no description renders an empty white box.
-  const hasCardContent = !!bodyContent || !!descriptionContent || featuredProfiles.length > 0;
+  const hasCardContent = isEvent || !!bodyContent || !!descriptionContent || featuredProfiles.length > 0;
 
   // Event facts read as one row of chips, the same treatment a character profile
   // gives race and occupation. Date and time come from a single field, so they
@@ -610,6 +611,9 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyContent) }}
               />
             )}
+
+            {/* RSVP — count is public, the guest list is organiser-only */}
+            {isEvent && <EventRsvp postId={post.post_id} />}
 
             {/* Featuring — small bubbles, closing out the content rather than the header */}
             {featuredProfiles.length > 0 && (
