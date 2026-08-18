@@ -81,6 +81,7 @@ router.get('/public', async (req: Request, res: Response) => {
           NULL AS thumbnail,
           NULL::int AS focal_x,
           NULL::int AS focal_y,
+          FALSE AS ended,
           COALESCE(p.details->>'description', '')::text AS preview,
           NULL AS author_name,
           a.username AS username,
@@ -134,6 +135,11 @@ router.get('/public', async (req: Request, res: Response) => {
             WHEN ps.post_type_id = 4 THEN NULLIF(ps.content->'headerImage'->>'focalY', '')::int
             ELSE NULL
           END AS focal_y,
+          -- An event whose date has passed sinks below everything still current
+          COALESCE(
+            ps.post_type_id = 4 AND NULLIF(ps.content->>'eventDateTime', '')::timestamptz < NOW(),
+            FALSE
+          ) AS ended,
           CASE
             WHEN ps.post_type_id = 1 THEN LEFT(COALESCE(ps.content->>'body', ''), 200)
             ELSE LEFT(COALESCE(ps.content->>'description', ''), 200)
@@ -191,6 +197,7 @@ router.get('/public', async (req: Request, res: Response) => {
         thumbnail: z.string().nullable(),
         focal_x: z.number().nullable(),
         focal_y: z.number().nullable(),
+        ended: z.boolean(),
         preview: z.string().nullable(),
         author_name: z.string().nullable(),
         username: z.string(),
@@ -201,7 +208,7 @@ router.get('/public', async (req: Request, res: Response) => {
     )`
       SELECT *, COUNT(*) OVER ()::int AS total_count
       FROM (${unionQuery}) AS combined
-      ORDER BY ${orderByClause}
+      ORDER BY ended ASC, ${orderByClause}
       LIMIT ${limit} OFFSET ${offset}
     `;
 
@@ -217,6 +224,7 @@ router.get('/public', async (req: Request, res: Response) => {
       thumbnail: row.thumbnail,
       focalX: row.focal_x ?? undefined,
       focalY: row.focal_y ?? undefined,
+      ended: row.ended,
       preview: row.preview || '',
       authorName: row.author_name,
       username: row.username,

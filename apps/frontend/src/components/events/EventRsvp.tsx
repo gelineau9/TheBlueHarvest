@@ -19,6 +19,7 @@ interface AttendanceState {
   count: number;
   capacity: number | null;
   is_full: boolean;
+  ended: boolean;
   can_see_attendees: boolean;
   my_attendance: Array<{ profile_id: number; name: string }>;
   attendees?: Attendee[];
@@ -102,7 +103,11 @@ export function EventRsvp({ postId }: { postId: number }) {
 
   if (!state) return null;
 
-  const { count, capacity, is_full, my_attendance, attendees, can_see_attendees } = state;
+  const { count, capacity, is_full, ended, my_attendance, attendees, can_see_attendees } = state;
+
+  // Once the event has happened, the section becomes a record: counts switch to
+  // the past tense and the RSVP/withdraw controls disappear.
+  const verb = ended ? 'attended' : 'attending';
 
   return (
     <section className="mt-6 border-t border-amber-200 pt-4">
@@ -110,16 +115,16 @@ export function EventRsvp({ postId }: { postId: number }) {
         <div className="flex items-center gap-2 text-amber-900">
           <Users className="h-5 w-5 text-amber-800" aria-hidden="true" />
           <span className="font-semibold">
-            {capacity !== null ? `${count} of ${capacity} attending` : `${count} attending`}
+            {capacity !== null ? `${count} of ${capacity} ${verb}` : `${count} ${verb}`}
           </span>
-          {is_full && (
+          {is_full && !ended && (
             <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
               Full
             </span>
           )}
         </div>
 
-        {isLoggedIn && (
+        {isLoggedIn && !ended && (
           <div className="flex items-center gap-2">
             {available.length > 0 && !is_full && (
               <>
@@ -162,23 +167,25 @@ export function EventRsvp({ postId }: { postId: number }) {
       {/* Your own RSVPs — always visible to you, whoever else can see the list */}
       {my_attendance.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-amber-700">You&apos;re bringing</span>
+          <span className="text-xs font-semibold text-amber-700">{ended ? 'You brought' : "You're bringing"}</span>
           {my_attendance.map((a) => (
             <span
               key={a.profile_id}
               className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900"
             >
               {a.name}
-              <button
-                type="button"
-                onClick={() => withdraw(a.profile_id)}
-                disabled={isBusy}
-                aria-label={`Withdraw ${a.name}`}
-                title="Withdraw"
-                className="ml-0.5 rounded-full text-amber-700 hover:text-red-700"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {!ended && (
+                <button
+                  type="button"
+                  onClick={() => withdraw(a.profile_id)}
+                  disabled={isBusy}
+                  aria-label={`Withdraw ${a.name}`}
+                  title="Withdraw"
+                  className="ml-0.5 rounded-full text-amber-700 hover:text-red-700"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </span>
           ))}
         </div>
