@@ -15,11 +15,12 @@ import {
 } from '@/components/ui/carousel';
 import { LikeButton } from '@/components/likes/LikeButton';
 import { htmlToPlainText } from '@/lib/html-text';
+import { focalStyle } from '@/lib/image-focus';
 
 interface PostContent {
   body?: string;
-  images?: Array<{ filename: string; url: string; originalName: string }>;
-  headerImage?: { filename: string; url: string; originalName: string };
+  images?: Array<{ filename: string; url: string; originalName: string; focalX?: number; focalY?: number }>;
+  headerImage?: { filename: string; url: string; originalName: string; focalX?: number; focalY?: number };
   description?: string;
   eventDateTime?: string;
   location?: string;
@@ -70,12 +71,13 @@ function SourceBadge({ source }: { source: SpotlightItem['source'] }) {
 
 // ── Thumbnail resolution ──────────────────────────────────────────────────────
 
-function getThumbnailUrl(item: SpotlightItem): string | null {
+/** The image a slide crops, with its focal point — art/media use the first image, events their header. */
+function getThumbnailImage(item: SpotlightItem) {
   if (item.post_type_id === 2 || item.post_type_id === 3) {
-    return item.content?.images?.[0]?.url ?? null;
+    return item.content?.images?.[0] ?? null;
   }
   if (item.post_type_id === 4) {
-    return item.content?.headerImage?.url ?? null;
+    return item.content?.headerImage ?? null;
   }
   return null;
 }
@@ -83,7 +85,7 @@ function getThumbnailUrl(item: SpotlightItem): string | null {
 // ── Slide card ────────────────────────────────────────────────────────────────
 
 function SpotlightSlide({ item }: { item: SpotlightItem }) {
-  const thumbnailUrl = getThumbnailUrl(item);
+  const thumbnail = getThumbnailImage(item);
 
   const date = new Date(item.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -99,15 +101,16 @@ function SpotlightSlide({ item }: { item: SpotlightItem }) {
         : null;
 
   // ── Image variant — full-bleed hero with text overlay ──────────────────────
-  if (thumbnailUrl) {
+  if (thumbnail) {
     return (
       <Link href={`/posts/${item.post_id}`} className="block w-full">
         <div className="relative w-full aspect-[16/7] overflow-hidden bg-amber-900">
           <NextImage
             fill
-            src={thumbnailUrl}
+            src={thumbnail.url}
             alt={item.title}
             sizes="100vw"
+            style={focalStyle(thumbnail)}
             className="object-cover transition-transform duration-500 hover:scale-[1.02]"
             priority
           />

@@ -16,6 +16,8 @@ import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
+import { FocalPointPicker } from '@/components/ui/focal-point-picker';
+import { focalStyle } from '@/lib/image-focus';
 
 interface ArtFormProps {
   onSuccess: (postId: number) => void;
@@ -35,6 +37,9 @@ type ArtPostInput = z.infer<typeof artPostSchema>;
 
 export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Card framing per image, keyed by filename. Cards crop to several different
+  // ratios, so we store a focal point rather than a single cropped thumbnail.
+  const [focalPoints, setFocalPoints] = useState<Record<string, { x?: number; y?: number }>>({});
   const [error, setError] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
@@ -98,6 +103,8 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
             filename: img.filename,
             url: img.url,
             originalName: img.originalName,
+            focalX: focalPoints[img.filename]?.x,
+            focalY: focalPoints[img.filename]?.y,
           })),
           credit: data.credit.trim(),
           description: data.description || '',
@@ -138,6 +145,11 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       setIsSubmitting(false);
     }
   };
+
+  const focalFor = (filename: string) => ({
+    focalX: focalPoints[filename]?.x,
+    focalY: focalPoints[filename]?.y,
+  });
 
   const displayError = error || uploadError;
 
@@ -205,6 +217,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
                     src={image.url}
                     alt={image.originalName}
                     sizes="(max-width: 768px) 100vw, 33vw"
+                    style={focalStyle({ url: image.url, ...focalFor(image.filename) })}
                     className="object-cover"
                   />
                 </div>
@@ -218,6 +231,26 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
                 </button>
                 <p className="text-xs text-amber-700 truncate mt-1">{image.originalName}</p>
               </div>
+            ))}
+          </div>
+        )}
+
+        {uploadedImages.length > 0 && (
+          <div className="mt-4 space-y-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <p className="text-sm text-amber-700">
+              Cards crop images to fit, and they use several different shapes. Pick the part of each image that matters
+              and every card will keep it in frame.
+            </p>
+            {uploadedImages.map((image) => (
+              <FocalPointPicker
+                key={`focal-${image.filename}`}
+                url={image.url}
+                focalX={focalPoints[image.filename]?.x}
+                focalY={focalPoints[image.filename]?.y}
+                disabled={isSubmitting}
+                label={image.originalName}
+                onChange={(x, y) => setFocalPoints((prev) => ({ ...prev, [image.filename]: { x, y } }))}
+              />
             ))}
           </div>
         )}
@@ -267,7 +300,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
 
       {/* Description */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Description (Optional)</Label>
+        <Label className="text-amber-900 font-semibold">Description</Label>
         <RichTextEditor
           value={watch('description') || ''}
           onChange={(html) => setValue('description', html)}
@@ -279,7 +312,7 @@ export function ArtForm({ onSuccess, onCancel }: ArtFormProps) {
       {/* Tags */}
       <div className="space-y-2">
         <Label htmlFor="tags" className="text-amber-900 font-semibold">
-          Tags (Optional)
+          Tags
         </Label>
         <Input
           id="tags"

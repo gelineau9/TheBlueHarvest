@@ -15,6 +15,8 @@ import { useImageUpload } from '@/hooks/useImageUpload';
 import { useCharacterProfiles } from '@/hooks/useCharacterProfiles';
 import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { AuthorSelect } from '@/components/posts/author-select';
+import { FocalPointPicker } from '@/components/ui/focal-point-picker';
+import { focalStyle } from '@/lib/image-focus';
 
 interface EventFormProps {
   onSuccess: (postId: number) => void;
@@ -83,6 +85,9 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [authorId, setAuthorId] = useState('');
+  // Card framing for the header image. Events are the heaviest users of the
+  // 3:1 banner crop, so the focal point matters most here.
+  const [focalPoint, setFocalPoint] = useState<{ x?: number; y?: number }>({});
 
   const { characters: profiles, isLoading: loadingProfiles } = useCharacterProfiles();
   const { profiles: authorableProfiles, isLoading: isLoadingProfiles } = useAuthorableProfiles();
@@ -153,6 +158,8 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
                 filename: headerImage.filename,
                 url: headerImage.url,
                 originalName: headerImage.originalName,
+                focalX: focalPoint.x,
+                focalY: focalPoint.y,
               }
             : null,
           tags: data.tags || [],
@@ -199,7 +206,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
 
       {/* Header Image Upload */}
       <div className="space-y-2">
-        <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
+        <Label className="text-amber-900 font-semibold">Header Image</Label>
 
         {headerImage ? (
           <div className="relative">
@@ -209,12 +216,16 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
                 src={headerImage.url}
                 alt={headerImage.originalName}
                 sizes="(max-width: 768px) 100vw, 800px"
+                style={focalStyle({ url: headerImage.url, focalX: focalPoint.x, focalY: focalPoint.y })}
                 className="object-cover"
               />
             </div>
             <button
               type="button"
-              onClick={() => handleRemoveImage(headerImage.filename)}
+              onClick={() => {
+                setFocalPoint({});
+                handleRemoveImage(headerImage.filename);
+              }}
               className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
               disabled={isSubmitting}
             >
@@ -249,6 +260,18 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
                 <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP • Max 10MB • Recommended 1200x400</p>
               </div>
             )}
+          </div>
+        )}
+
+        {headerImage && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <FocalPointPicker
+              url={headerImage.url}
+              focalX={focalPoint.x}
+              focalY={focalPoint.y}
+              disabled={isSubmitting}
+              onChange={(x, y) => setFocalPoint({ x, y })}
+            />
           </div>
         )}
       </div>
@@ -329,7 +352,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       <div className="space-y-2">
         <Label htmlFor="maxAttendees" className="text-amber-900 font-semibold flex items-center gap-2">
           <Users className="w-4 h-4" />
-          Max Attendees (Optional)
+          Max Attendees
         </Label>
         <Input
           id="maxAttendees"
@@ -346,7 +369,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       {/* Character Contact */}
       <div className="space-y-2">
         <Label htmlFor="contactProfileId" className="text-amber-900 font-semibold">
-          Character Contact (Optional)
+          Character Contact
         </Label>
         {loadingProfiles ? (
           <div className="text-amber-700 text-sm">Loading your characters...</div>
@@ -387,7 +410,7 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
       {/* Tags */}
       <div className="space-y-2">
         <Label htmlFor="tags" className="text-amber-900 font-semibold">
-          Tags (Optional)
+          Tags
         </Label>
         <Input
           id="tags"

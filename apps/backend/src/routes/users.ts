@@ -5,14 +5,16 @@
  * Returns content that the authenticated user owns or can edit.
  *
  * Routes:
- *   GET /api/users/public/:username - Public account info (no auth)
+ *   GET   /api/users/public/:username - Public account info (no auth)
+ *   PATCH /api/users/me/profile       - Update the caller's public profile
+ *   GET   /api/users/search           - Username suggestions for editor pickers
  *   GET /api/users/me/posts         - List user's posts (owned or editor)
  *   GET /api/users/me/collections   - List user's collections (owned or editor)
  *   GET /api/users/me/profiles      - List user's profiles (owned or editor)
  */
 
 import { Router, Request, Response } from 'express';
-import { sql } from 'slonik';
+import { sql, type SerializableValue } from 'slonik';
 import { z } from 'zod';
 import { getPool } from '../config/database.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
@@ -27,7 +29,24 @@ const PublicAccountSchema = z.object({
   account_id: z.number(),
   username: z.string(),
   created_at: z.string(),
+  bio: z.string().nullable(),
+  banner_url: z.string().nullable(),
+  banner_credit: z.string().nullable(),
 });
+
+const FeaturedCollectionSchema = z.object({
+  collection_id: z.number(),
+  title: z.string(),
+  description: z.string().nullable(),
+  collection_type_id: z.number(),
+  type_name: z.string(),
+  post_count: z.number(),
+});
+
+/** Public profile fields live in accounts.details rather than their own columns —
+ *  three optional presentation values don't justify a schema change. */
+const MAX_BIO_LENGTH = 500;
+const MAX_FEATURED_COLLECTIONS = 4;
 
 router.get('/public/:username', async (req: Request, res: Response) => {
   const { username } = req.params;
@@ -37,7 +56,13 @@ router.get('/public/:username', async (req: Request, res: Response) => {
 
     const account = await db.maybeOne(
       sql.type(PublicAccountSchema)`
-        SELECT account_id, username, created_at::text
+        SELECT
+          account_id,
+          username,
+          created_at::text,
+          details->>'bio'            AS bio,
+          details->'banner'->>'url'     AS banner_url,
+          details->'banner'->>'credit'  AS banner_credit
         FROM accounts
         WHERE username = ${username}
           AND is_banned = false
@@ -50,9 +75,147 @@ router.get('/public/:username', async (req: Request, res: Response) => {
       return;
     }
 
-    res.json(account);
+    // Featured collections are stored as an ordered array of ids. Resolve them
+    // here so a deleted or unpublished collection simply drops out of the list.
+    const featuredIds = await db.maybeOne(
+      sql.type(z.object({ ids: z.array(z.number()) }))`
+        SELECT COALESCE(
+          ARRAY(SELECT jsonb_array_elements_text(details->'featuredCollections')::int),
+          ARRAY[]::int[]
+        ) AS ids
+        FROM accounts
+        WHERE account_id = ${account.account_id}
+      `,
+    );
+
+    let featured_collections: readonly unknown[] = [];
+    if (featuredIds && featuredIds.ids.length > 0) {
+      const rows = await db.any(
+        sql.type(FeaturedCollectionSchema)`
+          SELECT
+            c.collection_id,
+            c.title,
+            c.description,
+            c.collection_type_id,
+            ct.type_name,
+            (
+              SELECT COUNT(*)::int FROM collection_posts cp
+              WHERE cp.collection_id = c.collection_id AND cp.deleted = false
+            ) AS post_count
+          FROM collections c
+          JOIN collection_types ct ON ct.type_id = c.collection_type_id
+          WHERE c.collection_id = ANY(${sql.array(featuredIds.ids, 'int4')})
+            AND c.account_id = ${account.account_id}
+            AND c.deleted = false
+        `,
+      );
+      // Preserve the author's chosen order, which ANY() does not guarantee
+      const byId = new Map(rows.map((r) => [r.collection_id, r]));
+      featured_collections = featuredIds.ids.map((cid) => byId.get(cid)).filter(Boolean);
+    }
+
+    res.json({ ...account, featured_collections });
   } catch (err) {
     logger.error('Public user fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── GET /api/users/search ───────────────────────────────────────────────────
+// Username suggestions for the "add editor" pickers. Requires auth: this is a
+// member-directory lookup, not public data. Returns usernames only — never
+// emails or anything else that would turn it into a scraping surface.
+
+router.get('/search', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const raw = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  // Two characters keeps a stray keystroke from returning the whole membership
+  if (raw.length < 2) {
+    res.json({ users: [] });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+    const users = await db.any(
+      sql.type(z.object({ username: z.string() }))`
+        SELECT username FROM accounts
+        WHERE f_unaccent(username) ILIKE f_unaccent(${'%' + raw + '%'})
+          AND deleted = false
+          AND is_banned = false
+        ORDER BY
+          -- Prefix matches first, then alphabetical, so typing "ro" surfaces
+          -- "rowan" ahead of "brandyrose"
+          CASE WHEN f_unaccent(username) ILIKE f_unaccent(${raw + '%'}) THEN 0 ELSE 1 END,
+          username
+        LIMIT 8
+      `,
+    );
+    res.json({ users: users.map((u) => u.username) });
+  } catch (err) {
+    logger.error('Username search error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── PATCH /api/users/me/profile ─────────────────────────────────────────────
+// Updates the caller's own public profile. Only the three presentation fields
+// are writable; everything else in accounts.details is left untouched.
+
+router.patch('/me/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+
+  const BodySchema = z.object({
+    bio: z.string().max(MAX_BIO_LENGTH).nullable().optional(),
+    banner: z
+      .object({ url: z.string().max(2048), filename: z.string().max(255) })
+      .nullable()
+      .optional(),
+    featuredCollections: z.array(z.number().int()).max(MAX_FEATURED_COLLECTIONS).optional(),
+  });
+
+  const parsed = BodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid profile payload', details: parsed.error.flatten() });
+    return;
+  }
+
+  const { bio, banner, featuredCollections } = parsed.data;
+
+  try {
+    const db = await getPool();
+
+    // Only collections the caller actually owns may be featured
+    let verifiedIds: number[] | undefined;
+    if (featuredCollections) {
+      const owned = await db.any(
+        sql.type(z.object({ collection_id: z.number() }))`
+          SELECT collection_id FROM collections
+          WHERE account_id = ${userId}
+            AND deleted = false
+            AND collection_id = ANY(${sql.array(featuredCollections, 'int4')})
+        `,
+      );
+      const ownedIds = new Set(owned.map((row) => row.collection_id));
+      verifiedIds = featuredCollections.filter((cid) => ownedIds.has(cid));
+    }
+
+    const updates: Record<string, SerializableValue> = {};
+    if (bio !== undefined) updates.bio = bio;
+    if (banner !== undefined) updates.banner = banner;
+    if (verifiedIds !== undefined) updates.featuredCollections = verifiedIds;
+
+    await db.query(
+      sql.type(z.object({}))`
+        UPDATE accounts
+        SET details = COALESCE(details, '{}'::jsonb) || ${sql.jsonb(updates)},
+            updated_at = NOW()
+        WHERE account_id = ${userId}
+      `,
+    );
+
+    res.json({ message: 'Profile updated', featuredCollections: verifiedIds });
+  } catch (err) {
+    logger.error('Profile update error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

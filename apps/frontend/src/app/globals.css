@@ -150,6 +150,12 @@
 }
 
 /* Rendered RTE output — mirrors editor spacing exactly */
+/* `prose` is inert (no @tailwindcss/typography installed), so the reading measure
+   has to live here or long-form text runs to ~110ch on a wide monitor. */
+.rte-content {
+  max-width: 68ch;
+}
+
 .rte-content p {
   margin-bottom: 1em;
 }

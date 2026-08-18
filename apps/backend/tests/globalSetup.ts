@@ -257,6 +257,35 @@ export async function setup(): Promise<void> {
       deleted          BOOLEAN NOT NULL DEFAULT FALSE
     );
 
+    -- Mirrors migration 0017: event RSVPs.
+    CREATE TABLE IF NOT EXISTS event_attendees (
+      attendee_id  SERIAL PRIMARY KEY,
+      post_id      INT NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+      profile_id   INT NOT NULL REFERENCES profiles(profile_id) ON DELETE CASCADE,
+      account_id   INT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deleted      BOOLEAN NOT NULL DEFAULT FALSE
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS event_attendees_post_profile_key
+      ON event_attendees (post_id, profile_id);
+    CREATE INDEX IF NOT EXISTS idx_event_attendees_post
+      ON event_attendees (post_id) WHERE deleted = false;
+    CREATE INDEX IF NOT EXISTS idx_event_attendees_account
+      ON event_attendees (account_id) WHERE deleted = false;
+
+    -- Mirrors migration 0016: diacritic-insensitive search helper.
+    CREATE EXTENSION IF NOT EXISTS unaccent;
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+    CREATE OR REPLACE FUNCTION f_unaccent(text)
+      RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT
+    AS $$ SELECT public.unaccent('public.unaccent'::regdictionary, $1) $$;
+
+    CREATE INDEX IF NOT EXISTS idx_profiles_name_unaccent
+      ON profiles USING gin (f_unaccent(name) gin_trgm_ops);
+    CREATE INDEX IF NOT EXISTS idx_posts_title_unaccent
+      ON posts USING gin (f_unaccent(title) gin_trgm_ops);
+
     CREATE UNIQUE INDEX IF NOT EXISTS idx_resources_slug ON resources (slug) WHERE deleted = false;
     CREATE INDEX IF NOT EXISTS idx_resources_type_published
       ON resources (resource_type_id, is_published, display_order) WHERE deleted = false;

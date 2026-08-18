@@ -39,6 +39,7 @@ interface ActivityFeedItem {
   account_id: number;
   actor_profile_id: number | null;
   actor_profile_name: string | null;
+  actor_avatar_url: string | null;
   post_id: number | null;
   post_title: string | null;
   created_at: string;
@@ -243,6 +244,7 @@ export function RightSidebar() {
                       kind="comment"
                       username={posterName}
                       usernameHref={posterHref}
+                      avatarUrl={item.actor_avatar_url}
                       postTitle={item.post_title ?? 'a post'}
                       postHref={`/posts/${item.post_id}`}
                       time={formatRelativeTime(item.created_at)}
@@ -256,6 +258,7 @@ export function RightSidebar() {
                       kind="profile"
                       username={posterName}
                       usernameHref={posterHref}
+                      avatarUrl={item.actor_avatar_url}
                       action={`created ${an(item.type_name)} ${item.type_name.toLowerCase()}`}
                       target={item.title}
                       targetHref={`/profiles/${item.id}`}
@@ -269,6 +272,7 @@ export function RightSidebar() {
                     kind="post"
                     username={posterName}
                     usernameHref={posterHref}
+                    avatarUrl={item.actor_avatar_url}
                     action={`posted a new ${item.type_name.toLowerCase()}`}
                     target={`"${item.title}"`}
                     targetHref={`/posts/${item.id}`}

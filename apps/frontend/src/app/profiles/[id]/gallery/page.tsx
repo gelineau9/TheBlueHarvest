@@ -7,6 +7,7 @@ import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { focalStyle } from '@/lib/image-focus';
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ function GalleryPostCard({ post }: { post: PublicPost }) {
               src={thumbnailUrl}
               alt={post.title}
               sizes="(max-width: 768px) 50vw, 250px"
+              style={focalStyle(post.content?.images?.[0])}
               className="object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (

@@ -15,6 +15,8 @@ import { AuthorSelect } from '@/components/posts/author-select';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
+import { FocalPointPicker } from '@/components/ui/focal-point-picker';
+import { focalStyle } from '@/lib/image-focus';
 
 const getMinDate = () => {
   const today = new Date();
@@ -352,9 +354,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       <div className="px-4 py-8">
         <Link href="/" className="inline-flex items-center text-amber-700 hover:text-amber-900 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
+          Back to Post
         </Link>
-        <Card className="p-8 bg-white border-amber-300">
+        <Card className="p-8 bg-white/80 border-amber-300">
           <h1 className="text-2xl font-bold text-amber-900 mb-4">{error || 'Post not found'}</h1>
           <p className="text-amber-700 mb-6">
             {error === 'You do not have permission to edit this post'
@@ -470,7 +472,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           Back to Post
         </button>
 
-        <Card className="p-8 bg-white border-amber-300">
+        <Card className="p-8 bg-white/80 border-amber-300">
           <div className="mb-6">
             <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full mb-3">
               {typeName}
@@ -544,6 +546,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                               alt={img.originalName}
                               fill
                               sizes="(max-width: 768px) 100vw, 33vw"
+                              style={focalStyle(img)}
                               className="object-cover"
                             />
                           </div>
@@ -557,6 +560,29 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           </button>
                           <p className="text-xs text-amber-700 truncate mt-1">{img.originalName}</p>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                  {images.length > 0 && (
+                    <div className="mt-4 space-y-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                      <p className="text-sm text-amber-700">
+                        Cards crop images to fit, in several different shapes. Pick the part of each image that matters
+                        and every card will keep it in frame.
+                      </p>
+                      {images.map((img) => (
+                        <FocalPointPicker
+                          key={`focal-${img.filename}`}
+                          url={img.url}
+                          focalX={img.focalX}
+                          focalY={img.focalY}
+                          disabled={isSaving}
+                          label={img.originalName}
+                          onChange={(x, y) =>
+                            setImages((prev) =>
+                              prev.map((i) => (i.filename === img.filename ? { ...i, focalX: x, focalY: y } : i)),
+                            )
+                          }
+                        />
                       ))}
                     </div>
                   )}
@@ -599,7 +625,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   profiles={authorableProfiles}
                 />
                 <div className="space-y-2">
-                  <Label className="text-amber-900 font-semibold">Header Image (Optional)</Label>
+                  <Label className="text-amber-900 font-semibold">Header Image</Label>
                   {headerImage ? (
                     <div className="relative">
                       <div className="relative aspect-video rounded-lg overflow-hidden bg-amber-100 border border-amber-300">
@@ -608,6 +634,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           src={headerImage.url}
                           alt={headerImage.originalName}
                           sizes="(max-width: 768px) 100vw, 800px"
+                          style={focalStyle(headerImage)}
                           className="object-cover"
                         />
                       </div>
@@ -645,6 +672,17 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {headerImage && (
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                      <FocalPointPicker
+                        url={headerImage.url}
+                        focalX={headerImage.focalX}
+                        focalY={headerImage.focalY}
+                        disabled={isSaving}
+                        onChange={(x, y) => setHeaderImage((prev) => (prev ? { ...prev, focalX: x, focalY: y } : prev))}
+                      />
                     </div>
                   )}
                 </div>
@@ -691,7 +729,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="maxAttendees" className="text-amber-900 font-semibold">
-                      Max Attendees (Optional)
+                      Max Attendees
                     </Label>
                     <Input
                       id="maxAttendees"
@@ -706,7 +744,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactProfileId" className="text-amber-900 font-semibold">
-                    Contact Character (Optional)
+                    Contact Character
                   </Label>
                   <select
                     id="contactProfileId"

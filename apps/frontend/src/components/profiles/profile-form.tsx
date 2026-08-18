@@ -52,6 +52,8 @@ function BannerUploadSection({
   handleRemoveBanner,
   triggerBannerFileSelect,
   disabled,
+  bannerCredit,
+  onBannerCreditChange,
 }: {
   banner: ReturnType<typeof useBannerUpload>['banner'];
   isBannerUploading: boolean;
@@ -65,6 +67,8 @@ function BannerUploadSection({
   handleRemoveBanner: () => void;
   triggerBannerFileSelect: () => void;
   disabled: boolean;
+  bannerCredit: string;
+  onBannerCreditChange: (value: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -143,6 +147,23 @@ function BannerUploadSection({
       </div>
       {bannerUploadError && <p className="text-sm text-red-600">{bannerUploadError}</p>}
 
+      {banner && (
+        <div className="space-y-2 pt-2">
+          <Label htmlFor="banner_credit" className="text-amber-900 font-semibold">
+            Banner artwork credit
+          </Label>
+          <Input
+            id="banner_credit"
+            value={bannerCredit}
+            onChange={(e) => onBannerCreditChange(e.target.value)}
+            placeholder="Who made this image? e.g. Art by Ninniach"
+            maxLength={200}
+            disabled={disabled}
+            className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+          />
+        </div>
+      )}
+
       <AvatarCropDialog
         isOpen={isBannerCropOpen}
         imageSrc={bannerPreviewSrc ?? ''}
@@ -164,6 +185,10 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
   const [avatar, setAvatar] = useState<Avatar | null>(null);
+  // Artwork credit rides with the image it belongs to, so it survives a re-upload
+  // being replaced and never has to be squeezed into the description.
+  const [avatarCredit, setAvatarCredit] = useState('');
+  const [bannerCredit, setBannerCredit] = useState('');
 
   // Character-specific fields (only used when profileTypeId === 1)
   const [race, setRace] = useState('');
@@ -346,7 +371,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
     setError(null);
     try {
       const details: Record<string, unknown> = {
-        avatar: avatar || undefined,
+        avatar: avatar ? { ...avatar, credit: avatarCredit.trim() || undefined } : undefined,
       };
 
       if (isCharacter) {
@@ -366,7 +391,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         details.status = kinshipStatus;
         if (kinshipAreaOfOperation.trim()) details.area_of_operation = kinshipAreaOfOperation.trim();
         if (foundingDate.trim()) details.founding_date = foundingDate.trim();
-        if (banner) details.banner = banner;
+        if (banner) details.banner = { ...banner, credit: bannerCredit.trim() || undefined };
       } else if (isItem) {
         details.description = itemDescription.trim() || undefined;
         if (uploadedImages.length > 0) details.images = uploadedImages;
@@ -382,7 +407,7 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
         if (orgType.trim()) details.org_type = orgType.trim();
         if (orgStatus.trim()) details.status = orgStatus.trim();
         if (orgAreaOfOperation.trim()) details.area_of_operation = orgAreaOfOperation.trim();
-        if (banner) details.banner = banner;
+        if (banner) details.banner = { ...banner, credit: bannerCredit.trim() || undefined };
       } else {
         details.description = data.details || undefined;
       }
@@ -521,6 +546,24 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
 
       {/* Avatar Upload */}
       <AvatarUploader avatar={avatar} onAvatarChange={setAvatar} label="Avatar" disabled={isSubmitting} />
+
+      {/* Credit the artist without having to bury it in the description */}
+      {avatar && (
+        <div className="space-y-2">
+          <Label htmlFor="avatar_credit" className="text-amber-900 font-semibold">
+            Avatar artwork credit
+          </Label>
+          <Input
+            id="avatar_credit"
+            value={avatarCredit}
+            onChange={(e) => setAvatarCredit(e.target.value)}
+            placeholder="Who made this image? e.g. Art by Ninniach"
+            maxLength={200}
+            disabled={isSubmitting}
+            className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
+          />
+        </div>
+      )}
 
       {/* ── Name field (always shown) ───────────────────────────────────────── */}
       <div className="space-y-2">
@@ -902,6 +945,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             handleBannerCropCancel={handleBannerCropCancel}
             handleRemoveBanner={handleRemoveBanner}
             triggerBannerFileSelect={triggerBannerFileSelect}
+            bannerCredit={bannerCredit}
+            onBannerCreditChange={setBannerCredit}
             disabled={isSubmitting}
           />
 
@@ -1191,6 +1236,8 @@ export function ProfileForm({ profileTypeId, onSuccess, onCancel }: ProfileFormP
             handleBannerCropCancel={handleBannerCropCancel}
             handleRemoveBanner={handleRemoveBanner}
             triggerBannerFileSelect={triggerBannerFileSelect}
+            bannerCredit={bannerCredit}
+            onBannerCreditChange={setBannerCredit}
             disabled={isSubmitting}
           />
 

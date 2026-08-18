@@ -9,7 +9,9 @@ import { createCollection, updateCollection } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, X } from 'lucide-react';
+import { AuthorSelect } from '@/components/posts/author-select';
+import { useSortableList } from '@/hooks/useSortableList';
+import { ArrowLeft, GripVertical, X } from 'lucide-react';
 import Link from 'next/link';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
@@ -20,6 +22,12 @@ const collectionFormSchema = z.object({
 });
 
 type CollectionFormData = z.infer<typeof collectionFormSchema>;
+
+const PROFILE_TYPE_LABELS: Record<number, string> = {
+  1: 'Character',
+  3: 'Kinship',
+  4: 'Organization',
+};
 
 interface Profile {
   profile_id: number;
@@ -82,6 +90,7 @@ export function CollectionForm({
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [selectedPosts, setSelectedPosts] = useState<Post[]>(initialPosts);
+  const sortable = useSortableList<Post>();
 
   const {
     register,
@@ -219,6 +228,20 @@ export function CollectionForm({
             }
           }
 
+          // Persist the order the user arranged. Runs after add/remove so every
+          // id in the payload actually belongs to the collection.
+          if (selectedPosts.length > 0) {
+            try {
+              await fetch(`/api/collections/${collectionId}/posts/reorder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_ids: selectedPosts.map((p) => p.post_id) }),
+              });
+            } catch (err) {
+              console.error('Failed to save post order:', err);
+            }
+          }
+
           router.refresh();
           router.push(`/collections/${collectionId}`);
         } else {
@@ -245,6 +268,18 @@ export function CollectionForm({
               });
             } catch (err) {
               console.error('Failed to add post to collection:', err);
+            }
+          }
+
+          if (selectedPosts.length > 1) {
+            try {
+              await fetch(`/api/collections/${result.collection.collection_id}/posts/reorder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_ids: selectedPosts.map((p) => p.post_id) }),
+              });
+            } catch (err) {
+              console.error('Failed to save post order:', err);
             }
           }
 
@@ -407,43 +442,30 @@ export function CollectionForm({
             {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
           </div>
 
-          {/* Primary Author */}
-          <div className="space-y-2">
-            <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-medium">
-              Primary Author
-            </Label>
-            <p className="text-sm text-amber-600 mb-2">
-              Optionally attribute this collection to one of your characters or organizations
+          {/* Author — same control and wording as the post forms. Collections may also
+              be attributed to an organization, so the list stays this form's own. */}
+          <AuthorSelect
+            id="primary_author_profile_id"
+            value={selectedAuthorId ? String(selectedAuthorId) : ''}
+            onChange={(value) => setValue('primary_author_profile_id', value ? parseInt(value, 10) : undefined)}
+            profiles={profiles.map((profile) => ({
+              profile_id: profile.profile_id,
+              name: profile.name,
+              profile_type_id: profile.profile_type_id,
+              type_label: PROFILE_TYPE_LABELS[profile.profile_type_id] ?? 'Profile',
+            }))}
+            isLoading={loadingProfiles}
+            subject="collection"
+          />
+          {!loadingProfiles && profiles.length === 0 && (
+            <p className="text-amber-600 text-sm">
+              No profiles found.{' '}
+              <Link href="/profiles/create" className="text-amber-700 underline">
+                Create one first
+              </Link>{' '}
+              to attribute this collection.
             </p>
-            {loadingProfiles ? (
-              <p className="text-amber-600">Loading profiles...</p>
-            ) : profiles.length === 0 ? (
-              <p className="text-amber-600 text-sm">
-                No character profiles found.{' '}
-                <Link href="/profiles/create" className="text-amber-700 underline">
-                  Create one first
-                </Link>{' '}
-                to attribute this collection.
-              </p>
-            ) : (
-              <select
-                id="primary_author_profile_id"
-                className="w-full px-3 py-2 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-amber-500 bg-white"
-                value={selectedAuthorId || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setValue('primary_author_profile_id', value ? parseInt(value, 10) : undefined);
-                }}
-              >
-                <option value="">No author (account-level collection)</option>
-                {profiles.map((profile) => (
-                  <option key={profile.profile_id} value={profile.profile_id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          )}
 
           {/* Posts Selection */}
           <div className="space-y-2">
@@ -462,13 +484,26 @@ export function CollectionForm({
             {selectedPosts.length > 0 ? (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-amber-800">Selected Posts ({selectedPosts.length})</h4>
+                <p className="text-xs text-amber-600">Drag to set the order they appear in.</p>
                 <div className="space-y-2">
-                  {selectedPosts.map((post) => (
+                  {selectedPosts.map((post, index) => (
                     <div
                       key={post.post_id}
-                      className="flex items-center justify-between p-3 bg-white border border-amber-200 rounded-md"
+                      {...sortable.rowProps(index, (from, to) =>
+                        setSelectedPosts(sortable.reorder(selectedPosts, from, to)),
+                      )}
+                      className={`flex items-center justify-between p-3 bg-white border border-amber-200 rounded-md ${sortable.rowStateClass(index)}`}
                     >
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          {...sortable.handleProps(index)}
+                          aria-label={`Reorder ${post.title}`}
+                          title="Drag to reorder"
+                          className="cursor-grab rounded p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-800 active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </button>
                         <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded">
                           {POST_TYPE_LABELS[post.post_type_id]}
                         </span>

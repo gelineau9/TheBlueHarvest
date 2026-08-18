@@ -20,6 +20,7 @@ import {
   X,
   UserPlus,
   Users,
+  GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -103,6 +104,47 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [removingPostId, setRemovingPostId] = useState<number | null>(null);
+  // Drag-and-drop reordering. Native HTML5 DnD rather than a library — this is
+  // the only sortable list in the app and it's a short one.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+
+  const persistOrder = async (ordered: CollectionPost[], previous: CollectionPost[]) => {
+    setIsSavingOrder(true);
+    setOrderError(null);
+    try {
+      const response = await fetch(`/api/collections/${id}/posts/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_ids: ordered.map((p) => p.post_id) }),
+      });
+      if (!response.ok) throw new Error('Failed to save order');
+    } catch {
+      // Put the list back the way the user found it rather than leave a lie on screen
+      setCollection((prev) => (prev ? { ...prev, posts: previous } : prev));
+      setOrderError('Could not save the new order. Please try again.');
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const handleDrop = (targetIndex: number) => {
+    setOverIndex(null);
+    const from = dragIndex;
+    setDragIndex(null);
+    if (from === null || from === targetIndex || !collection) return;
+
+    const previous = collection.posts;
+    const ordered = [...previous];
+    const [moved] = ordered.splice(from, 1);
+    ordered.splice(targetIndex, 0, moved);
+
+    setCollection({ ...collection, posts: ordered });
+    persistOrder(ordered, previous);
+  };
+
   const [editors, setEditors] = useState<Editor[]>([]);
   const [removingEditorId, setRemovingEditorId] = useState<number | null>(null);
   const [showAddEditorDialog, setShowAddEditorDialog] = useState(false);
@@ -413,6 +455,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
           ) : collection.collection_type_id === 1 ? (
             // Regular collection: group posts by type with subheadings
             <div className="space-y-6">
+              {orderError && <p className="text-sm text-red-600">{orderError}</p>}
               {/* Group posts by type */}
               {[
                 { typeId: 1, label: 'Writings related to this collection' },
@@ -429,12 +472,45 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                     <div className="space-y-3">
                       {postsOfType.map((post) => {
                         const PostIcon = postTypeIcons[post.post_type_id] || FileText;
+                        // Indices are global so a reorder inside a group still
+                        // produces a valid full-collection ordering.
+                        const globalIndex = collection.posts.indexOf(post);
 
                         return (
                           <div
                             key={post.post_id}
-                            className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors"
+                            onDragOver={(e) => {
+                              if (dragIndex === null) return;
+                              e.preventDefault();
+                              setOverIndex(globalIndex);
+                            }}
+                            onDragLeave={() => setOverIndex((prev) => (prev === globalIndex ? null : prev))}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDrop(globalIndex);
+                            }}
+                            className={`flex items-center justify-between p-4 bg-amber-50 rounded-lg border transition-colors ${
+                              overIndex === globalIndex && dragIndex !== globalIndex
+                                ? 'border-amber-600 ring-2 ring-amber-400/50'
+                                : 'border-amber-200 hover:border-amber-400'
+                            } ${dragIndex === globalIndex ? 'opacity-50' : ''} ${isSavingOrder ? 'pointer-events-none' : ''}`}
                           >
+                            {collection.can_edit && (
+                              <button
+                                type="button"
+                                draggable
+                                onDragStart={() => setDragIndex(globalIndex)}
+                                onDragEnd={() => {
+                                  setDragIndex(null);
+                                  setOverIndex(null);
+                                }}
+                                aria-label={`Reorder ${post.title}`}
+                                title="Drag to reorder"
+                                className="mr-1 flex-shrink-0 cursor-grab rounded p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-800 active:cursor-grabbing"
+                              >
+                                <GripVertical className="w-4 h-4" />
+                              </button>
+                            )}
                             <Link href={`/posts/${post.post_id}`} className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg flex-shrink-0">
                                 <PostIcon className="w-5 h-5" />
@@ -474,14 +550,45 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
           ) : (
             // Other collection types: flat list with type badges
             <div className="space-y-3">
-              {collection.posts.map((post) => {
+              {orderError && <p className="text-sm text-red-600">{orderError}</p>}
+              {collection.posts.map((post, index) => {
                 const PostIcon = postTypeIcons[post.post_type_id] || FileText;
+                const isDragging = dragIndex === index;
+                const isOver = overIndex === index && dragIndex !== index;
 
                 return (
                   <div
                     key={post.post_id}
-                    className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors"
+                    onDragOver={(e) => {
+                      if (dragIndex === null) return;
+                      e.preventDefault();
+                      setOverIndex(index);
+                    }}
+                    onDragLeave={() => setOverIndex((prev) => (prev === index ? null : prev))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleDrop(index);
+                    }}
+                    className={`flex items-center justify-between p-4 bg-amber-50 rounded-lg border transition-colors ${
+                      isOver ? 'border-amber-600 ring-2 ring-amber-400/50' : 'border-amber-200 hover:border-amber-400'
+                    } ${isDragging ? 'opacity-50' : ''} ${isSavingOrder ? 'pointer-events-none' : ''}`}
                   >
+                    {collection.can_edit && (
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={() => setDragIndex(index)}
+                        onDragEnd={() => {
+                          setDragIndex(null);
+                          setOverIndex(null);
+                        }}
+                        aria-label={`Reorder ${post.title}`}
+                        title="Drag to reorder"
+                        className="mr-1 flex-shrink-0 cursor-grab rounded p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-800 active:cursor-grabbing"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </button>
+                    )}
                     <Link href={`/posts/${post.post_id}`} className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg flex-shrink-0">
                         <PostIcon className="w-5 h-5" />

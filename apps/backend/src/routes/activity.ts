@@ -30,6 +30,7 @@ const ActivityRowSchema = z.object({
   // profile-level actor (primary author for posts, commenter's profile for comments)
   actor_profile_id: z.number().nullable(),
   actor_profile_name: z.string().nullable(),
+  actor_avatar_url: z.string().nullable(),
   // for comments: post the comment belongs to
   post_id: z.number().nullable(),
   post_title: z.string().nullable(),
@@ -61,6 +62,7 @@ router.get('/', async (req: Request, res: Response) => {
             a.account_id                   AS account_id,
             ap.profile_id                  AS actor_profile_id,
             ap.name                        AS actor_profile_name,
+            ap.details->'avatar'->>'url'   AS actor_avatar_url,
             NULL::int                      AS post_id,
             NULL::text                     AS post_title,
             p.created_at::text             AS created_at
@@ -84,6 +86,7 @@ router.get('/', async (req: Request, res: Response) => {
             a.account_id                   AS account_id,
             NULL::int                      AS actor_profile_id,
             NULL::text                     AS actor_profile_name,
+            pr.details->'avatar'->>'url'   AS actor_avatar_url,
             NULL::int                      AS post_id,
             NULL::text                     AS post_title,
             pr.created_at::text            AS created_at
@@ -105,6 +108,7 @@ router.get('/', async (req: Request, res: Response) => {
             a.account_id                   AS account_id,
             cp.profile_id                  AS actor_profile_id,
             cp.name                        AS actor_profile_name,
+            cp.details->'avatar'->>'url'   AS actor_avatar_url,
             p.post_id                      AS post_id,
             p.title                        AS post_title,
             c.created_at::text             AS created_at
