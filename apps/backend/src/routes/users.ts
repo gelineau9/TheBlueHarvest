@@ -7,6 +7,7 @@
  * Routes:
  *   GET   /api/users/public/:username - Public account info (no auth)
  *   PATCH /api/users/me/profile       - Update the caller's public profile
+ *   GET   /api/users/search           - Username suggestions for editor pickers
  *   GET /api/users/me/posts         - List user's posts (owned or editor)
  *   GET /api/users/me/collections   - List user's collections (owned or editor)
  *   GET /api/users/me/profiles      - List user's profiles (owned or editor)
@@ -30,6 +31,7 @@ const PublicAccountSchema = z.object({
   created_at: z.string(),
   bio: z.string().nullable(),
   banner_url: z.string().nullable(),
+  banner_credit: z.string().nullable(),
 });
 
 const FeaturedCollectionSchema = z.object({
@@ -59,7 +61,8 @@ router.get('/public/:username', async (req: Request, res: Response) => {
           username,
           created_at::text,
           details->>'bio'            AS bio,
-          details->'banner'->>'url'  AS banner_url
+          details->'banner'->>'url'     AS banner_url,
+          details->'banner'->>'credit'  AS banner_credit
         FROM accounts
         WHERE username = ${username}
           AND is_banned = false
@@ -114,6 +117,42 @@ router.get('/public/:username', async (req: Request, res: Response) => {
     res.json({ ...account, featured_collections });
   } catch (err) {
     logger.error('Public user fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── GET /api/users/search ───────────────────────────────────────────────────
+// Username suggestions for the "add editor" pickers. Requires auth: this is a
+// member-directory lookup, not public data. Returns usernames only — never
+// emails or anything else that would turn it into a scraping surface.
+
+router.get('/search', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const raw = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  // Two characters keeps a stray keystroke from returning the whole membership
+  if (raw.length < 2) {
+    res.json({ users: [] });
+    return;
+  }
+
+  try {
+    const db = await getPool();
+    const users = await db.any(
+      sql.type(z.object({ username: z.string() }))`
+        SELECT username FROM accounts
+        WHERE f_unaccent(username) ILIKE f_unaccent(${'%' + raw + '%'})
+          AND deleted = false
+          AND is_banned = false
+        ORDER BY
+          -- Prefix matches first, then alphabetical, so typing "ro" surfaces
+          -- "rowan" ahead of "brandyrose"
+          CASE WHEN f_unaccent(username) ILIKE f_unaccent(${raw + '%'}) THEN 0 ELSE 1 END,
+          username
+        LIMIT 8
+      `,
+    );
+    res.json({ users: users.map((u) => u.username) });
+  } catch (err) {
+    logger.error('Username search error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

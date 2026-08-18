@@ -455,6 +455,7 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
           ) : collection.collection_type_id === 1 ? (
             // Regular collection: group posts by type with subheadings
             <div className="space-y-6">
+              {orderError && <p className="text-sm text-red-600">{orderError}</p>}
               {/* Group posts by type */}
               {[
                 { typeId: 1, label: 'Writings related to this collection' },
@@ -471,12 +472,45 @@ export default function CollectionPage({ params }: { params: Promise<{ id: strin
                     <div className="space-y-3">
                       {postsOfType.map((post) => {
                         const PostIcon = postTypeIcons[post.post_type_id] || FileText;
+                        // Indices are global so a reorder inside a group still
+                        // produces a valid full-collection ordering.
+                        const globalIndex = collection.posts.indexOf(post);
 
                         return (
                           <div
                             key={post.post_id}
-                            className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200 hover:border-amber-400 transition-colors"
+                            onDragOver={(e) => {
+                              if (dragIndex === null) return;
+                              e.preventDefault();
+                              setOverIndex(globalIndex);
+                            }}
+                            onDragLeave={() => setOverIndex((prev) => (prev === globalIndex ? null : prev))}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDrop(globalIndex);
+                            }}
+                            className={`flex items-center justify-between p-4 bg-amber-50 rounded-lg border transition-colors ${
+                              overIndex === globalIndex && dragIndex !== globalIndex
+                                ? 'border-amber-600 ring-2 ring-amber-400/50'
+                                : 'border-amber-200 hover:border-amber-400'
+                            } ${dragIndex === globalIndex ? 'opacity-50' : ''} ${isSavingOrder ? 'pointer-events-none' : ''}`}
                           >
+                            {collection.can_edit && (
+                              <button
+                                type="button"
+                                draggable
+                                onDragStart={() => setDragIndex(globalIndex)}
+                                onDragEnd={() => {
+                                  setDragIndex(null);
+                                  setOverIndex(null);
+                                }}
+                                aria-label={`Reorder ${post.title}`}
+                                title="Drag to reorder"
+                                className="mr-1 flex-shrink-0 cursor-grab rounded p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-800 active:cursor-grabbing"
+                              >
+                                <GripVertical className="w-4 h-4" />
+                              </button>
+                            )}
                             <Link href={`/posts/${post.post_id}`} className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg flex-shrink-0">
                                 <PostIcon className="w-5 h-5" />

@@ -20,10 +20,13 @@ import {
   Heart,
   Swords,
   PlusCircle,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { UsernameInput } from '@/components/ui/username-input';
 import {
   Dialog,
   DialogContent,
@@ -43,8 +46,8 @@ import { htmlToPlainText } from '@/lib/html-text';
 interface ProfileDetails {
   description?: string;
   appearance?: string;
-  avatar?: { url: string; filename: string };
-  banner?: { url: string; filename: string };
+  avatar?: { url: string; filename: string; credit?: string };
+  banner?: { url: string; filename: string; credit?: string };
   race?: string;
   character_type?: string;
   occupation?: string;
@@ -390,6 +393,97 @@ function MembersSection({
   );
 }
 
+type RelationshipView = 'grid' | 'list';
+
+/** Cards / list switch, matching the one on the community profile. */
+function ViewToggle({
+  value,
+  onChange,
+  label,
+}: {
+  value: RelationshipView;
+  onChange: (v: RelationshipView) => void;
+  label: string;
+}) {
+  const base = 'flex items-center justify-center rounded p-1.5 transition-colors';
+  return (
+    <div className="flex gap-0.5 rounded-md border border-amber-800/20 p-0.5" role="group" aria-label={`${label} view`}>
+      <button
+        type="button"
+        onClick={() => onChange('grid')}
+        aria-label={`${label} as cards`}
+        aria-pressed={value === 'grid'}
+        title="Cards"
+        className={`${base} ${value === 'grid' ? 'bg-amber-800 text-amber-50' : 'text-amber-700 hover:bg-amber-100'}`}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('list')}
+        aria-label={`${label} as list`}
+        aria-pressed={value === 'list'}
+        title="List"
+        className={`${base} ${value === 'list' ? 'bg-amber-800 text-amber-50' : 'text-amber-700 hover:bg-amber-100'}`}
+      >
+        <List className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+/** Square tile: portrait fills the space, name and label sit over the bottom.
+ *  Reads as a face wall rather than a bulleted list. */
+function RelationshipTile({
+  rel,
+  canEdit,
+  isRemoving,
+  onRemove,
+}: {
+  rel: LiveRelationship;
+  canEdit: boolean;
+  isRemoving: boolean;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative">
+      <Link href={`/profiles/${rel.other_profile_id}`} className="block">
+        <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-amber-800/20 bg-amber-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
+          {rel.other_profile_avatar_url ? (
+            <NextImage
+              fill
+              src={rel.other_profile_avatar_url}
+              alt={rel.other_profile_name}
+              sizes="(max-width: 640px) 33vw, 160px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <User className="h-10 w-10 text-amber-300" />
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-amber-950/85 to-transparent p-2 pt-6">
+            <p className="truncate text-xs font-semibold text-amber-50 drop-shadow-sm">{rel.other_profile_name}</p>
+            {rel.label && <p className="truncate text-[10px] text-amber-100/90">{rel.label}</p>}
+          </div>
+        </div>
+      </Link>
+      {canEdit && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          disabled={isRemoving}
+          aria-label={`Remove ${rel.other_profile_name}`}
+          className="absolute right-1 top-1 h-7 w-7 bg-white/80 text-red-600 hover:bg-white hover:text-red-700"
+        >
+          {isRemoving ? '…' : <X className="h-3.5 w-3.5" />}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -425,6 +519,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [relationships, setRelationships] = useState<LiveRelationship[]>([]);
   const [relationshipsLoading, setRelationshipsLoading] = useState(false);
   const [removingRelId, setRemovingRelId] = useState<number | null>(null);
+  const [relationshipView, setRelationshipView] = useState<RelationshipView>('grid');
 
   // Kinship members
   const [members, setMembers] = useState<KinshipMember[]>([]);
@@ -885,6 +980,15 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
+          {/* Artwork credits for the images above — kept out of the description */}
+          {(d?.banner?.credit || d?.avatar?.credit) && (
+            <p className="mt-1.5 text-right text-xs italic text-amber-600">
+              {d?.banner?.credit && <span>Banner: {d.banner.credit}</span>}
+              {d?.banner?.credit && d?.avatar?.credit && <span className="mx-1.5 text-amber-800/40">·</span>}
+              {d?.avatar?.credit && <span>Avatar: {d.avatar.credit}</span>}
+            </p>
+          )}
+
           <div className={hasBanner ? 'pt-0' : ''}>
             <div className="flex items-start justify-between gap-6">
               <div className="flex items-start gap-6">
@@ -1097,9 +1201,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           <Card className="p-6 bg-white/80 border-amber-300 mb-6 divide-y divide-amber-200">
             {/* Relationships */}
             <section className="pb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Heart className="w-5 h-5 text-amber-800" />
-                <h2 className="text-xl font-bold text-amber-900">Relationships</h2>
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-amber-800" />
+                  <h2 className="text-xl font-bold text-amber-900">Relationships</h2>
+                </div>
+                {relationships.length > 0 && (
+                  <ViewToggle value={relationshipView} onChange={setRelationshipView} label="Relationships" />
+                )}
               </div>
 
               {relationshipsLoading ? (
@@ -1120,52 +1229,66 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                     return (
                       <div key={groupLabel}>
                         <h3 className={`text-sm font-semibold mb-2 ${color}`}>{groupLabel}</h3>
-                        <ul className="space-y-2">
-                          {group.map((rel) => (
-                            <li
-                              key={rel.relationship_id}
-                              className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
-                                  {rel.other_profile_avatar_url ? (
-                                    <NextImage
-                                      fill
-                                      src={rel.other_profile_avatar_url}
-                                      alt={rel.other_profile_name}
-                                      sizes="28px"
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="flex h-full items-center justify-center">
-                                      <User className="w-3.5 h-3.5 text-amber-400" />
-                                    </div>
-                                  )}
+                        {relationshipView === 'grid' ? (
+                          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                            {group.map((rel) => (
+                              <RelationshipTile
+                                key={rel.relationship_id}
+                                rel={rel}
+                                canEdit={!!profile.can_edit}
+                                isRemoving={removingRelId === rel.relationship_id}
+                                onRemove={() => handleRemoveRelationship(rel.relationship_id)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <ul className="space-y-2">
+                            {group.map((rel) => (
+                              <li
+                                key={rel.relationship_id}
+                                className="flex items-center justify-between gap-3 p-2 rounded-lg bg-amber-50 border border-amber-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="relative w-7 h-7 flex-shrink-0 rounded-full border-2 border-amber-200 bg-amber-100 overflow-hidden">
+                                    {rel.other_profile_avatar_url ? (
+                                      <NextImage
+                                        fill
+                                        src={rel.other_profile_avatar_url}
+                                        alt={rel.other_profile_name}
+                                        sizes="28px"
+                                        className="object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-full items-center justify-center">
+                                        <User className="w-3.5 h-3.5 text-amber-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <Link
+                                      href={`/profiles/${rel.other_profile_id}`}
+                                      className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
+                                    >
+                                      {rel.other_profile_name}
+                                    </Link>
+                                    {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
+                                  </div>
                                 </div>
-                                <div className="flex flex-col">
-                                  <Link
-                                    href={`/profiles/${rel.other_profile_id}`}
-                                    className="text-amber-900 hover:underline font-semibold text-sm leading-tight"
+                                {profile.can_edit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveRelationship(rel.relationship_id)}
+                                    disabled={removingRelId === rel.relationship_id}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                                   >
-                                    {rel.other_profile_name}
-                                  </Link>
-                                  {rel.label && <span className="text-xs text-amber-600">{rel.label}</span>}
-                                </div>
-                              </div>
-                              {profile.can_edit && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveRelationship(rel.relationship_id)}
-                                  disabled={removingRelId === rel.relationship_id}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                                >
-                                  {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
-                                </Button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                                    {removingRelId === rel.relationship_id ? '…' : <X className="w-4 h-4" />}
+                                  </Button>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     );
                   })}
@@ -1498,18 +1621,20 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           {profile.is_owner && (
             <div className="pt-2">
               <div className="flex gap-2">
-                <Input
-                  placeholder="Username"
-                  value={newEditorUsername}
-                  onChange={(e) => {
-                    setNewEditorUsername(e.target.value);
-                    setEditorError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !isAddingEditor) handleAddEditor();
-                  }}
-                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-                />
+                <div className="flex-1">
+                  <UsernameInput
+                    value={newEditorUsername}
+                    onChange={(v) => {
+                      setNewEditorUsername(v);
+                      setEditorError(null);
+                    }}
+                    onSubmit={() => {
+                      if (!isAddingEditor) handleAddEditor();
+                    }}
+                    disabled={isAddingEditor}
+                    exclude={editors.map((editor) => editor.username)}
+                  />
+                </div>
                 <Button
                   onClick={handleAddEditor}
                   disabled={isAddingEditor || !newEditorUsername.trim()}

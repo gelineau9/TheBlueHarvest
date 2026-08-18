@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FolderOpen, Loader2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/auth/auth-provider';
@@ -29,6 +30,7 @@ export function PublicProfileForm() {
   const [bio, setBio] = useState('');
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [bannerFilename, setBannerFilename] = useState<string | null>(null);
+  const [bannerCredit, setBannerCredit] = useState('');
   const [featured, setFeatured] = useState<number[]>([]);
   const [collections, setCollections] = useState<OwnCollection[]>([]);
 
@@ -50,6 +52,7 @@ export function PublicProfileForm() {
           const me = await meRes.json();
           setBio(me.bio ?? '');
           setBannerUrl(me.banner_url ?? null);
+          setBannerCredit(me.banner_credit ?? '');
           setFeatured((me.featured_collections ?? []).map((c: { collection_id: number }) => c.collection_id));
         }
         if (collRes.ok) {
@@ -109,7 +112,9 @@ export function PublicProfileForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bio: bio.trim() || null,
-          banner: bannerUrl ? { url: bannerUrl, filename: bannerFilename ?? 'banner' } : null,
+          banner: bannerUrl
+            ? { url: bannerUrl, filename: bannerFilename ?? 'banner', credit: bannerCredit.trim() || undefined }
+            : null,
           featuredCollections: featured,
         }),
       });
@@ -157,6 +162,7 @@ export function PublicProfileForm() {
               onClick={() => {
                 setBannerUrl(null);
                 setBannerFilename(null);
+                setBannerCredit('');
               }}
               size="icon"
               variant="ghost"
@@ -174,6 +180,23 @@ export function PublicProfileForm() {
           </label>
         )}
       </div>
+
+      {/* Artwork credit, so the artist is named without it going in the bio */}
+      {bannerUrl && (
+        <div className="mb-6 space-y-2">
+          <Label htmlFor="banner_credit" className="text-amber-900 font-semibold">
+            Header artwork credit
+          </Label>
+          <Input
+            id="banner_credit"
+            value={bannerCredit}
+            onChange={(e) => setBannerCredit(e.target.value)}
+            placeholder="Who made this image? e.g. Art by Ninniach"
+            maxLength={200}
+            className="border-amber-300 bg-white focus:border-amber-600 focus:ring-amber-600"
+          />
+        </div>
+      )}
 
       {/* Bio */}
       <div className="mb-6 space-y-2">

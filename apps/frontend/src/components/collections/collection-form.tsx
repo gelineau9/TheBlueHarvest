@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthorSelect } from '@/components/posts/author-select';
-import { ArrowLeft, X } from 'lucide-react';
+import { useSortableList } from '@/hooks/useSortableList';
+import { ArrowLeft, GripVertical, X } from 'lucide-react';
 import Link from 'next/link';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
@@ -89,6 +90,7 @@ export function CollectionForm({
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [selectedPosts, setSelectedPosts] = useState<Post[]>(initialPosts);
+  const sortable = useSortableList<Post>();
 
   const {
     register,
@@ -226,6 +228,20 @@ export function CollectionForm({
             }
           }
 
+          // Persist the order the user arranged. Runs after add/remove so every
+          // id in the payload actually belongs to the collection.
+          if (selectedPosts.length > 0) {
+            try {
+              await fetch(`/api/collections/${collectionId}/posts/reorder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_ids: selectedPosts.map((p) => p.post_id) }),
+              });
+            } catch (err) {
+              console.error('Failed to save post order:', err);
+            }
+          }
+
           router.refresh();
           router.push(`/collections/${collectionId}`);
         } else {
@@ -252,6 +268,18 @@ export function CollectionForm({
               });
             } catch (err) {
               console.error('Failed to add post to collection:', err);
+            }
+          }
+
+          if (selectedPosts.length > 1) {
+            try {
+              await fetch(`/api/collections/${result.collection.collection_id}/posts/reorder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_ids: selectedPosts.map((p) => p.post_id) }),
+              });
+            } catch (err) {
+              console.error('Failed to save post order:', err);
             }
           }
 
@@ -456,13 +484,26 @@ export function CollectionForm({
             {selectedPosts.length > 0 ? (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-amber-800">Selected Posts ({selectedPosts.length})</h4>
+                <p className="text-xs text-amber-600">Drag to set the order they appear in.</p>
                 <div className="space-y-2">
-                  {selectedPosts.map((post) => (
+                  {selectedPosts.map((post, index) => (
                     <div
                       key={post.post_id}
-                      className="flex items-center justify-between p-3 bg-white border border-amber-200 rounded-md"
+                      {...sortable.rowProps(index, (from, to) =>
+                        setSelectedPosts(sortable.reorder(selectedPosts, from, to)),
+                      )}
+                      className={`flex items-center justify-between p-3 bg-white border border-amber-200 rounded-md ${sortable.rowStateClass(index)}`}
                     >
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          {...sortable.handleProps(index)}
+                          aria-label={`Reorder ${post.title}`}
+                          title="Drag to reorder"
+                          className="cursor-grab rounded p-1 text-amber-500 hover:bg-amber-100 hover:text-amber-800 active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </button>
                         <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded">
                           {POST_TYPE_LABELS[post.post_type_id]}
                         </span>

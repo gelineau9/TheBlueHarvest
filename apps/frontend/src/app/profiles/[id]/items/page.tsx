@@ -6,6 +6,7 @@ import NextImage from 'next/image';
 import { ArrowLeft, Package } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { htmlToPlainText } from '@/lib/html-text';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ interface ItemsResponse {
 // ─── Item card ────────────────────────────────────────────────────────────────
 
 function ItemCard({ item }: { item: ItemProfile }) {
+  const preview = htmlToPlainText(item.details?.description ?? '').slice(0, 120);
   return (
     <Link href={`/profiles/${item.profile_id}`} className="block">
       <Card className="flex flex-col items-center gap-3 border-amber-800/20 bg-amber-50/90 p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500 hover:shadow-md">
@@ -40,9 +42,9 @@ function ItemCard({ item }: { item: ItemProfile }) {
         </div>
         <div>
           <p className="line-clamp-2 text-sm font-semibold text-amber-900 leading-snug">{item.name}</p>
-          {item.details?.description && (
-            <p className="mt-1 line-clamp-2 text-xs text-amber-600">{item.details.description}</p>
-          )}
+          {/* Descriptions are stored as rich text; render the plain-text form or
+              the markup shows through on the card. */}
+          {preview && <p className="mt-1 line-clamp-2 text-xs text-amber-600">{preview}</p>}
         </div>
       </Card>
     </Link>

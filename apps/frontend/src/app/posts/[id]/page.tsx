@@ -9,6 +9,7 @@ import { ArrowLeft, User, Pencil, Trash2, UserPlus, X, Pin, PinOff } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { UsernameInput } from '@/components/ui/username-input';
 import { useAuth } from '@/components/auth/auth-provider';
 import {
   Dialog,
@@ -714,17 +715,15 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           {post.is_owner && (
             <div className="pt-2">
               <div className="flex gap-2">
-                <Input
-                  placeholder="Username"
-                  value={newEditorUsername}
-                  onChange={(e) => setNewEditorUsername(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddEditor();
-                    }
-                  }}
-                  className="border-amber-300 focus:border-amber-600 focus:ring-amber-600 bg-white"
-                />
+                <div className="flex-1">
+                  <UsernameInput
+                    value={newEditorUsername}
+                    onChange={setNewEditorUsername}
+                    onSubmit={handleAddEditor}
+                    disabled={isAddingEditor}
+                    exclude={editors.map((editor) => editor.username)}
+                  />
+                </div>
                 <Button
                   onClick={handleAddEditor}
                   disabled={isAddingEditor || !newEditorUsername.trim()}
