@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, User, Pencil, Trash2, UserPlus, X, Pin, PinOff } from 'lucide-react';
+import { ArrowLeft, CalendarDays, User, Pencil, Trash2, UserPlus, X, Pin, PinOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -349,6 +349,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   // gives race and occupation. Date and time come from a single field, so they
   // share a single chip rather than sitting in two separate boxes.
   const eventChips: Array<{ key: string; label: string; qualifier: string; href?: string }> = [];
+  const eventEnded =
+    isEvent && !!post.content.eventDateTime && new Date(post.content.eventDateTime).getTime() < Date.now();
   if (isEvent) {
     if (post.content.eventDateTime) {
       const when = new Date(post.content.eventDateTime);
@@ -594,6 +596,14 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               style={focalStyle(post.content.headerImage)}
               className="object-cover"
             />
+          </div>
+        )}
+
+        {/* A past event stays viewable as a record of what happened */}
+        {eventEnded && (
+          <div className="mb-6 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-100/80 px-4 py-2.5 text-sm font-medium text-amber-800">
+            <CalendarDays className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+            This event has ended.
           </div>
         )}
 

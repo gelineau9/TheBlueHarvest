@@ -67,7 +67,7 @@ export function FocalPointPicker({
             className="text-amber-700 hover:bg-amber-100 hover:text-amber-900"
           >
             <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Reset to centre
+            Reset to center
           </Button>
         )}
       </div>

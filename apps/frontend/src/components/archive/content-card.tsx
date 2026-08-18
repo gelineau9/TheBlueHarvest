@@ -29,6 +29,8 @@ interface ContentCardProps {
   thumbnail?: string | null;
   focalX?: number;
   focalY?: number;
+  /** Event whose date has passed — marked and dimmed, but still browsable */
+  ended?: boolean;
   preview?: string;
   authorName?: string | null;
   username: string;
@@ -73,6 +75,7 @@ export function ContentCard({
   thumbnail,
   focalX,
   focalY,
+  ended,
   preview,
   authorName,
   username,
@@ -110,7 +113,7 @@ export function ContentCard({
               alt={name}
               sizes="(max-width: 768px) 100vw, 50vw"
               style={focalStyle(focusImage)}
-              className="object-cover"
+              className={`object-cover ${ended ? 'opacity-60 saturate-50' : ''}`}
             />
           </div>
         )}
@@ -135,6 +138,11 @@ export function ContentCard({
                 <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${colors.badge}`}>
                   {typeName}
                 </span>
+                {ended && (
+                  <span className="inline-block rounded-full border border-stone-300 bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-500">
+                    Ended
+                  </span>
+                )}
               </div>
 
               {/* Name/Title */}

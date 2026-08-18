@@ -13,6 +13,10 @@
  *
  * The cap is enforced here rather than in the UI, so a stale page or a direct
  * request can't push an event past its maximum.
+ *
+ * Once the event's date has passed, RSVPs close: the guest list freezes into a
+ * record of who attended. Only the organiser may still remove entries, to
+ * correct the record.
  */
 
 import { Router, Request, Response } from 'express';
@@ -33,6 +37,7 @@ const EventSchema = z.object({
   account_id: z.number(),
   post_type_id: z.number(),
   max_attendees: z.number().nullable(),
+  ended: z.boolean(),
 });
 
 /** Loads the event and its cap, or null when the post isn't a live event */
@@ -43,7 +48,8 @@ async function loadEvent(db: Awaited<ReturnType<typeof getPool>>, postId: number
         post_id,
         account_id,
         post_type_id,
-        NULLIF(content->>'maxAttendees', '')::int AS max_attendees
+        NULLIF(content->>'maxAttendees', '')::int AS max_attendees,
+        COALESCE(NULLIF(content->>'eventDateTime', '')::timestamptz < NOW(), false) AS ended
       FROM posts
       WHERE post_id = ${postId} AND deleted = false
     `,
@@ -134,6 +140,7 @@ router.get('/:postId/attendees', optionalAuthenticateToken, async (req: AuthRequ
       count,
       capacity,
       is_full: isFull,
+      ended: event.ended,
       can_see_attendees: canSeeList,
       my_attendance: myAttendance,
       ...(attendees ? { attendees } : {}),
@@ -172,6 +179,12 @@ router.post(
 
       if (!event || event.post_type_id !== EVENT_POST_TYPE_ID) {
         res.status(404).json({ error: 'Event not found' });
+        return;
+      }
+
+      // RSVPs close once the event has happened
+      if (event.ended) {
+        res.status(409).json({ error: 'event_ended', message: 'This event has already happened.' });
         return;
       }
 
@@ -243,6 +256,16 @@ router.delete('/:postId/attendees/:profileId', authenticateToken, async (req: Au
     // Withdraw your own RSVP; the organiser may also remove an attendee
     const isOrganiser = await canEditPost(db, postId, userId);
     const scope = isOrganiser ? sql.fragment`` : sql.fragment`AND account_id = ${userId}`;
+
+    // After the event, the list is a record of who attended — only the
+    // organiser may still correct it.
+    if (!isOrganiser) {
+      const event = await loadEvent(db, postId);
+      if (event?.ended) {
+        res.status(409).json({ error: 'event_ended', message: 'This event has already happened.' });
+        return;
+      }
+    }
 
     const removed = await db.maybeOne(
       sql.type(z.object({ attendee_id: z.number() }))`

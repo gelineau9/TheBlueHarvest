@@ -263,7 +263,11 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         type === POST_TYPES.ART ? { credit: credit.trim(), description, images, tags } : { description, images, tags };
       authorProfileId = authorId ? parseInt(authorId, 10) : null;
     } else if (type === POST_TYPES.EVENT) {
-      if (eventDate && eventTime) {
+      // Only validate the date when it actually changed — otherwise editing a
+      // past event (fixing a typo, adding a note) would be impossible, since
+      // its stored date can never satisfy "must be in the future".
+      const dateChanged = eventDate !== originalValues.eventDate || eventTime !== originalValues.eventTime;
+      if (dateChanged && eventDate && eventTime) {
         // Validate combined datetime in local timezone against right now
         const eventDateTime = new Date(`${eventDate}T${eventTime}`);
         if (eventDateTime <= new Date()) {
@@ -276,7 +280,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           setSaveError('Event date cannot be more than 1 year away');
           return;
         }
-      } else if (eventDate) {
+      } else if (dateChanged && eventDate) {
         // Date provided but no time yet — only check 1-year bound
         const oneYear = new Date();
         oneYear.setFullYear(oneYear.getFullYear() + 1);
@@ -696,7 +700,13 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                       type="date"
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
-                      min={getMinDate()}
+                      // A past event's stored date must stay valid, or native form
+                      // validation silently blocks every save of that event
+                      min={
+                        originalValues.eventDate && originalValues.eventDate < getMinDate()
+                          ? originalValues.eventDate
+                          : getMinDate()
+                      }
                       max={getMaxDate()}
                       className="border-amber-300 focus:border-amber-500 focus:ring-amber-500"
                     />
