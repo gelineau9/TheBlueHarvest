@@ -24,6 +24,7 @@ import { CommentList } from '@/components/comments/comment-list';
 import { LikeButton } from '@/components/likes/LikeButton';
 import { EventRsvp } from '@/components/events/EventRsvp';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
+import { focalStyle } from '@/lib/image-focus';
 
 interface Author {
   profile_id: number;
@@ -62,6 +63,8 @@ interface Post {
       filename: string;
       url: string;
       originalName: string;
+      focalX?: number;
+      focalY?: number;
     };
   };
   post_type_id: number;
@@ -588,6 +591,7 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               alt={post.title}
               fill
               sizes="(max-width: 768px) 100vw, 800px"
+              style={focalStyle(post.content.headerImage)}
               className="object-cover"
             />
           </div>

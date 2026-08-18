@@ -634,6 +634,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           src={headerImage.url}
                           alt={headerImage.originalName}
                           sizes="(max-width: 768px) 100vw, 800px"
+                          style={focalStyle(headerImage)}
                           className="object-cover"
                         />
                       </div>
@@ -671,6 +672,17 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           <p className="text-sm text-amber-600 mt-1">JPEG, PNG, GIF, or WebP · Max 10MB</p>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {headerImage && (
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                      <FocalPointPicker
+                        url={headerImage.url}
+                        focalX={headerImage.focalX}
+                        focalY={headerImage.focalY}
+                        disabled={isSaving}
+                        onChange={(x, y) => setHeaderImage((prev) => (prev ? { ...prev, focalX: x, focalY: y } : prev))}
+                      />
                     </div>
                   )}
                 </div>

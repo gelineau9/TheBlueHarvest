@@ -35,15 +35,19 @@ export function FocalPointPicker({
   disabled,
   label = 'Card framing',
 }: FocalPointPickerProps) {
-  const imageRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const x = focalX ?? DEFAULT_FOCAL_X;
   const y = focalY ?? DEFAULT_FOCAL_Y;
 
+  // Measured on the <img> itself: without object-fit its box always equals the
+  // rendered image, so click percentages are image percentages. A w-full
+  // object-contain box letterboxes tall images and compresses every off-centre
+  // click toward 50% — exactly wrong for the portrait images this exists for.
   const setFromEvent = (clientX: number, clientY: number) => {
     const box = imageRef.current?.getBoundingClientRect();
-    if (!box || box.width === 0) return;
+    if (!box || box.width === 0 || box.height === 0) return;
     const nextX = Math.min(100, Math.max(0, Math.round(((clientX - box.left) / box.width) * 100)));
     const nextY = Math.min(100, Math.max(0, Math.round(((clientY - box.top) / box.height) * 100)));
     onChange(nextX, nextY);
@@ -72,28 +76,31 @@ export function FocalPointPicker({
       </p>
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_170px]">
-        {/* The full image, with the chosen point marked */}
+        {/* The full image, with the chosen point marked. The wrapper shrink-wraps
+            the image so there is no letterbox to skew the click-to-percentage
+            mapping, and pointer capture keeps a drag alive (mouse and touch). */}
         <div
-          ref={imageRef}
           role="application"
           aria-label="Choose the focal point"
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             if (disabled) return;
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
             setIsDragging(true);
             setFromEvent(e.clientX, e.clientY);
           }}
-          onMouseMove={(e) => {
+          onPointerMove={(e) => {
             if (disabled || !isDragging) return;
             setFromEvent(e.clientX, e.clientY);
           }}
-          onMouseUp={() => setIsDragging(false)}
-          onMouseLeave={() => setIsDragging(false)}
-          className={`relative overflow-hidden rounded-md border border-amber-300 bg-amber-50 ${
+          onPointerUp={() => setIsDragging(false)}
+          onPointerCancel={() => setIsDragging(false)}
+          className={`relative mx-auto w-fit max-w-full touch-none self-start overflow-hidden rounded-md border border-amber-300 bg-amber-50 ${
             disabled ? '' : 'cursor-crosshair'
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- author-supplied image at unknown ratio */}
-          <img src={url} alt="" className="max-h-72 w-full object-contain" />
+          <img ref={imageRef} src={url} alt="" draggable={false} className="block max-h-72 max-w-full" />
           <span
             aria-hidden="true"
             style={{ left: `${x}%`, top: `${y}%` }}
