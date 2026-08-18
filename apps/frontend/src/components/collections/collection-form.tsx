@@ -9,6 +9,7 @@ import { createCollection, updateCollection } from '@/app/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthorSelect } from '@/components/posts/author-select';
 import { ArrowLeft, X } from 'lucide-react';
 import Link from 'next/link';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -20,6 +21,12 @@ const collectionFormSchema = z.object({
 });
 
 type CollectionFormData = z.infer<typeof collectionFormSchema>;
+
+const PROFILE_TYPE_LABELS: Record<number, string> = {
+  1: 'Character',
+  3: 'Kinship',
+  4: 'Organization',
+};
 
 interface Profile {
   profile_id: number;
@@ -407,43 +414,30 @@ export function CollectionForm({
             {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
           </div>
 
-          {/* Primary Author */}
-          <div className="space-y-2">
-            <Label htmlFor="primary_author_profile_id" className="text-amber-900 font-medium">
-              Primary Author
-            </Label>
-            <p className="text-sm text-amber-600 mb-2">
-              Optionally attribute this collection to one of your characters or organizations
+          {/* Author — same control and wording as the post forms. Collections may also
+              be attributed to an organization, so the list stays this form's own. */}
+          <AuthorSelect
+            id="primary_author_profile_id"
+            value={selectedAuthorId ? String(selectedAuthorId) : ''}
+            onChange={(value) => setValue('primary_author_profile_id', value ? parseInt(value, 10) : undefined)}
+            profiles={profiles.map((profile) => ({
+              profile_id: profile.profile_id,
+              name: profile.name,
+              profile_type_id: profile.profile_type_id,
+              type_label: PROFILE_TYPE_LABELS[profile.profile_type_id] ?? 'Profile',
+            }))}
+            isLoading={loadingProfiles}
+            subject="collection"
+          />
+          {!loadingProfiles && profiles.length === 0 && (
+            <p className="text-amber-600 text-sm">
+              No profiles found.{' '}
+              <Link href="/profiles/create" className="text-amber-700 underline">
+                Create one first
+              </Link>{' '}
+              to attribute this collection.
             </p>
-            {loadingProfiles ? (
-              <p className="text-amber-600">Loading profiles...</p>
-            ) : profiles.length === 0 ? (
-              <p className="text-amber-600 text-sm">
-                No character profiles found.{' '}
-                <Link href="/profiles/create" className="text-amber-700 underline">
-                  Create one first
-                </Link>{' '}
-                to attribute this collection.
-              </p>
-            ) : (
-              <select
-                id="primary_author_profile_id"
-                className="w-full px-3 py-2 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-amber-500 bg-white"
-                value={selectedAuthorId || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setValue('primary_author_profile_id', value ? parseInt(value, 10) : undefined);
-                }}
-              >
-                <option value="">No author (account-level collection)</option>
-                {profiles.map((profile) => (
-                  <option key={profile.profile_id} value={profile.profile_id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          )}
 
           {/* Posts Selection */}
           <div className="space-y-2">

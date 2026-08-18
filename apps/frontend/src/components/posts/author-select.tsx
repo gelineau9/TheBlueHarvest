@@ -16,6 +16,8 @@ interface AuthorSelectProps {
   disabled?: boolean;
   /** Validation message from the surrounding form, if any */
   error?: string;
+  /** What is being attributed — collections reuse this control */
+  subject?: string;
 }
 
 /**
@@ -26,7 +28,16 @@ interface AuthorSelectProps {
  * the explaining instead — it names the account that gets credited when no
  * character is chosen, rather than the blank "No author" it replaced.
  */
-export function AuthorSelect({ id, value, onChange, profiles, isLoading, disabled, error }: AuthorSelectProps) {
+export function AuthorSelect({
+  id,
+  value,
+  onChange,
+  profiles,
+  isLoading,
+  disabled,
+  error,
+  subject = 'post',
+}: AuthorSelectProps) {
   const { username } = useAuth();
 
   return (
@@ -35,7 +46,7 @@ export function AuthorSelect({ id, value, onChange, profiles, isLoading, disable
         Author
       </Label>
       <p className="text-sm text-amber-700">
-        Attribute this post to one of your characters or kinships. If you don&apos;t, it stays credited to your account.
+        Attribute this {subject} to one of your profiles. If you don&apos;t, it stays credited to your account.
       </p>
       {isLoading ? (
         <div className="text-sm text-amber-700">Loading your profiles...</div>

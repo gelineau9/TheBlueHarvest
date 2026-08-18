@@ -5,20 +5,7 @@ import { useRouter } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  ArrowLeft,
-  User,
-  Calendar,
-  Pencil,
-  Trash2,
-  Clock,
-  MapPin,
-  Users,
-  UserPlus,
-  X,
-  Pin,
-  PinOff,
-} from 'lucide-react';
+import { ArrowLeft, User, Pencil, Trash2, UserPlus, X, Pin, PinOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -349,9 +336,43 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   const canManageEditors = !!post.is_owner || coEditors.some((editor) => editor.username === currentUsername);
 
   const bodyContent = isWriting || !(isArt || isMedia || isEvent) ? post.content.body : undefined;
-  const descriptionContent = isArt || isMedia ? post.content.description : undefined;
+  const descriptionContent = isArt || isMedia || isEvent ? post.content.description : undefined;
   // Without this an art post with no description renders an empty white box.
-  const hasCardContent = isEvent || !!bodyContent || !!descriptionContent || featuredProfiles.length > 0;
+  const hasCardContent = !!bodyContent || !!descriptionContent || featuredProfiles.length > 0;
+
+  // Event facts read as one row of chips, the same treatment a character profile
+  // gives race and occupation. Date and time come from a single field, so they
+  // share a single chip rather than sitting in two separate boxes.
+  const eventChips: Array<{ key: string; label: string; qualifier: string; href?: string }> = [];
+  if (isEvent) {
+    if (post.content.eventDateTime) {
+      const when = new Date(post.content.eventDateTime);
+      eventChips.push({
+        key: 'when',
+        label: `${when.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        })}, ${when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+        qualifier: 'when',
+      });
+    }
+    if (post.content.location) {
+      eventChips.push({ key: 'location', label: post.content.location, qualifier: 'location' });
+    }
+    if (post.content.maxAttendees) {
+      eventChips.push({ key: 'cap', label: String(post.content.maxAttendees), qualifier: 'max attendees' });
+    }
+    if (post.content.contactProfileId) {
+      eventChips.push({
+        key: 'contact',
+        label: contactName || 'View contact',
+        qualifier: 'contact',
+        href: `/profiles/${post.content.contactProfileId}`,
+      });
+    }
+  }
 
   return (
     <div className="py-8 px-4">
@@ -461,6 +482,36 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
           )}
         </div>
 
+        {/* Event facts as chips — matches the identity chips on a profile */}
+        {eventChips.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {eventChips.map((chip) => {
+              const body = (
+                <>
+                  {chip.label}
+                  <span className="opacity-60"> · {chip.qualifier}</span>
+                </>
+              );
+              return chip.href ? (
+                <Link
+                  key={chip.key}
+                  href={chip.href}
+                  className="rounded-full border border-amber-200 bg-amber-100/70 px-3 py-1 text-xs font-medium text-amber-800 transition-colors hover:brightness-95"
+                >
+                  {body}
+                </Link>
+              ) : (
+                <span
+                  key={chip.key}
+                  className="rounded-full border border-amber-200 bg-amber-100/70 px-3 py-1 text-xs font-medium text-amber-800"
+                >
+                  {body}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Tags and likes ride directly above the main content */}
         <div className="mt-6 mb-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
@@ -559,100 +610,8 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
               />
             )}
 
-            {/* Event Post - Show Event Details */}
-            {isEvent && (
-              <div className="space-y-6">
-                {/* Event Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Date */}
-                  {post.content.eventDateTime && (
-                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                      <Calendar className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-amber-600 font-medium">Date</p>
-                        <p className="text-amber-900">
-                          {new Date(post.content.eventDateTime).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Time */}
-                  {post.content.eventDateTime && (
-                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                      <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-amber-600 font-medium">Time</p>
-                        <p className="text-amber-900">
-                          {new Date(post.content.eventDateTime).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Location */}
-                  {post.content.location && (
-                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                      <MapPin className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-amber-600 font-medium">Location</p>
-                        <p className="text-amber-900">{post.content.location}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Max Attendees */}
-                  {post.content.maxAttendees && (
-                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                      <Users className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-amber-600 font-medium">Max Attendees</p>
-                        <p className="text-amber-900">{post.content.maxAttendees}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Character Contact */}
-                {post.content.contactProfileId && (
-                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <User className="w-5 h-5 text-amber-700 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-amber-600 font-medium">Contact</p>
-                      <Link
-                        href={`/profiles/${post.content.contactProfileId}`}
-                        className="text-amber-900 hover:text-amber-700 underline"
-                      >
-                        {contactName || 'View Contact Character'}
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {/* Description */}
-                {post.content.description && (
-                  <div className="prose prose-amber">
-                    <h3 className="text-lg font-semibold text-amber-900 mb-2">About This Event</h3>
-                    <div
-                      className="rte-content text-amber-800 [&_a]:text-amber-700 [&_a]:underline [&_a:hover]:text-amber-900 [&_blockquote]:border-l-4 [&_blockquote]:border-amber-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-amber-700 [&_hr]:border-amber-200 [&_img]:rounded [&_img]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content.description) }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Featuring — small bubbles, closing out the content rather than the header */}
-            {!isEvent && featuredProfiles.length > 0 && (
+            {featuredProfiles.length > 0 && (
               <div className="mt-6 pt-4 border-t border-amber-200 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold text-amber-700">Featuring</span>
                 {featuredProfiles.map((fp) => (
