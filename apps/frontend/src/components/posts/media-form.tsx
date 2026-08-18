@@ -16,6 +16,8 @@ import { useAuthorableProfiles } from '@/hooks/useAuthorableProfiles';
 import { AuthorSelect } from '@/components/posts/author-select';
 import { FeaturedProfilesPicker, FeaturedProfile } from '@/components/posts/FeaturedProfilesPicker';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
+import { FocalPointPicker } from '@/components/ui/focal-point-picker';
+import { focalStyle } from '@/lib/image-focus';
 
 interface MediaFormProps {
   onSuccess: (postId: number) => void;
@@ -33,6 +35,9 @@ type MediaPostInput = z.infer<typeof mediaPostSchema>;
 
 export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Card framing per image, keyed by filename. Cards crop to several different
+  // ratios, so we store a focal point rather than a single cropped thumbnail.
+  const [focalPoints, setFocalPoints] = useState<Record<string, { x?: number; y?: number }>>({});
   const [error, setError] = useState<string | null>(null);
   const [tagsInput, setTagsInput] = useState('');
   const [isPublished, setIsPublished] = useState(true);
@@ -95,6 +100,8 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
             filename: img.filename,
             url: img.url,
             originalName: img.originalName,
+            focalX: focalPoints[img.filename]?.x,
+            focalY: focalPoints[img.filename]?.y,
           })),
           description: data.description || '',
           tags: data.tags || [],
@@ -134,6 +141,11 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
       setIsSubmitting(false);
     }
   };
+
+  const focalFor = (filename: string) => ({
+    focalX: focalPoints[filename]?.x,
+    focalY: focalPoints[filename]?.y,
+  });
 
   const displayError = error || uploadError;
 
@@ -201,6 +213,7 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
                     src={image.url}
                     alt={image.originalName}
                     sizes="(max-width: 768px) 100vw, 33vw"
+                    style={focalStyle({ url: image.url, ...focalFor(image.filename) })}
                     className="object-cover"
                   />
                 </div>
@@ -214,6 +227,26 @@ export function MediaForm({ onSuccess, onCancel }: MediaFormProps) {
                 </button>
                 <p className="text-xs text-amber-700 truncate mt-1">{image.originalName}</p>
               </div>
+            ))}
+          </div>
+        )}
+
+        {uploadedImages.length > 0 && (
+          <div className="mt-4 space-y-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <p className="text-sm text-amber-700">
+              Cards crop images to fit, and they use several different shapes. Pick the part of each image that matters
+              and every card will keep it in frame.
+            </p>
+            {uploadedImages.map((image) => (
+              <FocalPointPicker
+                key={`focal-${image.filename}`}
+                url={image.url}
+                focalX={focalPoints[image.filename]?.x}
+                focalY={focalPoints[image.filename]?.y}
+                disabled={isSubmitting}
+                label={image.originalName}
+                onChange={(x, y) => setFocalPoints((prev) => ({ ...prev, [image.filename]: { x, y } }))}
+              />
             ))}
           </div>
         )}

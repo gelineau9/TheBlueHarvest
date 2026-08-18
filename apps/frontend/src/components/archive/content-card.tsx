@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { htmlToPlainText } from '@/lib/html-text';
+import { focalStyle } from '@/lib/image-focus';
 
 interface ContentCardProps {
   id: number;
@@ -26,6 +27,8 @@ interface ContentCardProps {
   typeName: string;
   name: string;
   thumbnail?: string | null;
+  focalX?: number;
+  focalY?: number;
   preview?: string;
   authorName?: string | null;
   username: string;
@@ -68,6 +71,8 @@ export function ContentCard({
   typeName,
   name,
   thumbnail,
+  focalX,
+  focalY,
   preview,
   authorName,
   username,
@@ -91,6 +96,7 @@ export function ContentCard({
   const plainPreview = preview ? htmlToPlainText(preview) || undefined : undefined;
 
   const hasThumbnail = thumbnail && contentCategory === 'post' && [2, 3, 4].includes(typeId);
+  const focusImage = thumbnail ? { url: thumbnail, focalX, focalY } : null;
 
   return (
     <Link href={href}>
@@ -103,6 +109,7 @@ export function ContentCard({
               src={thumbnail!}
               alt={name}
               sizes="(max-width: 768px) 100vw, 50vw"
+              style={focalStyle(focusImage)}
               className="object-cover"
             />
           </div>

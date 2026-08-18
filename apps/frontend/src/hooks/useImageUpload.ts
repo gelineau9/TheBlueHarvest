@@ -6,6 +6,9 @@ export interface UploadedImage {
   filename: string;
   originalName: string;
   url: string;
+  /** Card framing, 0–100. Absent means centre. See lib/image-focus. */
+  focalX?: number;
+  focalY?: number;
   size?: number;
 }
 

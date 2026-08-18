@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { ContentCarousel } from '@/components/content-carousel';
 import { LikeButton } from '@/components/likes/LikeButton';
 import type { PublicPost, PublicPostsResponse } from '@/types/posts';
+import { focalStyle } from '@/lib/image-focus';
 
 const STORAGE_KEY = 'art-view-mode';
 
@@ -33,6 +34,7 @@ function ArtCard({ post }: { post: PublicPost }) {
               src={thumbnailUrl}
               alt={post.title}
               sizes="(max-width: 768px) 100vw, 33vw"
+              style={focalStyle(post.content?.images?.[0])}
               className="object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (
@@ -98,7 +100,14 @@ function ArtListItem({ post }: { post: PublicPost }) {
       {/* Thumbnail */}
       <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded bg-amber-100">
         {thumbnailUrl ? (
-          <NextImage fill src={thumbnailUrl} alt={post.title} sizes="64px" className="object-cover" />
+          <NextImage
+            fill
+            src={thumbnailUrl}
+            alt={post.title}
+            sizes="64px"
+            style={focalStyle(post.content?.images?.[0])}
+            className="object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <ImageIcon className="h-5 w-5 text-amber-300" aria-hidden="true" />

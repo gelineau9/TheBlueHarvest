@@ -15,6 +15,8 @@ import { AuthorSelect } from '@/components/posts/author-select';
 import { syncFeaturedProfiles } from '@/lib/featured-profiles';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { useSidebarRefresh } from '@/contexts/SidebarRefreshContext';
+import { FocalPointPicker } from '@/components/ui/focal-point-picker';
+import { focalStyle } from '@/lib/image-focus';
 
 const getMinDate = () => {
   const today = new Date();
@@ -544,6 +546,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                               alt={img.originalName}
                               fill
                               sizes="(max-width: 768px) 100vw, 33vw"
+                              style={focalStyle(img)}
                               className="object-cover"
                             />
                           </div>
@@ -557,6 +560,29 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
                           </button>
                           <p className="text-xs text-amber-700 truncate mt-1">{img.originalName}</p>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                  {images.length > 0 && (
+                    <div className="mt-4 space-y-5 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                      <p className="text-sm text-amber-700">
+                        Cards crop images to fit, in several different shapes. Pick the part of each image that matters
+                        and every card will keep it in frame.
+                      </p>
+                      {images.map((img) => (
+                        <FocalPointPicker
+                          key={`focal-${img.filename}`}
+                          url={img.url}
+                          focalX={img.focalX}
+                          focalY={img.focalY}
+                          disabled={isSaving}
+                          label={img.originalName}
+                          onChange={(x, y) =>
+                            setImages((prev) =>
+                              prev.map((i) => (i.filename === img.filename ? { ...i, focalX: x, focalY: y } : i)),
+                            )
+                          }
+                        />
                       ))}
                     </div>
                   )}

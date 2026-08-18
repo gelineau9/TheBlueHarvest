@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/carousel';
 import { LikeButton } from '@/components/likes/LikeButton';
 import { htmlToPlainText } from '@/lib/html-text';
+import { focalStyle } from '@/lib/image-focus';
 
 interface PostContent {
   body?: string;
@@ -108,6 +109,7 @@ function SpotlightSlide({ item }: { item: SpotlightItem }) {
             src={thumbnailUrl}
             alt={item.title}
             sizes="100vw"
+            style={focalStyle(item.content?.images?.[0])}
             className="object-cover transition-transform duration-500 hover:scale-[1.02]"
             priority
           />

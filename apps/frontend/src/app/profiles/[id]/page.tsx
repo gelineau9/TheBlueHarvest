@@ -40,6 +40,7 @@ import { profileTypeIcon } from '@/components/profiles/profile-type-icons';
 import { useAuth } from '@/components/auth/auth-provider';
 import { FollowButton } from '@/components/follows/FollowButton';
 import { htmlToPlainText } from '@/lib/html-text';
+import { focalStyle } from '@/lib/image-focus';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,7 @@ function GalleryPostCard({ post }: { post: PublicPost }) {
               src={thumbnailUrl}
               alt={post.title}
               sizes="(max-width: 768px) 50vw, 200px"
+              style={focalStyle(post.content?.images?.[0])}
               className="object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (

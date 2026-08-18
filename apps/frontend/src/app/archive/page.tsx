@@ -38,6 +38,8 @@ interface ArchiveItem {
   typeName: string;
   name: string;
   thumbnail: string | null;
+  focalX?: number;
+  focalY?: number;
   preview: string;
   authorName: string | null;
   username: string;
@@ -634,6 +636,8 @@ export default function ArchivePage() {
                   typeName={item.typeName}
                   name={item.name}
                   thumbnail={item.thumbnail}
+                  focalX={item.focalX}
+                  focalY={item.focalY}
                   preview={item.preview}
                   authorName={item.authorName}
                   username={item.username}

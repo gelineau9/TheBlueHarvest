@@ -79,6 +79,8 @@ router.get('/public', async (req: Request, res: Response) => {
           pt.type_name AS type_name,
           p.name AS name,
           NULL AS thumbnail,
+          NULL::int AS focal_x,
+          NULL::int AS focal_y,
           COALESCE(p.details->>'description', '')::text AS preview,
           NULL AS author_name,
           a.username AS username,
@@ -119,6 +121,19 @@ router.get('/public', async (req: Request, res: Response) => {
             THEN ps.content->'headerImage'->>'url'
             ELSE NULL
           END AS thumbnail,
+          -- Focal point of the same image, so cards can anchor their crop
+          CASE
+            WHEN ps.post_type_id IN (2, 3) AND jsonb_array_length(COALESCE(ps.content->'images', '[]'::jsonb)) > 0
+            THEN NULLIF(ps.content->'images'->0->>'focalX', '')::int
+            WHEN ps.post_type_id = 4 THEN NULLIF(ps.content->'headerImage'->>'focalX', '')::int
+            ELSE NULL
+          END AS focal_x,
+          CASE
+            WHEN ps.post_type_id IN (2, 3) AND jsonb_array_length(COALESCE(ps.content->'images', '[]'::jsonb)) > 0
+            THEN NULLIF(ps.content->'images'->0->>'focalY', '')::int
+            WHEN ps.post_type_id = 4 THEN NULLIF(ps.content->'headerImage'->>'focalY', '')::int
+            ELSE NULL
+          END AS focal_y,
           CASE
             WHEN ps.post_type_id = 1 THEN LEFT(COALESCE(ps.content->>'body', ''), 200)
             ELSE LEFT(COALESCE(ps.content->>'description', ''), 200)
@@ -174,6 +189,8 @@ router.get('/public', async (req: Request, res: Response) => {
         type_name: z.string(),
         name: z.string(),
         thumbnail: z.string().nullable(),
+        focal_x: z.number().nullable(),
+        focal_y: z.number().nullable(),
         preview: z.string().nullable(),
         author_name: z.string().nullable(),
         username: z.string(),
@@ -198,6 +215,8 @@ router.get('/public', async (req: Request, res: Response) => {
       typeName: row.type_name,
       name: row.name,
       thumbnail: row.thumbnail,
+      focalX: row.focal_x ?? undefined,
+      focalY: row.focal_y ?? undefined,
       preview: row.preview || '',
       authorName: row.author_name,
       username: row.username,

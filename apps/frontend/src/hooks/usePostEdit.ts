@@ -8,6 +8,9 @@ export interface UploadedImage {
   originalName: string;
   url: string;
   size?: number;
+  /** Card framing, 0–100. Absent means centre. See lib/image-focus. */
+  focalX?: number;
+  focalY?: number;
 }
 
 export interface Post {
